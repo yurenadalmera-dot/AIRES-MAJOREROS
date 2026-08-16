@@ -88,6 +88,59 @@ comportamiento completo sin necesitar credenciales reales.
 Para conectar con Lodgify de verdad: define `LODGIFY_API_KEY` en el entorno del servidor (nunca en
 el cliente) y configura el `lodgifyPropertyId` de cada vivienda en **Viviendas**.
 
+## Despliegue en producción (Docker / Easypanel)
+
+El repositorio incluye un `Dockerfile` listo para desplegar en cualquier runtime
+Docker. La imagen se construye en dos etapas y arranca mediante
+`docker-entrypoint.sh`, que antes de levantar la aplicación:
+
+1. crea el directorio de la base de datos si no existe,
+2. aplica el esquema con `prisma db push` (idempotente),
+3. siembra los datos de ejemplo **solo si la base de datos está vacía**, de modo
+   que un redespliegue nunca pisa datos existentes.
+
+### El volumen persistente no es opcional
+
+La base de datos es SQLite: un fichero. Si ese fichero vive dentro del
+contenedor, **cada redespliegue borra todos los datos**. Hay que montar un
+volumen persistente y apuntar `DATABASE_URL` a él:
+
+| Variable | Valor |
+|---|---|
+| `DATABASE_URL` | `file:/data/app.db` |
+| `AUTH_SECRET` | cadena larga y aleatoria (ver abajo) |
+| `LODGIFY_API_KEY` | opcional; vacío = modo demostración |
+| `SEED_ON_FIRST_RUN` | opcional; `false` para no sembrar nunca |
+
+Volumen: montar en `/data`. El contenedor escucha en el puerto `3000`.
+
+Como el fallo es silencioso (la aplicación arranca igual sin volumen), el
+arranque comprueba si `/data` es realmente un punto de montaje y avisa por
+consola en caso contrario. Merece la pena mirar los logs del primer despliegue.
+
+Generar un `AUTH_SECRET`:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+### Copias de seguridad
+
+Al ser un único fichero, basta con copiarlo periódicamente fuera del servidor:
+
+```bash
+sqlite3 /ruta/al/volumen/app.db ".backup '/ruta/backups/app-$(date +%F).db'"
+```
+
+Conviene usar `.backup` en lugar de `cp`: copia de forma consistente aunque la
+aplicación esté escribiendo en ese momento.
+
+### Migrar a PostgreSQL más adelante
+
+Si el volumen de datos crece o hace falta concurrencia real, el cambio es
+acotado: `provider = "postgresql"` en `prisma/schema.prisma` y un `DATABASE_URL`
+de Postgres. No hay SQL específico de SQLite en el código de la aplicación.
+
 ## Estructura del proyecto
 
 ```
@@ -100,6 +153,9 @@ lib/status.ts           Cálculo del estado de cada vivienda a partir de reserva
 lib/money.ts            Cálculo de comisiones, neto a percibir y reparto entre socias.
 prisma/schema.prisma    Modelo de datos.
 prisma/seed.ts          Datos ficticios de ejemplo (Fuerteventura).
+Dockerfile              Imagen de producción (build en dos etapas).
+docker-entrypoint.sh    Arranque: esquema, siembra inicial y comprobaciones.
+scripts/needs-seed.mjs  Decide si la base de datos está vacía y hay que sembrar.
 ```
 
 ## Limitaciones conocidas de esta demo
