@@ -1,12 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { isDemoMode, DEMO_AUTH_SECRET } from "@/lib/demo-mode";
 
 const COOKIE_NAME = "session";
 const encoder = new TextEncoder();
 
 function getSecret() {
-  const secret = process.env.AUTH_SECRET ?? (isDemoMode() ? DEMO_AUTH_SECRET : undefined);
+  const secret = process.env.AUTH_SECRET;
   if (!secret) {
     throw new Error("Falta la variable de entorno AUTH_SECRET");
   }

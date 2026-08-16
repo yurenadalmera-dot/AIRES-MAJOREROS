@@ -9,9 +9,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  // "native" para desarrollo local; el target de RHEL es el que usa el runtime
-  // de Node en Vercel, necesario para que el motor de Prisma funcione allí.
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
