@@ -1,0 +1,319 @@
+// Schema de datos para la plataforma de gestión de alquileres vacacionales
+// y facturación de limpiezas.
+//
+// Nota sobre "enums": el motor de desarrollo/demo es SQLite, que no soporta
+// enums nativos en Prisma. Los campos que en producción (Postgres) podrían
+// ser enum se modelan como String con los valores válidos documentados y
+// validados en la capa de aplicación (ver lib/constants.ts), para que migrar
+// a Postgres en el futuro sea un cambio de "datasource", no de modelo.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Multi-tenant / cuenta
+// ---------------------------------------------------------------------------
+
+/// Organización cliente de la plataforma. Permite vender la misma app a
+/// otras empresas del sector sin tocar código: cada una es una Organization
+/// con sus propios Business, viviendas, empleadas, integraciones, etc.
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  businesses  Business[]
+  owners      Owner[]
+  properties  Property[]
+  employees   Employee[]
+  bookings    Booking[]
+  cleaningTasks CleaningTask[]
+  partners    Partner[]
+  invoices    Invoice[]
+  users       User[]
+  integrationSettings IntegrationSettings[]
+  partnerSplitConfigs PartnerSplitConfig[]
+}
+
+/// Una "unidad de negocio" dentro de la organización. type identifica su
+/// función funcional dentro de la app (RENTAL_MANAGEMENT / CLEANING_BILLING)
+/// pero el nombre visible es libre, para no hardcodear "Emma"/"Aires".
+model Business {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  type           String   // RENTAL_MANAGEMENT | CLEANING_BILLING
+  name           String
+  legalName      String?  // razón social / nombre fiscal a mostrar en informes y facturas
+  taxId          String?  // NIF/CIF de ejemplo, nunca datos reales
+  contactEmail   String?
+  contactPhone   String?
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, type])
+}
+
+// ---------------------------------------------------------------------------
+// Negocio de alquiler vacacional (Emma)
+// ---------------------------------------------------------------------------
+
+model Owner {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String?
+  phone          String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  properties Property[]
+
+  @@index([organizationId])
+}
+
+model Property {
+  id                String   @id @default(cuid())
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id])
+  ownerId           String?
+  owner             Owner?   @relation(fields: [ownerId], references: [id])
+  name              String
+  locality           String  // localidad en Fuerteventura (Corralejo, Costa Calma...)
+  address           String?
+  capacity          Int      @default(2)
+  bedrooms          Int      @default(1)
+  bathrooms         Int      @default(1)
+  active            Boolean  @default(true)
+  cleaningPrice     Decimal  @default(0) // precio que Aires Majoreros factura por limpieza estándar de esta vivienda
+  manualStatus      String?  // override manual opcional: OCCUPIED | AVAILABLE | CLEANING_NEEDED | MAINTENANCE
+  lodgifyPropertyId String?  @unique // para emparejar con la integración Lodgify
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  bookings      Booking[]
+  cleaningTasks CleaningTask[]
+
+  @@index([organizationId])
+}
+
+model Employee {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  role           String   @default("CLEANING") // CLEANING | MAINTENANCE | BOTH
+  phone          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  cleaningTasks CleaningTask[]
+
+  @@index([organizationId])
+}
+
+/// Reserva. Puede venir de Lodgify (lodgifyBookingId presente) o creada a
+/// mano. manuallyAdjusted protege la reserva de ser sobrescrita por el sync.
+model Booking {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  propertyId     String
+  property       Property @relation(fields: [propertyId], references: [id])
+
+  lodgifyBookingId String? @unique // clave única para upsert idempotente desde Lodgify
+
+  guestName  String
+  guestEmail String?
+  guestPhone String?
+  adults     Int    @default(1)
+  children   Int    @default(0)
+
+  checkIn  DateTime
+  checkOut DateTime
+
+  channel String @default("DIRECTO") // Airbnb | Booking.com | Lodgify | Directo | ... (lista configurable)
+  status  String @default("CONFIRMED") // CONFIRMED | CANCELLED
+
+  totalPrice             Decimal
+  platformCommissionPct  Decimal @default(0)
+  platformCommissionAmt  Decimal @default(0)
+  bankCommissionPct      Decimal @default(0)
+  bankCommissionAmt      Decimal @default(0)
+  netAmount              Decimal @default(0)
+
+  manuallyAdjusted Boolean @default(false) // true = el sync de Lodgify nunca debe tocar esta reserva
+  notes            String?
+
+  source    String   @default("MANUAL") // MANUAL | LODGIFY
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cleaningTasks CleaningTask[]
+
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([checkIn])
+  @@index([checkOut])
+}
+
+/// Registro compartido entre los dos negocios: es a la vez tarea operativa
+/// (Emma: calendario/asignación) y línea facturable (Aires Majoreros:
+/// facturación), sin duplicarse en dos tablas distintas.
+model CleaningTask {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  propertyId     String
+  property       Property @relation(fields: [propertyId], references: [id])
+
+  bookingId String?  // limpieza asociada a la salida de esta reserva (opcional)
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+
+  type   String @default("CLEANING") // CLEANING | MAINTENANCE
+  date   DateTime
+  status String @default("PENDING") // PENDING | IN_PROGRESS | DONE | CANCELLED
+
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  billable Boolean @default(true) // solo las de type=CLEANING generan factura a Aires Majoreros
+  price    Decimal @default(0)    // importe que se factura por esta limpieza
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([date])
+  @@index([status])
+  @@index([invoiceId])
+}
+
+// ---------------------------------------------------------------------------
+// Negocio de facturación de limpiezas (Aires Majoreros)
+// ---------------------------------------------------------------------------
+
+model Partner {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+}
+
+/// Reparto configurable del importe facturado entre las socias. Por defecto
+/// 50/50, pero editable y con vigencia temporal (effectiveFrom) para permitir
+/// cambios futuros sin perder el histórico.
+model PartnerSplitConfig {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  partnerAId     String
+  partnerBId     String
+  partnerAPercent Decimal @default(50)
+  partnerBPercent Decimal @default(50)
+  effectiveFrom  DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+}
+
+model Invoice {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  invoiceNumber String   @unique
+  billedToName  String   // cliente facturado (p.ej. la razón social del negocio de alquiler)
+  billedToTaxId String?
+  periodStart   DateTime
+  periodEnd     DateTime
+  issueDate     DateTime @default(now())
+  status        String   @default("DRAFT") // DRAFT | ISSUED | PAID
+
+  subtotal Decimal @default(0)
+  total    Decimal @default(0) // sin IVA en esta demo (autónomo/sociedad: configurar impuestos según asesoría)
+
+  partnerAId      String?
+  partnerBId      String?
+  partnerAPercent Decimal @default(50)
+  partnerBPercent Decimal @default(50)
+  partnerAAmount  Decimal @default(0)
+  partnerBAmount  Decimal @default(0)
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lines         CleaningTask[]
+  invoiceLines  InvoiceLine[]
+
+  @@index([organizationId])
+}
+
+/// Copia inmutable de cada línea en el momento de facturar (snapshot), para
+/// que la factura no cambie si luego se edita la vivienda o el precio.
+model InvoiceLine {
+  id            String   @id @default(cuid())
+  invoiceId     String
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
+  cleaningTaskId String?
+  description   String
+  propertyName  String
+  date          DateTime
+  amount        Decimal
+
+  @@index([invoiceId])
+}
+
+// ---------------------------------------------------------------------------
+// Integraciones y configuración
+// ---------------------------------------------------------------------------
+
+model IntegrationSettings {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  provider       String   @default("LODGIFY")
+
+  apiKeyMasked        String? // solo se guarda una versión enmascarada a modo informativo
+  defaultPlatformPct  Decimal @default(15)
+  defaultBankPct      Decimal @default(2.5)
+  syncEnabled         Boolean @default(true)
+  lastSyncAt          DateTime?
+  lastSyncSummary     String?
+
+  @@unique([organizationId, provider])
+}
+
+// ---------------------------------------------------------------------------
+// Usuarios / acceso
+// ---------------------------------------------------------------------------
+
+model User {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String   @unique
+  passwordHash   String
+  role           String   @default("STAFF") // ADMIN | RENTAL_MANAGER | PARTNER | STAFF
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+}
