@@ -9,7 +9,14 @@ interface OwnerOption {
   name: string;
 }
 
-export default function ReportForm({ owners }: { owners: OwnerOption[] }) {
+export default function ReportForm({
+  owners,
+  basePath,
+}: {
+  owners: OwnerOption[];
+  /** Panel desde el que se genera el informe: "/rental" o "/cleaning". */
+  basePath: string;
+}) {
   const router = useRouter();
   const today = new Date();
   const [ownerId, setOwnerId] = useState(owners[0]?.id ?? "");
@@ -36,7 +43,7 @@ export default function ReportForm({ owners }: { owners: OwnerOption[] }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    router.push(`/rental/reports/print?ownerId=${ownerId}&start=${start}&end=${end}`);
+    router.push(`${basePath}/reports/print?ownerId=${ownerId}&start=${start}&end=${end}`);
   }
 
   return (

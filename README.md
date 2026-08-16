@@ -35,6 +35,12 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
   tarea operativa (calendario/asignación en el negocio de alquiler) y como línea facturable (en
   cuanto está `DONE`, aparece en el panel de facturación; al facturarse se le asigna un
   `invoiceId` y desaparece de "pendientes"). No hay duplicación de datos entre los dos negocios.
+- **Vistas compartidas entre negocios**: el tablero de limpieza/mantenimiento y los informes por
+  propietario son accesibles desde **ambos** paneles, porque la empresa de limpiezas es quien
+  gestiona y factura ese trabajo. No son páginas duplicadas: `components/shared/*` contiene la
+  vista real y las rutas de `/rental/*` y `/cleaning/*` son envoltorios finos que la renderizan
+  con el mismo `organizationId`. Un cambio de estado o de asignación hecho desde un panel se ve
+  inmediatamente en el otro, porque es el mismo registro.
 - **Integración Lodgify** (`lib/lodgify.ts`, `lib/actions/lodgify-sync.ts`): recorre todas las
   páginas de reservas, se queda solo con las confirmadas (`Booked`), descarta
   `Declined`/`Cancelled`/`Tentative`, empareja `property_id` con la vivienda mediante
@@ -87,6 +93,7 @@ el cliente) y configura el `lodgifyPropertyId` de cada vivienda en **Viviendas**
 ```
 app/                    Rutas (App Router). app/rental/* y app/cleaning/* son los dos negocios.
 components/             Componentes de UI compartidos y formularios.
+components/shared/      Vistas que ambos negocios renderizan (tablero de tareas, informes).
 lib/actions/            Server Actions (mutaciones): reservas, tareas, propiedades, facturas...
 lib/lodgify*.ts         Cliente de integración con Lodgify + datos de demostración.
 lib/status.ts           Cálculo del estado de cada vivienda a partir de reservas y tareas.

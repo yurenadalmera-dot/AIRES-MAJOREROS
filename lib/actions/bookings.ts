@@ -88,6 +88,7 @@ export async function createBooking(formData: FormData) {
   revalidatePath("/rental/bookings");
   revalidatePath("/rental/calendar");
   revalidatePath("/rental/tasks");
+  revalidatePath("/cleaning/tasks");
   revalidatePath("/rental/properties");
 }
 
@@ -146,6 +147,7 @@ export async function updateBooking(bookingId: string, formData: FormData) {
   revalidatePath("/rental/bookings");
   revalidatePath("/rental/calendar");
   revalidatePath("/rental/tasks");
+  revalidatePath("/cleaning/tasks");
   revalidatePath("/rental/properties");
 }
 
@@ -163,4 +165,5 @@ export async function deleteBooking(bookingId: string) {
   revalidatePath("/rental/bookings");
   revalidatePath("/rental/calendar");
   revalidatePath("/rental/tasks");
+  revalidatePath("/cleaning/tasks");
 }

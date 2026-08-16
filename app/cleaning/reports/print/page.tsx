@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireBusinessContext } from "@/lib/business-context";
 import OwnerReportPrintView from "@/components/shared/OwnerReportPrintView";
 
-export default async function RentalOwnerReportPrintPage({
+export default async function CleaningOwnerReportPrintPage({
   searchParams,
 }: {
   searchParams: Promise<{ ownerId?: string; start?: string; end?: string }>;
@@ -17,7 +17,7 @@ export default async function RentalOwnerReportPrintPage({
       ownerId={params.ownerId}
       start={params.start}
       end={params.end}
-      backHref="/rental/reports"
+      backHref="/cleaning/reports"
     />
   );
 }

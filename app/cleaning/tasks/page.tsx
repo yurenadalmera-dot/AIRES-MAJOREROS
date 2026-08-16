@@ -1,7 +1,9 @@
 import { requireBusinessContext } from "@/lib/business-context";
 import TasksBoardView from "@/components/shared/TasksBoardView";
 
-export default async function RentalTasksPage({
+// Misma vista y mismos datos que /rental/tasks: es la empresa que gestiona y
+// factura las limpiezas, así que necesita consultar y asignar las tareas.
+export default async function CleaningTasksPage({
   searchParams,
 }: {
   searchParams: Promise<{ type?: string; status?: string }>;
@@ -13,7 +15,7 @@ export default async function RentalTasksPage({
     <TasksBoardView
       organizationId={organizationId}
       params={params}
-      subtitle="Asignación de tareas a empleadas. Las limpiezas hechas alimentan automáticamente la facturación del negocio de limpiezas."
+      subtitle="Tareas gestionadas por la empresa de limpiezas. Es el mismo registro que ve la operativa de alquiler: al marcar una limpieza como hecha pasa automáticamente a facturación."
     />
   );
 }

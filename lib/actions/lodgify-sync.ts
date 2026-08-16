@@ -173,6 +173,9 @@ export async function syncLodgifyReservations(): Promise<SyncSummary> {
   revalidatePath("/rental/tasks");
   revalidatePath("/rental/properties");
   revalidatePath("/rental/settings");
+  // El sync crea limpiezas de salida, visibles también desde el panel de limpiezas.
+  revalidatePath("/cleaning");
+  revalidatePath("/cleaning/tasks");
 
   return summary;
 }

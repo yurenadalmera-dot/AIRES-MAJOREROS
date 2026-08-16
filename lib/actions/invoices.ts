@@ -111,6 +111,10 @@ export async function generateInvoice(formData: FormData) {
 
   revalidatePath("/cleaning");
   revalidatePath("/cleaning/invoices");
+  // Al facturar, las tareas pasan a mostrarse como "facturada" en el tablero,
+  // que se consulta desde los dos negocios.
+  revalidatePath("/cleaning/tasks");
+  revalidatePath("/rental/tasks");
 
   return invoice.id;
 }

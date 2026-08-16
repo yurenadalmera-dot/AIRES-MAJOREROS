@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PageHeader, StatCard, EmptyState } from "@/components/ui";
@@ -27,7 +28,12 @@ export default async function CleaningBillingPage() {
     <div>
       <PageHeader
         title="Facturación"
-        subtitle="Limpiezas realizadas y confirmadas por Emma, todavía sin facturar. Este listado se alimenta automáticamente de la operativa — es el mismo registro, sin duplicarse."
+        subtitle="Limpiezas ya realizadas y todavía sin facturar. Este listado se alimenta automáticamente de la operativa — es el mismo registro, sin duplicarse."
+        actions={
+          <Link href="/cleaning/tasks" className="btn-secondary">
+            🧹 Ver tablero de tareas
+          </Link>
+        }
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">

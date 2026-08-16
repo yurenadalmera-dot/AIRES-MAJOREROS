@@ -32,6 +32,8 @@ const RENTAL_NAV: NavItem[] = [
 const CLEANING_NAV: NavItem[] = [
   { href: "/cleaning", label: "Facturación", icon: "💶" },
   { href: "/cleaning/invoices", label: "Historial de facturas", icon: "📄" },
+  { href: "/cleaning/tasks", label: "Limpieza y mantenimiento", icon: "🧹" },
+  { href: "/cleaning/reports", label: "Informes propietarios", icon: "🧾" },
   { href: "/cleaning/settings", label: "Reparto y ajustes", icon: "⚙️" },
 ];
 

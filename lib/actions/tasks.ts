@@ -11,25 +11,35 @@ async function requireOrg() {
   return session.organizationId;
 }
 
+/**
+ * Una tarea es un registro compartido: se consulta desde los paneles de los
+ * dos negocios (tablero e informes en ambos, más facturación). Al cambiarla
+ * hay que refrescar las rutas de ambos lados, no solo las del alquiler.
+ */
+function revalidateTaskViews() {
+  revalidatePath("/rental");
+  revalidatePath("/rental/tasks");
+  revalidatePath("/rental/properties");
+  revalidatePath("/rental/reports");
+  revalidatePath("/cleaning");
+  revalidatePath("/cleaning/tasks");
+  revalidatePath("/cleaning/reports");
+  revalidatePath("/cleaning/invoices");
+}
+
 export async function assignEmployeeToTask(taskId: string, employeeId: string | null) {
   await requireOrg();
   await prisma.cleaningTask.update({
     where: { id: taskId },
     data: { employeeId: employeeId || null },
   });
-  revalidatePath("/rental/tasks");
-  revalidatePath("/rental");
-  revalidatePath("/rental/properties");
-  revalidatePath("/cleaning");
+  revalidateTaskViews();
 }
 
 export async function updateTaskStatus(taskId: string, status: string) {
   await requireOrg();
   await prisma.cleaningTask.update({ where: { id: taskId }, data: { status } });
-  revalidatePath("/rental/tasks");
-  revalidatePath("/rental");
-  revalidatePath("/rental/properties");
-  revalidatePath("/cleaning");
+  revalidateTaskViews();
 }
 
 const maintenanceSchema = z.object({
@@ -58,9 +68,7 @@ export async function createMaintenanceTask(formData: FormData) {
     },
   });
 
-  revalidatePath("/rental/tasks");
-  revalidatePath("/rental");
-  revalidatePath("/rental/properties");
+  revalidateTaskViews();
 }
 
 export async function deleteTask(taskId: string) {
@@ -68,7 +76,5 @@ export async function deleteTask(taskId: string) {
   const task = await prisma.cleaningTask.findUnique({ where: { id: taskId } });
   if (task?.invoiceId) throw new Error("No se puede eliminar una tarea ya facturada");
   await prisma.cleaningTask.delete({ where: { id: taskId } });
-  revalidatePath("/rental/tasks");
-  revalidatePath("/rental");
-  revalidatePath("/cleaning");
+  revalidateTaskViews();
 }
