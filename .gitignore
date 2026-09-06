@@ -10,3 +10,4 @@ prisma/dev.db-journal
 prisma/preview-seed.db
 .DS_Store
 next-env.d.ts
+tsconfig.tsbuildinfo

@@ -77,6 +77,39 @@ Contraseña para todos: `demo1234`
 
 Cualquier usuario puede alternar entre los dos negocios con el conmutador de la barra lateral.
 
+## Despliegue
+
+La aplicación es un proyecto Next.js estándar: `npm install && npm run build && npm start`.
+Funciona en cualquier hosting con Node (Hostinger, VPS, Vercel...).
+
+### Variables de entorno
+
+| Variable | Obligatoria | Para qué sirve |
+|---|---|---|
+| `AUTH_SECRET` | Sí, salvo en modo demo | Firma la cookie de sesión. Sin ella el login falla aunque las credenciales sean correctas. Genérala con `openssl rand -base64 48`. |
+| `DATABASE_URL` | Sí, salvo en modo demo | Conexión a la base de datos. |
+| `DEMO_MODE` | No | `1` fuerza el modo demo, `0` lo desactiva. Sin definir, se decide automáticamente. |
+| `LODGIFY_API_KEY` | No | Sin ella, la sincronización usa datos ficticios. |
+
+### Modo demo
+
+Si el build de producción se despliega **sin** un `DATABASE_URL` de un motor de servidor
+(PostgreSQL, MySQL...), la aplicación arranca en modo demo: usa la base de datos SQLite ya
+sembrada que se genera durante `npm run build` (`prisma/preview-seed.db`), copiándola al
+directorio temporal del sistema, y firma las sesiones con un secreto de respaldo. Así el
+despliegue es navegable con los usuarios de demostración sin configurar nada.
+
+Es un entorno de pruebas: los cambios duran mientras viva el proceso y vuelven a los datos de
+ejemplo al reiniciarse. Para un uso real, configura `DATABASE_URL` y `AUTH_SECRET`.
+
+### Comprobar un despliegue
+
+`GET /api/health` (público) informa de si el despliegue puede autenticar: modo activo, si
+`AUTH_SECRET` y `DATABASE_URL` están configuradas, y si la base de datos responde y tiene
+usuarios. Devuelve `200` si el login puede funcionar y `503` si falta algo, sin revelar el valor
+de ninguna variable. Ante un fallo de configuración, el propio formulario de login muestra el
+motivo concreto (por ejemplo, que falta `AUTH_SECRET`) en vez de un error genérico.
+
 ## Probar la sincronización con Lodgify
 
 En **Alquileres → Ajustes → Integración con Lodgify**, pulsa "Sincronizar ahora". Sin

@@ -1,14 +1,29 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { isDemoMode, DEMO_AUTH_SECRET } from "@/lib/demo-mode";
+import { resolveAuthSecret } from "@/lib/demo-mode";
 
 const COOKIE_NAME = "session";
 const encoder = new TextEncoder();
 
+export class MissingAuthSecretError extends Error {
+  constructor() {
+    super(
+      "Falta la variable de entorno AUTH_SECRET: sin ella no se pueden firmar las " +
+        "cookies de sesión. Defínela en el entorno del servidor con una cadena larga y aleatoria."
+    );
+    this.name = "MissingAuthSecretError";
+  }
+}
+
+/** ¿Está el secreto de sesión disponible (configurado o de modo demo)? */
+export function hasAuthSecret(): boolean {
+  return resolveAuthSecret() !== null;
+}
+
 function getSecret() {
-  const secret = process.env.AUTH_SECRET ?? (isDemoMode() ? DEMO_AUTH_SECRET : undefined);
+  const secret = resolveAuthSecret();
   if (!secret) {
-    throw new Error("Falta la variable de entorno AUTH_SECRET");
+    throw new MissingAuthSecretError();
   }
   return encoder.encode(secret);
 }
