@@ -78,10 +78,24 @@ Hostinger está conectado al repositorio de GitHub: **cada push a la rama por de
 (`claude/rental-cleaning-management-app-hrv9wg`) lanza un build y un redespliegue automáticos**.
 El progreso y los logs se ven en hPanel → el sitio → Node.js → Compilaciones.
 
+Las variables de entorno se configuran en hPanel → el sitio → Node.js → Variables de entorno, y
+son exactamente tres: `DATABASE_URL`, `DIRECT_URL` y `AUTH_SECRET` (ver `.env.example` para el
+formato).
+
+> ⚠️ **No definir `NODE_ENV` ahí.** Con `NODE_ENV=production`, el `npm install` del build omite
+> las `devDependencies`; sin `typescript` instalado, Next.js deja de leer los `paths` de
+> `tsconfig.json` y el build falla entero con `Module not found: Can't resolve '@/lib/...'`.
+> Next.js ya fija `NODE_ENV=production` por su cuenta en `next build` y `next start`. Se
+> reconoce en los logs de compilación: un build sano audita ~127 paquetes, uno roto ~38.
+
 > ⚠️ **Las variables de entorno se pierden con el primer despliegue desde GitHub.** Si tras un
 > redespliegue la aplicación da un error de conexión a base de datos, hay que volver a
-> introducirlas en hPanel → Node.js → Variables de entorno. Las necesarias son `DATABASE_URL`,
-> `DIRECT_URL`, `AUTH_SECRET` y `NODE_ENV=production` (ver `.env.example` para el formato).
+> introducirlas.
+
+> ⚠️ **La cadena de conexión debe llevar el identificador del proyecto en el usuario.** El pooler
+> de Supabase (Supavisor) enruta por ahí: el usuario es `app_owner.<project_ref>`, no `app_owner`
+> a secas. Con el usuario sin el sufijo, la conexión se rechaza en el pooler y en los logs de
+> Supabase no aparece ni el intento.
 
 ### Seguridad de la base de datos
 
