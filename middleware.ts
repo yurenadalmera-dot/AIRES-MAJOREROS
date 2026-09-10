@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { isDemoMode, DEMO_AUTH_SECRET } from "@/lib/demo-mode";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 
@@ -17,7 +16,7 @@ export async function middleware(req: NextRequest) {
   if (isPublic(pathname)) return NextResponse.next();
 
   const token = req.cookies.get("session")?.value;
-  const secret = process.env.AUTH_SECRET ?? (isDemoMode() ? DEMO_AUTH_SECRET : undefined);
+  const secret = process.env.AUTH_SECRET;
 
   let valid = false;
   if (token && secret) {

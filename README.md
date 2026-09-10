@@ -23,10 +23,18 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
   Prisma); las escrituras usan **Server Actions** (`lib/actions/*.ts`), sin necesidad de una capa
   de API REST aparte. Tailwind CSS para el estilo, con hoja de impresión (`@media print`) para
   informes y facturas.
-- **Base de datos**: [Prisma ORM](https://www.prisma.io) sobre **SQLite** en desarrollo/demo
-  (`prisma/dev.db`, fichero único, cero configuración). El *schema* (`prisma/schema.prisma`) está
-  escrito para migrar a **PostgreSQL** cambiando solo el `datasource` y `DATABASE_URL` — no hay
-  SQL específico de SQLite en el código de la aplicación.
+- **Base de datos**: [Prisma ORM](https://www.prisma.io) sobre **PostgreSQL**, alojada en
+  [Supabase](https://supabase.com) (proyecto `aires-majoreros`). La app se conecta con un rol
+  dedicado (`app_owner`, sin privilegios de superusuario) a través del *connection pooler* de
+  Supabase (Supavisor): `DATABASE_URL` usa el puerto de transacción (6543) para las consultas de
+  la app, `DIRECT_URL` usa el puerto de sesión (5432) para `prisma db push` / `migrate`, que no
+  funcionan a través del modo transacción. Ver `.env.example`.
+- **Hosting**: [Hostinger](https://hostinger.com) (hosting Node.js, plan Business), dominio propio
+  `airesmajoreros.pro`. El build (`npm run build`) genera la app Next.js en modo `next start`
+  estándar sobre el hosting Node.js de Hostinger — no hay funciones serverless ni modo demo
+  autocontenido: siempre se conecta a la base de datos real configurada en `DATABASE_URL`.
+- **Correo**: buzón `info@airesmajoreros.pro` con el mismo dominio, gestionado desde el panel de
+  Hostinger (Correo).
 - **Modelo de datos multi-negocio**: todo cuelga de una `Organization` → varios `Business`
   (`RENTAL_MANAGEMENT` / `CLEANING_BILLING`). Nombres, comisiones, precios de limpieza y reparto
   entre socias son datos configurables, no están escritos en el código, para poder reconfigurar
@@ -57,13 +65,14 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
 
 ```bash
 npm install
-cp .env.example .env        # ya viene copiado; genera tu propio AUTH_SECRET en producción
-npm run db:push             # crea las tablas en SQLite
+cp .env.example .env        # rellena DATABASE_URL / DIRECT_URL (Supabase) y AUTH_SECRET
+npm run db:push             # crea las tablas en PostgreSQL
 npm run db:seed             # carga los datos de ejemplo (Fuerteventura)
 npm run dev                 # http://localhost:3000
 ```
 
-`npm run db:reset` hace ambas cosas de golpe (reinicia el esquema y vuelve a sembrar).
+`npm run db:reset` hace ambas cosas de golpe (reinicia el esquema y vuelve a sembrar). **Cuidado
+con `db:reset` en producción**: usa `--force-reset`, borra todos los datos.
 
 ### Usuarios de demostración
 

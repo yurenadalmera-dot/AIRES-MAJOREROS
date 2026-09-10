@@ -1,22 +1,31 @@
 // Schema de datos para la plataforma de gestión de alquileres vacacionales
 // y facturación de limpiezas.
 //
-// Nota sobre "enums": el motor de desarrollo/demo es SQLite, que no soporta
-// enums nativos en Prisma. Los campos que en producción (Postgres) podrían
-// ser enum se modelan como String con los valores válidos documentados y
-// validados en la capa de aplicación (ver lib/constants.ts), para que migrar
-// a Postgres en el futuro sea un cambio de "datasource", no de modelo.
+// Nota sobre "enums": el modelo se diseñó originalmente para el motor de
+// desarrollo/demo SQLite, que no soporta enums nativos en Prisma. Los campos
+// que podrían ser enum se modelan como String con los valores válidos
+// documentados y validados en la capa de aplicación (ver lib/constants.ts).
+// Se mantiene así también en PostgreSQL (producción) para no reescribir el
+// modelo: el "datasource" es el único cambio real entre entornos.
+//
+// Producción: PostgreSQL en Supabase. DATABASE_URL usa el connection pooler
+// (Supavisor, puerto 6543, pgbouncer=true) para las consultas de la app;
+// DIRECT_URL usa la conexión directa/sesión (puerto 5432) para migraciones
+// (`prisma db push` / `prisma migrate`), que no funcionan a través del
+// transaction pooler.
 
 generator client {
   provider = "prisma-client-js"
   // "native" para desarrollo local; el target de RHEL es el que usa el runtime
-  // de Node en Vercel, necesario para que el motor de Prisma funcione allí.
+  // de Node en Vercel/Hostinger, necesario para que el motor de Prisma
+  // funcione en esos entornos.
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------------------------
