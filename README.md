@@ -61,6 +61,37 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
 - **Autenticación**: sesión propia con cookie `httpOnly` firmada (JWT vía `jose`) y contraseñas
   con `bcrypt`. Sin proveedores externos — suficiente para una herramienta interna.
 
+## Producción
+
+La aplicación está publicada en **https://airesmajoreros.pro**.
+
+| Pieza | Dónde | Detalle |
+|---|---|---|
+| App | Hostinger, hosting Node.js (plan Business) | Next.js, Node 22, `npm run build` → `next start` |
+| Base de datos | Supabase, proyecto `aires-majoreros` | PostgreSQL 17, región `eu-west-1` |
+| Dominio | Hostinger | `airesmajoreros.pro`, DNS gestionado en Hostinger |
+| Correo | Hostinger (Starter Business Email) | `info@airesmajoreros.pro`, con SPF, DKIM y DMARC |
+
+### Despliegue
+
+Hostinger está conectado al repositorio de GitHub: **cada push a la rama por defecto
+(`claude/rental-cleaning-management-app-hrv9wg`) lanza un build y un redespliegue automáticos**.
+El progreso y los logs se ven en hPanel → el sitio → Node.js → Compilaciones.
+
+> ⚠️ **Las variables de entorno se pierden con el primer despliegue desde GitHub.** Si tras un
+> redespliegue la aplicación da un error de conexión a base de datos, hay que volver a
+> introducirlas en hPanel → Node.js → Variables de entorno. Las necesarias son `DATABASE_URL`,
+> `DIRECT_URL`, `AUTH_SECRET` y `NODE_ENV=production` (ver `.env.example` para el formato).
+
+### Seguridad de la base de datos
+
+Las tablas tienen **RLS (Row Level Security) activado sin ninguna política**, lo que bloquea por
+completo el acceso a través de la API pública de Supabase (roles `anon` / `authenticated`), que
+además no tienen ningún privilegio concedido sobre el esquema `public`. La aplicación no usa el
+cliente de Supabase: se conecta por Prisma con el rol `app_owner`, que tiene el atributo
+`BYPASSRLS` y por tanto trabaja con normalidad. Si algún día se quisiera usar el SDK de Supabase
+desde el navegador, habría que escribir políticas RLS explícitas antes.
+
 ## Puesta en marcha
 
 ```bash
