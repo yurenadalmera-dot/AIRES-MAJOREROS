@@ -4,14 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && node scripts/build-preview-db.mjs && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
-    "db:preview-seed": "node scripts/build-preview-db.mjs",
-    "build:demo": "prisma generate && npm run db:preview-seed && next build"
+    "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
