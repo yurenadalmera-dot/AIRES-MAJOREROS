@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+// `/api/health/db` es pública a propósito: sirve para diagnosticar un
+// despliegue que todavía no deja entrar a nadie, así que exigir sesión la
+// haría inútil. No expone datos: solo si hay conexión a la base de datos.
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health/db"];
 
 function isPublic(pathname: string) {
   return (
