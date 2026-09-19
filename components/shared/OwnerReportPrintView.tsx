@@ -55,6 +55,10 @@ export default async function OwnerReportPrintView({
       propertyId: { in: propertyIds },
       type: "CLEANING",
       billable: true,
+      // Una limpieza cancelada no se ha hecho, así que no se le puede
+      // descontar al propietario. Antes sí entraba, y el informe no cuadraba
+      // con la factura, que solo cuenta las hechas.
+      status: { not: "CANCELLED" },
       date: { gte: periodStart, lte: periodEnd },
     },
     include: { property: true },

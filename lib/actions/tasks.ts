@@ -3,13 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-
-async function requireOrg() {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
-  return session.organizationId;
-}
+import { exigir } from "@/lib/auth";
 
 /**
  * Una tarea es un registro compartido: se consulta desde los paneles de los
@@ -28,7 +22,7 @@ function revalidateTaskViews() {
 }
 
 export async function assignEmployeeToTask(taskId: string, employeeId: string | null) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.limpiezas");
   await prisma.cleaningTask.updateMany({
     where: { id: taskId, organizationId },
     data: { employeeId: employeeId || null },
@@ -37,7 +31,7 @@ export async function assignEmployeeToTask(taskId: string, employeeId: string | 
 }
 
 export async function updateTaskStatus(taskId: string, status: string) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.estado_tarea");
   await prisma.cleaningTask.updateMany({ where: { id: taskId, organizationId }, data: { status } });
   revalidateTaskViews();
 }
@@ -50,7 +44,7 @@ const maintenanceSchema = z.object({
 });
 
 export async function createMaintenanceTask(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.limpiezas");
   const raw = Object.fromEntries(formData.entries());
   const data = maintenanceSchema.parse(raw);
 
@@ -72,7 +66,7 @@ export async function createMaintenanceTask(formData: FormData) {
 }
 
 export async function deleteTask(taskId: string) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.limpiezas");
   const task = await prisma.cleaningTask.findFirst({ where: { id: taskId, organizationId } });
   if (!task) throw new Error("Tarea no encontrada");
   if (task.invoiceId) throw new Error("No se puede eliminar una tarea ya facturada");

@@ -3,13 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-
-async function requireOrg() {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
-  return session.organizationId;
-}
+import { exigir } from "@/lib/auth";
 
 const integrationSchema = z.object({
   defaultPlatformPct: z.coerce.number().min(0).max(100),
@@ -19,7 +13,7 @@ const integrationSchema = z.object({
 });
 
 export async function updateLodgifySettings(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   const raw = Object.fromEntries(formData.entries());
   const data = integrationSchema.parse({ ...raw, syncEnabled: raw.syncEnabled === "on" });
 
@@ -57,7 +51,7 @@ const businessSchema = z.object({
 });
 
 export async function updateBusinessInfo(businessId: string, formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("administracion");
   const raw = Object.fromEntries(formData.entries());
   const data = businessSchema.parse(raw);
   await prisma.business.updateMany({

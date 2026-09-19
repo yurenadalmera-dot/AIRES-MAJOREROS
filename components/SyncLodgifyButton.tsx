@@ -36,6 +36,9 @@ export default function SyncLodgifyButton() {
           </p>
           <p>Reservas recibidas: {summary.fetched} · Confirmadas (Booked): {summary.confirmed}</p>
           <p>✅ Creadas: {summary.created} · 🔄 Actualizadas: {summary.updated}</p>
+          {summary.cancelled > 0 && (
+            <p>🚫 Anuladas en Lodgify: {summary.cancelled} (su limpieza pendiente se ha cancelado)</p>
+          )}
           <p>🔒 Omitidas por ajuste manual: {summary.skippedManuallyAdjusted}</p>
           <p>⚠️ Sin vivienda emparejada: {summary.unmatchedProperty}</p>
           {summary.unmatchedDetails.length > 0 && (

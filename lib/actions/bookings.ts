@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { exigir } from "@/lib/auth";
 import { calculateCommissions } from "@/lib/money";
 
 const bookingSchema = z.object({
@@ -22,14 +22,8 @@ const bookingSchema = z.object({
   notes: z.string().optional(),
 });
 
-async function requireOrg() {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
-  return session.organizationId;
-}
-
 export async function createBooking(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   const raw = Object.fromEntries(formData.entries());
   const data = bookingSchema.parse(raw);
 
@@ -95,7 +89,7 @@ export async function createBooking(formData: FormData) {
 }
 
 export async function updateBooking(bookingId: string, formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   const raw = Object.fromEntries(formData.entries());
   const data = bookingSchema.parse(raw);
 
@@ -156,7 +150,7 @@ export async function updateBooking(bookingId: string, formData: FormData) {
 }
 
 export async function setBookingManualLock(bookingId: string, locked: boolean) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   await prisma.booking.updateMany({
     where: { id: bookingId, organizationId },
     data: { manuallyAdjusted: locked },
@@ -165,7 +159,7 @@ export async function setBookingManualLock(bookingId: string, locked: boolean) {
 }
 
 export async function deleteBooking(bookingId: string) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   await prisma.cleaningTask.deleteMany({ where: { bookingId, organizationId, invoiceId: null } });
   await prisma.booking.deleteMany({ where: { id: bookingId, organizationId } });
   revalidatePath("/rental");

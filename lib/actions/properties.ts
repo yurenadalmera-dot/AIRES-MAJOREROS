@@ -3,13 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-
-async function requireOrg() {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
-  return session.organizationId;
-}
+import { exigir } from "@/lib/auth";
 
 const propertySchema = z.object({
   name: z.string().min(1),
@@ -24,7 +18,7 @@ const propertySchema = z.object({
 });
 
 export async function createProperty(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   const raw = Object.fromEntries(formData.entries());
   const data = propertySchema.parse(raw);
 
@@ -49,7 +43,7 @@ export async function createProperty(formData: FormData) {
 }
 
 export async function updateProperty(propertyId: string, formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   const raw = Object.fromEntries(formData.entries());
   const data = propertySchema.parse(raw);
 
@@ -73,7 +67,7 @@ export async function updateProperty(propertyId: string, formData: FormData) {
 }
 
 export async function setPropertyManualStatus(propertyId: string, status: string | null) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   await prisma.property.updateMany({
     where: { id: propertyId, organizationId },
     data: { manualStatus: status },
@@ -83,7 +77,7 @@ export async function setPropertyManualStatus(propertyId: string, status: string
 }
 
 export async function setPropertyActive(propertyId: string, active: boolean) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   await prisma.property.updateMany({ where: { id: propertyId, organizationId }, data: { active } });
   revalidatePath("/rental/properties");
   revalidatePath("/rental/settings");
@@ -96,7 +90,7 @@ const ownerSchema = z.object({
 });
 
 export async function createOwner(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("operativa.alquiler");
   const raw = Object.fromEntries(formData.entries());
   const data = ownerSchema.parse(raw);
   await prisma.owner.create({
@@ -118,7 +112,7 @@ const employeeSchema = z.object({
 });
 
 export async function createEmployee(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("administracion");
   const raw = Object.fromEntries(formData.entries());
   const data = employeeSchema.parse(raw);
   await prisma.employee.create({
@@ -134,7 +128,7 @@ export async function createEmployee(formData: FormData) {
 }
 
 export async function setEmployeeActive(employeeId: string, active: boolean) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("administracion");
   await prisma.employee.updateMany({ where: { id: employeeId, organizationId }, data: { active } });
   revalidatePath("/rental/settings");
   revalidatePath("/rental/tasks");

@@ -3,15 +3,9 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { exigir } from "@/lib/auth";
 import { splitAmount, round2 } from "@/lib/money";
 import { format } from "date-fns";
-
-async function requireOrg() {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
-  return session.organizationId;
-}
 
 const generateSchema = z.object({
   periodStart: z.string().min(1),
@@ -52,7 +46,7 @@ async function siguienteNumeroFactura(organizationId: string) {
  * Majoreros — sin duplicar el dato, solo enlazándolo (invoiceId).
  */
 export async function generateInvoice(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("facturacion");
   const raw = Object.fromEntries(formData.entries());
   const data = generateSchema.parse(raw);
 
@@ -137,7 +131,7 @@ export async function generateInvoice(formData: FormData) {
 }
 
 export async function updateInvoiceStatus(invoiceId: string, status: string) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("facturacion");
   await prisma.invoice.updateMany({ where: { id: invoiceId, organizationId }, data: { status } });
   revalidatePath("/cleaning/invoices");
 }
@@ -149,7 +143,7 @@ const splitSchema = z.object({
 });
 
 export async function updatePartnerSplit(formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("administracion");
   const raw = Object.fromEntries(formData.entries());
   const data = splitSchema.parse(raw);
 
@@ -173,7 +167,7 @@ const partnerSchema = z.object({
 });
 
 export async function updatePartnerName(partnerId: string, formData: FormData) {
-  const organizationId = await requireOrg();
+  const organizationId = await exigir("administracion");
   const raw = Object.fromEntries(formData.entries());
   const data = partnerSchema.parse(raw);
   await prisma.partner.updateMany({

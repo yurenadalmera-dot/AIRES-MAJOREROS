@@ -61,7 +61,21 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
   el sync usa datos de demostración paginados (`lib/lodgify-mock-data.ts`) que ejercitan la misma
   lógica de punta a punta.
 - **Autenticación**: sesión propia con cookie `httpOnly` firmada (JWT vía `jose`) y contraseñas
-  con `bcrypt`. Sin proveedores externos — suficiente para una herramienta interna.
+  con `bcrypt`. Sin proveedores externos — suficiente para una herramienta interna. La cookie dura
+  30 días, pero **el usuario se relee de la base en cada petición**: dar de baja a alguien, o
+  cambiarle el rol, surte efecto al momento y no cuando le caduque la sesión.
+- **Permisos** (`lib/permisos.ts`): cada acción del servidor exige un permiso, y los permisos
+  cuelgan del rol. Es la única tabla que decide quién puede qué; cambiarla es cambiar ese fichero.
+
+  | Rol | Puede |
+  |---|---|
+  | `ADMIN` | Todo |
+  | `RENTAL_MANAGER` | Reservas, viviendas, propietarios, limpiezas, sync de Lodgify |
+  | `PARTNER` | Facturación y operativa de limpiezas |
+  | `STAFF` | Solo marcar el estado de su trabajo |
+
+  > ⚠️ Este reparto es **una propuesta**, deducida de lo que significa cada rol, no una regla de
+  > negocio confirmada. Conviene validarlo con quien vaya a usar la aplicación.
 
 ## Producción
 

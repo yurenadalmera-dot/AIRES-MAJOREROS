@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { exigir } from "@/lib/auth";
 import { fetchAllLodgifyReservations, onlyConfirmed, isLodgifyLiveMode } from "@/lib/lodgify";
 import { calculateCommissions } from "@/lib/money";
 
@@ -12,6 +12,8 @@ export interface SyncSummary {
   confirmed: number;
   created: number;
   updated: number;
+  /** Reservas que estaban confirmadas y ya no lo están en Lodgify. */
+  cancelled: number;
   skippedManuallyAdjusted: number;
   unmatchedProperty: number;
   unmatchedDetails: string[];
@@ -28,9 +30,7 @@ export interface SyncSummary {
  *     sobre el precio total, porque Lodgify no los desglosa.
  */
 export async function syncLodgifyReservations(): Promise<SyncSummary> {
-  const session = await getSession();
-  if (!session) throw new Error("No autenticado");
-  const organizationId = session.organizationId;
+  const organizationId = await exigir("operativa.alquiler");
 
   const settings = await prisma.integrationSettings.findUnique({
     where: { organizationId_provider: { organizationId, provider: "LODGIFY" } },
@@ -41,14 +41,53 @@ export async function syncLodgifyReservations(): Promise<SyncSummary> {
   const all = await fetchAllLodgifyReservations();
   const confirmed = onlyConfirmed(all);
 
+  let created = 0;
+  let updated = 0;
+  let skippedManuallyAdjusted = 0;
+
+  // Las reservas que ya NO están confirmadas (anuladas o rechazadas en
+  // Lodgify) hay que reflejarlas: antes se descartaban sin más, así que una
+  // reserva anulada se quedaba como CONFIRMED con su limpieza pendiente. Se
+  // mandaba a alguien a limpiar un apartamento vacío y se facturaba.
+  let cancelled = 0;
+  const idsConfirmados = new Set(confirmed.map((r) => r.externalId));
+  for (const res of all) {
+    if (idsConfirmados.has(res.externalId)) continue;
+
+    const existente = await prisma.booking.findFirst({
+      where: { lodgifyBookingId: res.externalId, organizationId, status: "CONFIRMED" },
+    });
+    if (!existente) continue;
+    // Una reserva tocada a mano no se toca, igual que en la actualización.
+    if (existente.manuallyAdjusted) {
+      skippedManuallyAdjusted++;
+      continue;
+    }
+
+    await prisma.booking.updateMany({
+      where: { id: existente.id, organizationId },
+      data: { status: "CANCELLED" },
+    });
+    // Su limpieza se cancela, salvo que ya esté facturada o hecha: eso ya
+    // ocurrió y no se puede deshacer desde aquí.
+    await prisma.cleaningTask.updateMany({
+      where: {
+        bookingId: existente.id,
+        organizationId,
+        type: "CLEANING",
+        invoiceId: null,
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+      },
+      data: { status: "CANCELLED" },
+    });
+    cancelled++;
+  }
+
   const properties = await prisma.property.findMany({
     where: { organizationId, lodgifyPropertyId: { not: null } },
   });
   const propertyByExternalId = new Map(properties.map((p) => [p.lodgifyPropertyId as string, p]));
 
-  let created = 0;
-  let updated = 0;
-  let skippedManuallyAdjusted = 0;
   let unmatchedProperty = 0;
   const unmatchedDetails: string[] = [];
 
@@ -151,6 +190,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary> {
     confirmed: confirmed.length,
     created,
     updated,
+    cancelled,
     skippedManuallyAdjusted,
     unmatchedProperty,
     unmatchedDetails,
