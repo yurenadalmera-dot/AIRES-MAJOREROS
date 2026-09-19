@@ -1,0 +1,81 @@
+{
+  "_comentario": [
+    "Configuración del panel de Aires Majoreros (Alejandra).",
+    "El código de la app es común a todos los clientes; lo que cambia de uno a",
+    "otro vive aquí. Si para diferenciar un cliente hace falta tocar el código,",
+    "es que falta una opción en este fichero.",
+    "Los valores marcados PENDIENTE no están confirmados: ver docs/fase-0.md."
+  ],
+
+  "cliente": "aires",
+  "nombre": "Aires Majoreros",
+  "responsable": "Alejandra",
+
+  "infraestructura": {
+    "proyecto_supabase": "aires-operativa",
+    "dominio": "app.airesmajoreros.pro",
+    "api_supabase": "https://db.airesmajoreros.pro",
+    "slug_app_ui": "principal"
+  },
+
+  "marca": {
+    "nombre_visible": "Aires Majoreros",
+    "logo": "PENDIENTE",
+    "colores": {
+      "_comentario": "PENDIENTE: colores reales de marca. Estos son neutros provisionales.",
+      "primario": "#0d6e6e",
+      "secundario": "#e08e45",
+      "fondo": "#f7f7f5",
+      "texto": "#1a1a1a"
+    }
+  },
+
+  "modulos": {
+    "_comentario": "true = activo; 'solo_lectura' = se ve pero no se edita; false = no aparece.",
+    "clientes_facturacion": true,
+    "viviendas": true,
+    "empleadas": true,
+    "limpiezas": true,
+    "calendario_limpiezas": true,
+    "tarifas": true,
+    "facturacion": true,
+
+    "reservas": false,
+    "_comentario_reservas": "Las reservas son de Mirador. Aquí solo interesa el nº de huéspedes, que viaja con la limpieza.",
+
+    "liquidaciones": false,
+    "_comentario_liquidaciones": "Liquidar al propietario es cosa de Mirador."
+  },
+
+  "fiscal": {
+    "forma_juridica": "sociedad_limitada",
+    "aplica_igic": true,
+    "igic_pct": 7,
+    "aplica_retencion_irpf": false,
+    "verifactu_obligatorio_desde": "2027-01-01",
+    "_comentario": "Aires Majoreros S.L.: repercute IGIC y no sufre retención. VeriFactu para sociedades entra el 01/01/2027. Los precios de las tarifas se guardan SIN IGIC; el impuesto se añade al facturar."
+  },
+
+  "facturacion": {
+    "_comentario": "Aires factura AL PROPIETARIO de la vivienda (hoy Inversiones Brito), nunca a la gestora del alquiler. El prototipo dashboard-gestion.html asumía lo contrario y está mal.",
+    "destinatario": "propietario",
+    "prefijo_numeracion": "AM",
+    "dia_facturacion": 1
+  },
+
+  "textos": {
+    "titulo_panel": "Limpiezas y facturación",
+    "etiqueta_limpieza": "Limpieza",
+    "etiqueta_repaso": "Repaso",
+    "pie_factura": "PENDIENTE: pie legal de las facturas (datos registrales de la S.L.)."
+  },
+
+  "integraciones": {
+    "puente_mirador": {
+      "activa": true,
+      "sentido": "aires_a_mirador",
+      "disparador": "limpieza_completada",
+      "_comentario": "n8n replica a mirador-operativa cuando una limpieza pasa a completada, enviando el id de origen. La unicidad de origen_id en destino hace la réplica idempotente: reintentar no duplica."
+    }
+  }
+}
