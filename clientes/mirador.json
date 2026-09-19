@@ -1,0 +1,73 @@
+{
+  "_comentario": [
+    "Configuración del panel de Mirador de Sotavento (Emma).",
+    "El código de la app es común a todos los clientes; lo que cambia de uno a",
+    "otro vive aquí. Si para diferenciar un cliente hace falta tocar el código,",
+    "es que falta una opción en este fichero.",
+    "Los valores marcados PENDIENTE no están confirmados: ver docs/fase-0.md."
+  ],
+
+  "cliente": "mirador",
+  "nombre": "Mirador de Sotavento",
+  "responsable": "Emma",
+
+  "infraestructura": {
+    "proyecto_supabase": "mirador-operativa",
+    "dominio": "mirador.airesmajoreros.pro",
+    "api_supabase": "https://db.airesmajoreros.pro",
+    "slug_app_ui": "principal"
+  },
+
+  "marca": {
+    "nombre_visible": "Mirador de Sotavento",
+    "logo": "PENDIENTE",
+    "colores": {
+      "_comentario": "PENDIENTE: colores reales de marca. Estos son neutros provisionales.",
+      "primario": "#1f4e5f",
+      "secundario": "#c9a227",
+      "fondo": "#f7f7f5",
+      "texto": "#1a1a1a"
+    }
+  },
+
+  "modulos": {
+    "_comentario": "true = activo; 'solo_lectura' = se ve pero no se edita; false = no aparece.",
+    "propietarios": true,
+    "viviendas": true,
+    "reservas": true,
+    "calendario": true,
+    "movimientos": true,
+    "liquidaciones": true,
+    "informes_propietario": true,
+
+    "limpiezas": "solo_lectura",
+    "_comentario_limpiezas": "Llegan replicadas desde aires-operativa. El puente es de un solo sentido: aquí no se tocan.",
+
+    "facturacion": false,
+    "_comentario_facturacion": "Aires factura al propietario, no a Emma. Emma factura sus comisiones aparte, fuera de este módulo."
+  },
+
+  "fiscal": {
+    "forma_juridica": "autonomo",
+    "aplica_igic": false,
+    "aplica_retencion_irpf": true,
+    "retencion_irpf_pct": 7,
+    "verifactu_obligatorio_desde": "2027-07-01",
+    "_comentario": "Emma es autónoma: retención del 7 % de IRPF y sin IGIC. VeriFactu para autónomos entra el 01/07/2027."
+  },
+
+  "textos": {
+    "titulo_panel": "Gestión de alquiler vacacional",
+    "etiqueta_liquidacion": "Liquidación al propietario",
+    "etiqueta_limpieza": "Limpieza",
+    "pie_informe": "PENDIENTE: pie legal de los informes a propietarios."
+  },
+
+  "integraciones": {
+    "lodgify": {
+      "activa": true,
+      "frecuencia_sondeo_horas": 3,
+      "_comentario": "Workflow de n8n ya en producción sobre Airtable. Migrarlo a Postgres implica reescribirlo; en Fase 0 no se toca."
+    }
+  }
+}
