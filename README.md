@@ -23,12 +23,14 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
   Prisma); las escrituras usan **Server Actions** (`lib/actions/*.ts`), sin necesidad de una capa
   de API REST aparte. Tailwind CSS para el estilo, con hoja de impresión (`@media print`) para
   informes y facturas.
-- **Base de datos**: [Prisma ORM](https://www.prisma.io) sobre **PostgreSQL**, alojada en
-  [Supabase](https://supabase.com) (proyecto `aires-majoreros`). La app se conecta con un rol
-  dedicado (`app_owner`, sin privilegios de superusuario) a través del *connection pooler* de
-  Supabase (Supavisor): `DATABASE_URL` usa el puerto de transacción (6543) para las consultas de
-  la app, `DIRECT_URL` usa el puerto de sesión (5432) para `prisma db push` / `migrate`, que no
-  funcionan a través del modo transacción. Ver `.env.example`.
+- **Base de datos**: [Prisma ORM](https://www.prisma.io) sobre **MySQL**, la que viene incluida en
+  el propio plan de Hostinger (`srv2067.hstgr.io:3306`, base `u143635831_airesmaj`). Vive en la
+  misma máquina que la aplicación, así que la conexión no sale a internet y no hay *connection
+  pooler* de por medio. Una sola variable, `DATABASE_URL`; ver `.env.example`.
+
+  El esquema es portable a propósito: los campos que podrían ser `enum` se modelan como `String`
+  y se validan en `lib/constants.ts`, así que cambiar de motor es cambiar el `datasource` de
+  `prisma/schema.prisma` y poco más.
 - **Hosting**: [Hostinger](https://hostinger.com) (hosting Node.js, plan Business), dominio propio
   `airesmajoreros.pro`. El build (`npm run build`) genera la app Next.js en modo `next start`
   estándar sobre el hosting Node.js de Hostinger — no hay funciones serverless ni modo demo
@@ -68,7 +70,7 @@ La aplicación está publicada en **https://airesmajoreros.pro**.
 | Pieza | Dónde | Detalle |
 |---|---|---|
 | App | Hostinger, hosting Node.js (plan Business) | Next.js, Node 22, `npm run build` → `next start` |
-| Base de datos | Supabase, proyecto `aires-majoreros` | PostgreSQL 17, región `eu-west-1` |
+| Base de datos | Hostinger, MySQL incluido en el plan | `u143635831_airesmaj` en `srv2067.hstgr.io:3306`, 3 GB |
 | Dominio | Hostinger | `airesmajoreros.pro`, DNS gestionado en Hostinger |
 | Correo | Hostinger (Starter Business Email) | `info@airesmajoreros.pro`, con SPF, DKIM y DMARC |
 
@@ -79,8 +81,23 @@ Hostinger está conectado al repositorio de GitHub: **cada push a la rama por de
 El progreso y los logs se ven en hPanel → el sitio → Node.js → Compilaciones.
 
 Las variables de entorno se configuran en hPanel → el sitio → Node.js → Variables de entorno, y
-son exactamente tres: `DATABASE_URL`, `DIRECT_URL` y `AUTH_SECRET` (ver `.env.example` para el
-formato).
+son tres: `DATABASE_URL`, `AUTH_SECRET` y `ADMIN_PASSWORD` (ver `.env.example` para el formato).
+
+`ADMIN_PASSWORD` es la contraseña de `info@airesmajoreros.pro`. El seed da de alta esa cuenta —o
+le restablece la contraseña, si ya existe— en **cada** despliegue, así que cambiarla es cambiar la
+variable y relanzar el build. No está escrita en ningún sitio del repositorio a propósito.
+
+El script de `build` hace algo más que compilar:
+
+```
+prisma generate && prisma db push --skip-generate && tsx prisma/seed.ts && next build
+```
+
+Aplica el esquema y siembra durante el despliegue **porque el build de Hostinger es lo único que
+tiene acceso de red a esa base de datos**: desde fuera del hosting el puerto 3306 no es
+alcanzable. El `db push` va sin `--accept-data-loss` a propósito: si un cambio de esquema fuera a
+destruir datos, el build falla en lugar de borrarlos en silencio. La siembra, por su parte, no
+hace nada si la base ya tiene datos (ver más abajo).
 
 > ⚠️ **No definir `NODE_ENV` ahí.** Con `NODE_ENV=production`, el `npm install` del build omite
 > las `devDependencies`; sin `typescript` instalado, Next.js deja de leer los `paths` de
@@ -92,32 +109,38 @@ formato).
 > redespliegue la aplicación da un error de conexión a base de datos, hay que volver a
 > introducirlas.
 
-> ⚠️ **La cadena de conexión debe llevar el identificador del proyecto en el usuario.** El pooler
-> de Supabase (Supavisor) enruta por ahí: el usuario es `app_owner.<project_ref>`, no `app_owner`
-> a secas. Con el usuario sin el sufijo, la conexión se rechaza en el pooler y en los logs de
-> Supabase no aparece ni el intento.
-
 ### Seguridad de la base de datos
 
-Las tablas tienen **RLS (Row Level Security) activado sin ninguna política**, lo que bloquea por
-completo el acceso a través de la API pública de Supabase (roles `anon` / `authenticated`), que
-además no tienen ningún privilegio concedido sobre el esquema `public`. La aplicación no usa el
-cliente de Supabase: se conecta por Prisma con el rol `app_owner`, que tiene el atributo
-`BYPASSRLS` y por tanto trabaja con normalidad. Si algún día se quisiera usar el SDK de Supabase
-desde el navegador, habría que escribir políticas RLS explícitas antes.
+MySQL de Hostinger **no acepta conexiones desde fuera del hosting** salvo que se dé de alta
+explícitamente una IP remota (hPanel → Bases de datos → Acceso remoto). No hay ninguna dada de
+alta, así que la única vía de entrada a los datos es la propia aplicación, y la única forma de
+autenticarse en ella es la tabla `User` (contraseñas con `bcrypt`, sesión en cookie `httpOnly`
+firmada).
+
+Eso es también lo que obliga a aplicar el esquema desde el build: no es una comodidad, es que no
+hay otro sitio desde donde alcanzar el puerto.
 
 ## Puesta en marcha
 
 ```bash
 npm install
-cp .env.example .env        # rellena DATABASE_URL / DIRECT_URL (Supabase) y AUTH_SECRET
-npm run db:push             # crea las tablas en PostgreSQL
+cp .env.example .env        # rellena DATABASE_URL y AUTH_SECRET
+npm run db:push             # crea las tablas
 npm run db:seed             # carga los datos de ejemplo (Fuerteventura)
 npm run dev                 # http://localhost:3000
 ```
 
-`npm run db:reset` hace ambas cosas de golpe (reinicia el esquema y vuelve a sembrar). **Cuidado
-con `db:reset` en producción**: usa `--force-reset`, borra todos los datos.
+**La siembra no pisa datos existentes.** `npm run db:seed` comprueba primero si ya hay
+organizaciones; si las hay, no toca nada y lo dice. Para reconstruir desde cero hace falta pedirlo
+a las claras:
+
+```bash
+npm run db:seed -- --force   # BORRA las 13 tablas y vuelve a sembrar
+npm run db:reset             # además reinicia el esquema (--force-reset)
+```
+
+Esa guarda es la que permite tener la siembra dentro del `build` sin que cada despliegue borre lo
+que haya escrito la clienta.
 
 ### Usuarios de demostración
 

@@ -589,7 +589,54 @@ async function main() {
   console.log("   Usuarios demo (contraseña 'demo1234'): emma@example.com, socia1@example.com, socia2@example.com, admin@example.com");
 }
 
+/**
+ * Da de alta (o actualiza) la cuenta de administración real a partir del
+ * entorno. Corre siempre, también cuando la siembra de demostración se salta
+ * por haber datos: es lo que permite recuperar el acceso tras un despliegue
+ * sin tocar la base de datos a mano.
+ *
+ * La contraseña NO vive en el repositorio. Se lee de ADMIN_PASSWORD, que se
+ * configura en las variables de entorno del hosting; sin esa variable no se
+ * crea nada y el despliegue sigue adelante.
+ */
+async function asegurarAdministrador() {
+  const email = (process.env.ADMIN_EMAIL ?? "info@airesmajoreros.pro").toLowerCase().trim();
+  const password = process.env.ADMIN_PASSWORD;
+
+  if (!password) {
+    console.log(
+      "ℹ️  Sin ADMIN_PASSWORD en el entorno: no se toca la cuenta de administración."
+    );
+    return;
+  }
+
+  const org = await prisma.organization.findFirst({ orderBy: { createdAt: "asc" } });
+  if (!org) {
+    console.log("ℹ️  No hay ninguna organización todavía: se omite la cuenta de administración.");
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  await prisma.user.upsert({
+    where: { email },
+    // Si ya existe se le restablece la contraseña y se reactiva: el objetivo es
+    // que esta cuenta siempre pueda entrar.
+    update: { passwordHash, role: "ADMIN", active: true },
+    create: {
+      organizationId: org.id,
+      name: process.env.ADMIN_NAME ?? "Administración",
+      email,
+      passwordHash,
+      role: "ADMIN",
+      active: true,
+    },
+  });
+
+  console.log(`🔑 Cuenta de administración lista: ${email}`);
+}
+
 main()
+  .then(asegurarAdministrador)
   .catch((e) => {
     console.error(e);
     process.exit(1);
