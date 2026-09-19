@@ -70,7 +70,9 @@ export async function createBooking(formData: FormData) {
 
   // La limpieza de salida se genera automáticamente, igual que ocurre en el
   // flujo de sincronización con Lodgify.
-  const property = await prisma.property.findUnique({ where: { id: data.propertyId } });
+  const property = await prisma.property.findFirst({
+    where: { id: data.propertyId, organizationId },
+  });
   await prisma.cleaningTask.create({
     data: {
       organizationId,
@@ -93,7 +95,7 @@ export async function createBooking(formData: FormData) {
 }
 
 export async function updateBooking(bookingId: string, formData: FormData) {
-  await requireOrg();
+  const organizationId = await requireOrg();
   const raw = Object.fromEntries(formData.entries());
   const data = bookingSchema.parse(raw);
 
@@ -109,11 +111,13 @@ export async function updateBooking(bookingId: string, formData: FormData) {
     bankCommissionPct: data.bankCommissionPct,
   });
 
-  const existing = await prisma.booking.findUnique({ where: { id: bookingId } });
+  // Filtrar también por organización: el id viene del cliente, y sin ese
+  // filtro una cuenta podría editar la reserva de otra empresa.
+  const existing = await prisma.booking.findFirst({ where: { id: bookingId, organizationId } });
   if (!existing) throw new Error("Reserva no encontrada");
 
-  await prisma.booking.update({
-    where: { id: bookingId },
+  await prisma.booking.updateMany({
+    where: { id: bookingId, organizationId },
     data: {
       propertyId: data.propertyId,
       guestName: data.guestName,
@@ -139,7 +143,7 @@ export async function updateBooking(bookingId: string, formData: FormData) {
 
   // Mantener la fecha de la tarea de limpieza asociada a la salida, si existe.
   await prisma.cleaningTask.updateMany({
-    where: { bookingId, type: "CLEANING" },
+    where: { bookingId, organizationId, type: "CLEANING" },
     data: { date: checkOut, propertyId: data.propertyId },
   });
 
@@ -152,15 +156,18 @@ export async function updateBooking(bookingId: string, formData: FormData) {
 }
 
 export async function setBookingManualLock(bookingId: string, locked: boolean) {
-  await requireOrg();
-  await prisma.booking.update({ where: { id: bookingId }, data: { manuallyAdjusted: locked } });
+  const organizationId = await requireOrg();
+  await prisma.booking.updateMany({
+    where: { id: bookingId, organizationId },
+    data: { manuallyAdjusted: locked },
+  });
   revalidatePath("/rental/bookings");
 }
 
 export async function deleteBooking(bookingId: string) {
-  await requireOrg();
-  await prisma.cleaningTask.deleteMany({ where: { bookingId, invoiceId: null } });
-  await prisma.booking.delete({ where: { id: bookingId } });
+  const organizationId = await requireOrg();
+  await prisma.cleaningTask.deleteMany({ where: { bookingId, organizationId, invoiceId: null } });
+  await prisma.booking.deleteMany({ where: { id: bookingId, organizationId } });
   revalidatePath("/rental");
   revalidatePath("/rental/bookings");
   revalidatePath("/rental/calendar");

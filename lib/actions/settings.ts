@@ -57,11 +57,11 @@ const businessSchema = z.object({
 });
 
 export async function updateBusinessInfo(businessId: string, formData: FormData) {
-  await requireOrg();
+  const organizationId = await requireOrg();
   const raw = Object.fromEntries(formData.entries());
   const data = businessSchema.parse(raw);
-  await prisma.business.update({
-    where: { id: businessId },
+  await prisma.business.updateMany({
+    where: { id: businessId, organizationId },
     data: {
       name: data.name,
       legalName: data.legalName || null,

@@ -49,12 +49,12 @@ export async function createProperty(formData: FormData) {
 }
 
 export async function updateProperty(propertyId: string, formData: FormData) {
-  await requireOrg();
+  const organizationId = await requireOrg();
   const raw = Object.fromEntries(formData.entries());
   const data = propertySchema.parse(raw);
 
-  await prisma.property.update({
-    where: { id: propertyId },
+  await prisma.property.updateMany({
+    where: { id: propertyId, organizationId },
     data: {
       name: data.name,
       locality: data.locality,
@@ -73,15 +73,18 @@ export async function updateProperty(propertyId: string, formData: FormData) {
 }
 
 export async function setPropertyManualStatus(propertyId: string, status: string | null) {
-  await requireOrg();
-  await prisma.property.update({ where: { id: propertyId }, data: { manualStatus: status } });
+  const organizationId = await requireOrg();
+  await prisma.property.updateMany({
+    where: { id: propertyId, organizationId },
+    data: { manualStatus: status },
+  });
   revalidatePath("/rental/properties");
   revalidatePath("/rental");
 }
 
 export async function setPropertyActive(propertyId: string, active: boolean) {
-  await requireOrg();
-  await prisma.property.update({ where: { id: propertyId }, data: { active } });
+  const organizationId = await requireOrg();
+  await prisma.property.updateMany({ where: { id: propertyId, organizationId }, data: { active } });
   revalidatePath("/rental/properties");
   revalidatePath("/rental/settings");
 }
@@ -131,8 +134,8 @@ export async function createEmployee(formData: FormData) {
 }
 
 export async function setEmployeeActive(employeeId: string, active: boolean) {
-  await requireOrg();
-  await prisma.employee.update({ where: { id: employeeId }, data: { active } });
+  const organizationId = await requireOrg();
+  await prisma.employee.updateMany({ where: { id: employeeId, organizationId }, data: { active } });
   revalidatePath("/rental/settings");
   revalidatePath("/rental/tasks");
 }

@@ -60,8 +60,11 @@ export async function syncLodgifyReservations(): Promise<SyncSummary> {
       continue;
     }
 
-    const existing = await prisma.booking.findUnique({
-      where: { lodgifyBookingId: res.externalId },
+    // `lodgifyBookingId` es único en toda la tabla, así que hay que acotar por
+    // organización: sin ello, el sync de una cuenta podría sobrescribir la
+    // reserva de otra que usara el mismo identificador de Lodgify.
+    const existing = await prisma.booking.findFirst({
+      where: { lodgifyBookingId: res.externalId, organizationId },
     });
 
     if (existing) {
@@ -74,8 +77,8 @@ export async function syncLodgifyReservations(): Promise<SyncSummary> {
         platformCommissionPct: platformPct,
         bankCommissionPct: bankPct,
       });
-      await prisma.booking.update({
-        where: { id: existing.id },
+      await prisma.booking.updateMany({
+        where: { id: existing.id, organizationId },
         data: {
           propertyId: property.id,
           guestName: res.guestName,

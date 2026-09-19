@@ -28,17 +28,17 @@ function revalidateTaskViews() {
 }
 
 export async function assignEmployeeToTask(taskId: string, employeeId: string | null) {
-  await requireOrg();
-  await prisma.cleaningTask.update({
-    where: { id: taskId },
+  const organizationId = await requireOrg();
+  await prisma.cleaningTask.updateMany({
+    where: { id: taskId, organizationId },
     data: { employeeId: employeeId || null },
   });
   revalidateTaskViews();
 }
 
 export async function updateTaskStatus(taskId: string, status: string) {
-  await requireOrg();
-  await prisma.cleaningTask.update({ where: { id: taskId }, data: { status } });
+  const organizationId = await requireOrg();
+  await prisma.cleaningTask.updateMany({ where: { id: taskId, organizationId }, data: { status } });
   revalidateTaskViews();
 }
 
@@ -72,9 +72,10 @@ export async function createMaintenanceTask(formData: FormData) {
 }
 
 export async function deleteTask(taskId: string) {
-  await requireOrg();
-  const task = await prisma.cleaningTask.findUnique({ where: { id: taskId } });
-  if (task?.invoiceId) throw new Error("No se puede eliminar una tarea ya facturada");
-  await prisma.cleaningTask.delete({ where: { id: taskId } });
+  const organizationId = await requireOrg();
+  const task = await prisma.cleaningTask.findFirst({ where: { id: taskId, organizationId } });
+  if (!task) throw new Error("Tarea no encontrada");
+  if (task.invoiceId) throw new Error("No se puede eliminar una tarea ya facturada");
+  await prisma.cleaningTask.deleteMany({ where: { id: taskId, organizationId } });
   revalidateTaskViews();
 }

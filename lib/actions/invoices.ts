@@ -22,6 +22,29 @@ const generateSchema = z.object({
 });
 
 /**
+ * Siguiente número de factura del año, `AM-AAAA-NNNN`.
+ *
+ * Se deriva del número más alto ya emitido, no de cuántas facturas hay: si se
+ * anula una, contar da un número que ya existe y, como `invoiceNumber` es
+ * único, la siguiente factura no se puede emitir. Además la numeración debe
+ * ser correlativa y no reutilizar números, aunque haya huecos por anulación.
+ */
+async function siguienteNumeroFactura(organizationId: string) {
+  const prefijo = `AM-${format(new Date(), "yyyy")}-`;
+
+  const ultima = await prisma.invoice.findFirst({
+    where: { organizationId, invoiceNumber: { startsWith: prefijo } },
+    orderBy: { invoiceNumber: "desc" },
+    select: { invoiceNumber: true },
+  });
+
+  const ultimoOrdinal = ultima ? Number(ultima.invoiceNumber.slice(prefijo.length)) : 0;
+  const siguiente = Number.isFinite(ultimoOrdinal) ? ultimoOrdinal + 1 : 1;
+
+  return `${prefijo}${String(siguiente).padStart(4, "0")}`;
+}
+
+/**
  * Genera una factura a partir de las tareas de limpieza YA hechas (DONE),
  * facturables y todavía sin asignar a ninguna factura, dentro del periodo.
  * Este es el punto donde el registro compartido "CleaningTask" pasa de ser
@@ -64,13 +87,7 @@ export async function generateInvoice(formData: FormData) {
   const partnerBPercent = splitConfig ? Number(splitConfig.partnerBPercent) : 50;
   const { partnerAAmount, partnerBAmount } = splitAmount(subtotal, partnerAPercent, partnerBPercent);
 
-  const invoiceCountThisYear = await prisma.invoice.count({
-    where: {
-      organizationId,
-      invoiceNumber: { startsWith: `AM-${format(new Date(), "yyyy")}-` },
-    },
-  });
-  const invoiceNumber = `AM-${format(new Date(), "yyyy")}-${String(invoiceCountThisYear + 1).padStart(4, "0")}`;
+  const invoiceNumber = await siguienteNumeroFactura(organizationId);
 
   const invoice = await prisma.invoice.create({
     data: {
@@ -120,8 +137,8 @@ export async function generateInvoice(formData: FormData) {
 }
 
 export async function updateInvoiceStatus(invoiceId: string, status: string) {
-  await requireOrg();
-  await prisma.invoice.update({ where: { id: invoiceId }, data: { status } });
+  const organizationId = await requireOrg();
+  await prisma.invoice.updateMany({ where: { id: invoiceId, organizationId }, data: { status } });
   revalidatePath("/cleaning/invoices");
 }
 
@@ -156,11 +173,11 @@ const partnerSchema = z.object({
 });
 
 export async function updatePartnerName(partnerId: string, formData: FormData) {
-  await requireOrg();
+  const organizationId = await requireOrg();
   const raw = Object.fromEntries(formData.entries());
   const data = partnerSchema.parse(raw);
-  await prisma.partner.update({
-    where: { id: partnerId },
+  await prisma.partner.updateMany({
+    where: { id: partnerId, organizationId },
     data: { name: data.name, email: data.email || null },
   });
   revalidatePath("/cleaning/settings");

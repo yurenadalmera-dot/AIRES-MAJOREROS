@@ -66,11 +66,24 @@ export function formatDateLong(value: Date | string): string {
   }).format(d);
 }
 
-/** Reparte un importe total entre dos socias según porcentajes configurables. */
+/**
+ * Reparte un importe total entre dos socias según porcentajes configurables.
+ *
+ * Cada parte sale de SU porcentaje. Antes la segunda se calculaba por resta,
+ * lo que hacía que `partnerBPercent` se ignorase: con un 70/20 la segunda
+ * socia cobraba el 30 % en lugar del 20 %, sin previo aviso.
+ *
+ * Cuando los dos porcentajes suman 100 —el caso normal, que es lo que guarda
+ * la pantalla de ajustes— el resto del redondeo se le suma a la segunda parte,
+ * para que A + B dé exactamente el total y la factura cuadre al céntimo.
+ */
 export function splitAmount(total: number, partnerAPercent: number, partnerBPercent: number) {
   const partnerAAmount = round2((total * partnerAPercent) / 100);
-  // El segundo importe se calcula por resta para que la suma cuadre siempre
-  // con el total exacto, aunque haya redondeos.
-  const partnerBAmount = round2(total - partnerAAmount);
+
+  const repartenElTotal = Math.abs(partnerAPercent + partnerBPercent - 100) < 0.005;
+  const partnerBAmount = repartenElTotal
+    ? round2(total - partnerAAmount)
+    : round2((total * partnerBPercent) / 100);
+
   return { partnerAAmount, partnerBAmount };
 }
