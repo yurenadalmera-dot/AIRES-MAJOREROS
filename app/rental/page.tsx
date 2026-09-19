@@ -28,7 +28,13 @@ export default async function RentalDashboardPage() {
       }),
       prisma.property.findMany({ where: { organizationId, active: true }, include: { owner: true } }),
       prisma.booking.findMany({ where: { organizationId, status: "CONFIRMED" } }),
-      prisma.cleaningTask.findMany({ where: { organizationId } }),
+      // Igual que en la pantalla de viviendas: solo lo que puede afectar a hoy.
+      prisma.cleaningTask.findMany({
+        where: {
+          organizationId,
+          OR: [{ date: { lte: todayEnd } }, { status: "IN_PROGRESS" }],
+        },
+      }),
       prisma.cleaningTask.findMany({
         where: { organizationId, type: "CLEANING", status: { in: ["PENDING", "IN_PROGRESS"] } },
         include: { property: true },

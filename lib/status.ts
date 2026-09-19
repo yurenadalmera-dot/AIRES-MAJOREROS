@@ -42,8 +42,15 @@ export function computePropertyStatus(
     if (!cleaningDoneToday) return PROPERTY_STATUS.CLEANING_NEEDED;
   }
 
+  // Un mantenimiento cuenta si ya ha empezado o si le ha llegado la fecha.
+  // Sin la comprobación de fecha, programar una revisión para dentro de medio
+  // año dejaba la vivienda marcada «en mantenimiento» desde hoy, y con ella
+  // los contadores de libres y ocupadas del panel del día.
   const openMaintenance = tasks.some(
-    (t) => t.type === "MAINTENANCE" && (t.status === "PENDING" || t.status === "IN_PROGRESS")
+    (t) =>
+      t.type === "MAINTENANCE" &&
+      (t.status === "IN_PROGRESS" ||
+        (t.status === "PENDING" && startOfDay(t.date) <= today))
   );
   if (openMaintenance) return PROPERTY_STATUS.MAINTENANCE;
 

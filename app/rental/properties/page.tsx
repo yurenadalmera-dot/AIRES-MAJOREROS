@@ -21,7 +21,15 @@ export default async function PropertiesPage() {
         checkOut: { gte: startOfDay(today) },
       },
     }),
-    prisma.cleaningTask.findMany({ where: { organizationId } }),
+    // Solo las que pueden afectar al estado de hoy: las de hoy o anteriores,
+    // más las que estén en curso. Antes traía todas las de la base, que crecen
+    // sin parar y además metían mantenimientos futuros en el cálculo.
+    prisma.cleaningTask.findMany({
+      where: {
+        organizationId,
+        OR: [{ date: { lte: endOfDay(today) } }, { status: "IN_PROGRESS" }],
+      },
+    }),
   ]);
 
   return (
