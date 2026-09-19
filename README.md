@@ -97,26 +97,42 @@ son tres: `DATABASE_URL`, `AUTH_SECRET` y `ADMIN_PASSWORD` (ver `.env.example` p
 le restablece la contraseña, si ya existe— en **cada** despliegue, así que cambiarla es cambiar la
 variable y relanzar el build. No está escrita en ningún sitio del repositorio a propósito.
 
-### Aplicar el esquema
+### Cómo se prepara la base de datos
 
-**El build no toca la base de datos**, y no puede: corre en un contenedor aparte del servidor de
-hosting, y esta base solo acepta conexiones desde el propio servidor. Un `prisma db push` desde el
-build falla con `P1000: Authentication failed` aunque la contraseña sea correcta — el rechazo es
-por origen, no por credenciales, y el mensaje despista.
+Lo normal sería aplicar el esquema en el despliegue. Aquí no se puede, por una restricción que
+conviene tener clara antes de tocar nada:
 
-El esquema y la siembra se aplican **desde el servidor**, donde la conexión sí es local:
+> **La base solo acepta conexiones desde el propio servidor de hosting.** No hay ninguna IP remota
+> dada de alta (hPanel → Bases de datos → Acceso remoto), así que ni el build —que corre en un
+> contenedor aparte— ni ninguna máquina de fuera llegan a ella. Un `prisma db push` desde el build
+> falla con `P1000: Authentication failed` **aunque la contraseña sea correcta**: lo que se
+> rechaza es el origen, no las credenciales, y el mensaje despista mucho.
 
+El único proceso con acceso es la propia aplicación. Así que es ella quien prepara la base, al
+arrancar (`instrumentation.ts`, que Next.js ejecuta una vez por proceso antes de atender
+peticiones):
+
+1. Si no existe la tabla `User`, crea el esquema entero con las sentencias de
+   `lib/esquema-inicial.ts` y siembra los datos de ejemplo.
+2. Si ya existe, no toca el esquema ni siembra; solo repasa la cuenta de administración.
+
+Es idempotente y no destruye nada. Passenger arranca varios procesos a la vez, así que la creación
+va dentro de un `GET_LOCK` de MySQL: uno crea las tablas y los demás se lo encuentran hecho. Si
+algo falla, **la aplicación arranca igual** y el error queda en los logs de Node.js — un sitio que
+responde «no hay base de datos» se diagnostica; uno que no arranca, no.
+
+`DB_AUTO_SETUP=0` desactiva todo esto.
+
+**Cuando cambie `prisma/schema.prisma`** hay que regenerar `lib/esquema-inicial.ts`:
+
+```bash
+npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script
 ```
-cd ~/domains/airesmajoreros.pro/public_html && npm run db:setup
-```
 
-En hPanel eso se lanza como **tarea programada** (Avanzado → Cron jobs), que es la única forma de
-ejecutar un comando en el servidor sin SSH. Hace falta después de cada cambio de esquema; mientras
-el esquema no cambie, no hace falta tocarlo en cada despliegue.
-
-`db:setup` es `prisma db push` seguido de la siembra. El `db push` va sin `--accept-data-loss` a
-propósito: si un cambio de esquema fuera a destruir datos, falla en lugar de borrarlos en
-silencio. La siembra no hace nada si la base ya tiene datos (ver más abajo).
+Eso da el SQL nuevo (sin conectar a ninguna base). Ojo: ese fichero solo se aplica sobre una base
+**vacía**. Migrar una base que ya tiene datos es otra cosa, y hoy pasa por ejecutar el SQL a mano
+desde phpMyAdmin (hPanel → Bases de datos → phpMyAdmin), que es el otro sitio desde el que se
+llega a la base.
 
 > ⚠️ **No definir `NODE_ENV` ahí.** Con `NODE_ENV=production`, el `npm install` del build omite
 > las `devDependencies`; sin `typescript` instalado, Next.js deja de leer los `paths` de
@@ -130,14 +146,14 @@ silencio. La siembra no hace nada si la base ya tiene datos (ver más abajo).
 
 ### Seguridad de la base de datos
 
-MySQL de Hostinger **no acepta conexiones desde fuera del hosting** salvo que se dé de alta
-explícitamente una IP remota (hPanel → Bases de datos → Acceso remoto). No hay ninguna dada de
-alta, así que la única vía de entrada a los datos es la propia aplicación, y la única forma de
-autenticarse en ella es la tabla `User` (contraseñas con `bcrypt`, sesión en cookie `httpOnly`
-firmada).
+La restricción de arriba es, vista del derecho, la mejor propiedad de seguridad que tiene el
+montaje: **la base no está expuesta a internet**. La única vía de entrada a los datos es la propia
+aplicación, y la única forma de autenticarse en ella es la tabla `User` (contraseñas con `bcrypt`,
+sesión en cookie `httpOnly` firmada).
 
-Eso es también lo que obliga a aplicar el esquema desde el build: no es una comodidad, es que no
-hay otro sitio desde donde alcanzar el puerto.
+Dar de alta un acceso remoto con `%` haría que el build pudiera aplicar el esquema, sí, pero a
+cambio de dejar la base accesible desde cualquier host con solo la contraseña. No se ha hecho, y
+no conviene hacerlo.
 
 ## Puesta en marcha
 
