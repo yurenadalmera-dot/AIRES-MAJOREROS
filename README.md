@@ -136,6 +136,27 @@ responde «no hay base de datos» se diagnostica; uno que no arranca, no.
 
 `DB_AUTO_SETUP=0` desactiva todo esto.
 
+### Comprobar que el sitio funciona de verdad
+
+Poniendo `SELFTEST=1` (y `SELFTEST_BASE=https://airesmajoreros.pro`) en las variables de entorno,
+la aplicación se prueba a sí misma unos segundos después de arrancar y deja el resultado en los
+logs de Node.js:
+
+```
+🧪 AUTOPRUEBA · salud=200 ok=true usuarios=5 login=200 login_incorrecto=401
+   /rental=200 /rental/calendar=200 … sin_sesion=307
+🧪 AUTOPRUEBA: TODO CORRECTO
+```
+
+Comprueba el estado de la base, que la cuenta de administración entra, que una contraseña
+equivocada **no** entra, que las ocho páginas cargan con sesión y que sin sesión se redirige al
+login. No modifica nada.
+
+Existe porque desde fuera no siempre se alcanza el dominio (proxys, redes cerradas), y entonces no
+hay manera de saber si el login funciona salvo pedírselo a alguien. Ojo: bajo Passenger la
+aplicación **no** escucha en `127.0.0.1:3000`, así que `SELFTEST_BASE` tiene que ser la URL
+pública. Se deja apagada en el día a día y se enciende para verificar un despliegue.
+
 **Cuando cambie `prisma/schema.prisma`** hay que regenerar `lib/esquema-inicial.ts`:
 
 ```bash
