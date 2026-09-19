@@ -7,10 +7,13 @@ export const dynamic = "force-dynamic";
  * Comprobación de estado de la conexión a la base de datos.
  *
  * Sirve para diagnosticar un despliegue sin tener que leer los logs del
- * servidor: responde si la aplicación llega a PostgreSQL y, cuando no,
+ * servidor: responde si la aplicación llega a la base de datos y, cuando no,
  * con qué error exacto falla. Nunca devuelve credenciales — de la cadena
  * de conexión solo se extraen el host y el usuario, que es lo que hace
  * falta para distinguir un fallo de red de uno de autenticación.
+ *
+ * La cuenta se hace con el cliente de Prisma y no con SQL en crudo, para que
+ * la comprobación no dependa del dialecto del motor.
  */
 export async function GET() {
   const started = Date.now();
@@ -28,14 +31,12 @@ export async function GET() {
   }
 
   try {
-    const [{ count }] = await prisma.$queryRaw<
-      { count: bigint }[]
-    >`SELECT COUNT(*)::bigint AS count FROM "User"`;
+    const usuarios = await prisma.user.count();
 
     return NextResponse.json({
       ok: true,
       target,
-      usuarios: Number(count),
+      usuarios,
       authSecretPresente: Boolean(process.env.AUTH_SECRET),
       ms: Date.now() - started,
     });
