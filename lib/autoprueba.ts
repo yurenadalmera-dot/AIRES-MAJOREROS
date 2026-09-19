@@ -52,6 +52,19 @@ export async function autoprueba() {
     linea.push(`login=${entrada.status}`);
     if (entrada.status !== 200 || !cookie) fallos.push("el login del administrador no entra");
 
+    // 3 bis · Las cuentas de demostración NO pueden entrar.
+    // Llevan una contraseña conocida y publicada; si alguna entra, cualquiera
+    // que llegue a la web tiene la aplicación entera.
+    for (const cuenta of ["admin@example.com", "emma@example.com"]) {
+      const r = await fetch(`${BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cuenta, password: "demo1234" }),
+      });
+      linea.push(`demo(${cuenta.split("@")[0]})=${r.status}`);
+      if (r.status === 200) fallos.push(`¡${cuenta} entra con la contraseña de demostración!`);
+    }
+
     // 3 · Una contraseña equivocada debe ser rechazada
     const malo = await fetch(`${BASE}/api/auth/login`, {
       method: "POST",
