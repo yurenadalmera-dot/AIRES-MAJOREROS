@@ -34,9 +34,10 @@ Lo que comprueban:
   la facturabilidad ni adjudicarse el trabajo de otra.
 - Un usuario autenticado **sin perfil no ve absolutamente nada**.
 - Nadie, gestora incluida, puede escribir en `limpiezas_replicadas`.
-- El motor de tarifas: 60 € con 2 huéspedes, 80 € con 4, 40 € el repaso, la
-  lista del cliente gana a la general, el precio cerrado gana a todo e ignora
-  los huéspedes, y **sin tarifa vigente falla en vez de devolver 0 €**.
+- El motor de tarifas: 60 € con 2 huéspedes, 80 € con 4, 40 € el repaso; una
+  tarifa plana no se mueve aunque lleguen 8 huéspedes; la lista del cliente
+  gana a la general; el precio cerrado gana a todo e ignora los huéspedes; y
+  **sin tarifa vigente falla en vez de devolver 0 €**.
 - `app_ui`: versiona al desplegar, revierte en caliente, y un update que no
   cambia el HTML no ensucia el histórico.
 
@@ -51,34 +52,33 @@ Claude Code que corre en el VPS.
 Lo que sí puede hacer con lo que hay aquí: aplicar los ficheros en orden,
 lanzar los tests, y si alguno falla, parar.
 
+## Resueltas el 19/09/2026
+
+### Academia: 600 € fijos
+
+Emma cobra **600 € desde el mes anterior**. Los 400 y 500 € del briefing son
+histórico que se quedó en los Excel, y no se van a rehacer liquidaciones
+pasadas: la operativa arranca ahora.
+
+Cargado como un único tramo que cubre cualquier importe, así que la magnitud
+sobre la que escalaba deja de importar. Se ha mantenido el tipo
+`fijo_escalonado` en lugar de inventar uno nuevo: si algún día vuelve a
+escalonarse, basta con añadir tramos a la misma regla.
+
+### Inversiones Brito: 50 € y 30 €, precio plano
+
+Se queda en **50 € la salida y 30 € el repaso, sin suplemento por huésped**.
+Técnicamente es `importe_huesped_extra = 0`, así que el motor multiplica los
+huéspedes de más por cero y siempre sale lo mismo.
+
+Si más adelante resulta que Brito sí paga suplemento, se corrige rellenando
+`huespedes_incluidos` e `importe_huesped_extra` en su lista: el motor ya lo
+soporta y no hay que tocar el esquema. El test `998_test_tarifas.sql` cubre
+los dos comportamientos, plano y con suplemento.
+
 ## Preguntas abiertas
 
-Ordenadas por lo que bloquean. Las tres primeras impiden facturar o liquidar
-correctamente.
-
-### 1 · Academia: ¿sobre qué escalan los 400 → 500 → 600 €? (bloquea liquidar)
-
-El briefing da los importes pero no la magnitud. ¿Ventas del periodo? ¿Número
-de reservas? ¿Tramos del año?
-
-La regla está creada **sin tramos**, así que hoy no puede liquidar. En
-`db/mirador/003_datos_referencia.sql` está el `insert` de los tramos comentado
-y listo para descomentar en cuanto se confirmen los límites.
-
-**Para Emma.**
-
-### 2 · Inversiones Brito: ¿cuántos huéspedes cubre la base de 50 €? (bloquea facturar)
-
-Constan la base (50 €) y el repaso (30 €), pero no los huéspedes incluidos ni
-el importe del huésped extra. Se ha asumido lo mismo que la tarifa oficial
-(2 incluidos, +10 €/huésped) y está marcado en la nota de la lista.
-
-Si la suposición es falsa, toda limpieza de Brito con más de 2 huéspedes se
-factura mal.
-
-**Para Emma.**
-
-### 3 · Villa Caliche y Villa Gregorio: ¿quién paga? (bloquea facturar)
+### 1 · Villa Caliche y Villa Gregorio: ¿quién paga? (bloquea facturar)
 
 Domingo Javier, 100 € cada una, marcadas como no facturables. Revisados los
 dos excel de movimientos de Brito y Academia, no aparece ninguna partida.
@@ -88,7 +88,7 @@ una factura por inercia. Se limpian, pero nadie las cobra.
 
 **Para Emma.** Ya venía del briefing sin resolver.
 
-### 4 · «Villa Monikka» y «Villa Mónica»: ¿son la misma?
+### 2 · «Villa Monikka» y «Villa Mónica»: ¿son la misma?
 
 El briefing las nombra en contextos distintos:
 
@@ -102,7 +102,7 @@ unifica; si se hubieran fusionado por error, separarlas después es peor.
 **Para Emma o Yurena.** Rápida de responder y conviene cerrarla antes de
 migrar.
 
-### 5 · Villa Mónica: margen sin verificar
+### 3 · Villa Mónica: margen sin verificar
 
 120 € fijos con 15 plazas. Faltan horas reales y personal para saber si el
 precio cubre el coste. No bloquea nada técnico, pero puede estar perdiendo
@@ -110,7 +110,7 @@ dinero en cada servicio.
 
 **Para Emma.**
 
-### 6 · Repaso: ¿lleva extra por huésped?
+### 4 · Repaso: ¿lleva extra por huésped?
 
 Se ha modelado como importe único (40 € oficial, 30 € Brito), sin extra. El
 briefing no dice lo contrario, pero tampoco lo confirma.
@@ -118,7 +118,7 @@ briefing no dice lo contrario, pero tampoco lo confirma.
 Si llevara extra, es un cambio de datos, no de esquema: la estructura ya lo
 soporta.
 
-### 7 · Marca: colores, logos y pies legales
+### 5 · Marca: colores, logos y pies legales
 
 `clientes/*.json` lleva colores neutros provisionales y los pies legales de
 facturas e informes marcados como `PENDIENTE`. Una factura sin los datos

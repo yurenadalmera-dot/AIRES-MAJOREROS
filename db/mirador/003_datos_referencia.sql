@@ -12,10 +12,14 @@
 --   · Grupo Chano   → 30 % sobre beneficio (ventas − gastos)
 --   · Academia      → importe fijo escalonado: 400 → 500 → 600 €
 --
--- Las dos primeras se cargan completas. La de Academia se crea SIN tramos,
--- porque el briefing da los importes pero no sobre qué magnitud escalan. Un
--- escalón inventado sale caro: se liquidaría de menos o de más a un
--- propietario real. Ver docs/fase-0.md.
+-- Sobre Academia: el briefing hablaba de 400 → 500 → 600 € escalonados, pero
+-- Yurena confirmó el 19/09/2026 que **hoy se cobran 600 € fijos** y que el
+-- escalonado pertenece al histórico que quedó en los Excel. Como la operativa
+-- arranca ahora y no se van a rehacer liquidaciones anteriores, se carga un
+-- único tramo de 600 € que cubre cualquier importe.
+--
+-- Se mantiene como `fijo_escalonado` con un solo tramo en lugar de inventar un
+-- tipo nuevo: si algún día vuelve a escalonarse, basta con añadir tramos.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -61,53 +65,50 @@ where g.nombre = 'Grupo Chano'
   );
 
 -- -----------------------------------------------------------------------------
--- Academia · fijo escalonado, sin tramos todavía
+-- Academia · 600 € fijos
+--
+-- Confirmado por Yurena el 19/09/2026: Emma cobra 600 € desde el mes anterior.
+-- Los 400 y 500 € del briefing son histórico que se quedó en los Excel, y no
+-- se van a rehacer liquidaciones pasadas.
 -- -----------------------------------------------------------------------------
 
 insert into public.reglas_liquidacion
   (grupo_liquidacion_id, tipo, base_escalon, vigente_desde, notas)
 select g.id, 'fijo_escalonado',
-       'PENDIENTE DE CONFIRMAR',
+       'importe único: no escala',
        date '2026-01-01',
-       'Importes conocidos: 400 → 500 → 600 €. Falta saber sobre qué magnitud escalan (¿ventas del periodo? ¿nº de reservas? ¿tramo temporal?). Los tramos se cargan cuando Emma lo confirme; hasta entonces esta regla NO puede liquidar.'
+       'Importe fijo de 600 €, confirmado el 19/09/2026. El 400 → 500 → 600 € del briefing es histórico anterior, que vivía en los Excel y no se migra. Si volviera a escalonarse, se añaden tramos a esta misma regla.'
 from public.grupos_liquidacion g
 where g.nombre = 'Academia'
   and not exists (
     select 1 from public.reglas_liquidacion r where r.grupo_liquidacion_id = g.id
   );
 
+-- Un único tramo que cubre cualquier importe: sea cual sea la magnitud, salen
+-- 600 €. `hasta_valor` nulo = sin límite superior.
+insert into public.reglas_liquidacion_tramos
+  (regla_id, desde_valor, hasta_valor, importe, orden)
+select r.id, 0, null, 600.00, 1
+from public.reglas_liquidacion r
+join public.grupos_liquidacion g on g.id = r.grupo_liquidacion_id
+where g.nombre = 'Academia'
+  and not exists (
+    select 1 from public.reglas_liquidacion_tramos t where t.regla_id = r.id
+  );
+
 do $$
+declare v_importe numeric;
 begin
-  if exists (
-    select 1
-    from public.reglas_liquidacion r
-    join public.grupos_liquidacion g on g.id = r.grupo_liquidacion_id
-    where g.nombre = 'Academia'
-      and not exists (
-        select 1 from public.reglas_liquidacion_tramos t where t.regla_id = r.id
-      )
-  ) then
-    raise notice
-      'Regla de Academia creada SIN tramos: no puede liquidar hasta que se confirme el criterio del escalón (400 → 500 → 600 €).';
+  select t.importe into v_importe
+  from public.reglas_liquidacion_tramos t
+  join public.reglas_liquidacion r on r.id = t.regla_id
+  join public.grupos_liquidacion g on g.id = r.grupo_liquidacion_id
+  where g.nombre = 'Academia';
+
+  if v_importe is null then
+    raise exception 'La regla de Academia se ha quedado sin tramo: no podría liquidar.';
   end if;
+
+  raise notice 'Academia: % € fijos por periodo.', v_importe;
 end;
 $$;
-
--- -----------------------------------------------------------------------------
--- Cuando se confirme el criterio, los tramos se cargan así (ejemplo con
--- ventas del periodo como magnitud). Dejar comentado hasta tener respuesta:
---
---   insert into public.reglas_liquidacion_tramos
---     (regla_id, desde_valor, hasta_valor, importe, orden)
---   select r.id, v.desde, v.hasta, v.importe, v.orden
---   from public.reglas_liquidacion r
---   join public.grupos_liquidacion g on g.id = r.grupo_liquidacion_id
---   cross join (values
---     (0,     5000,  400.00, 1),
---     (5000,  10000, 500.00, 2),
---     (10000, null,  600.00, 3)
---   ) as v(desde, hasta, importe, orden)
---   where g.nombre = 'Academia';
---
--- y actualizar `base_escalon` con la magnitud real.
--- -----------------------------------------------------------------------------

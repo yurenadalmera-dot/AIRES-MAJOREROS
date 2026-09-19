@@ -52,12 +52,15 @@ where l.nombre = 'Oficial 2026' and l.cliente_facturacion_id is null
   );
 
 -- -----------------------------------------------------------------------------
--- Lista de Inversiones Brito · 50 € base, repaso 30 €
+-- Lista de Inversiones Brito · 50 € la salida, 30 € el repaso
 --
 -- Solo se crea si el cliente ya existe (viene de la migración de Airtable).
--- El briefing da la base y el repaso, pero NO dice cuántos huéspedes cubre ni
--- cuánto cuesta el huésped extra. Se asume la misma estructura que la oficial
--- (2 incluidos, +10 €) y queda marcado como pendiente de confirmar.
+--
+-- Yurena confirmó el 19/09/2026: se deja en 50 € y 30 €, **sin extra por
+-- huésped**. Es decir, precio plano: 2 huéspedes o 6, la salida son 50 €.
+-- Si resultara que Brito sí paga suplemento por huésped, se corrige poniendo
+-- `huespedes_incluidos` e `importe_huesped_extra` en esta lista; el motor ya
+-- lo soporta y no hay que tocar el esquema.
 -- -----------------------------------------------------------------------------
 
 do $$
@@ -87,15 +90,17 @@ begin
       'Inversiones Brito 2026',
       v_cliente_id,
       date '2026-01-01',
-      'PENDIENTE (Emma): el briefing fija base 50 € y repaso 30 €, pero no dice huéspedes incluidos ni importe del huésped extra. Se han copiado los de la tarifa oficial (2 incluidos, +10 €).'
+      'Precio plano confirmado el 19/09/2026: 50 € la salida y 30 € el repaso, sin suplemento por huésped.'
     )
     returning id into v_lista_id;
   end if;
 
+  -- `importe_huesped_extra` a 0 es lo que hace el precio plano: el motor
+  -- multiplica los huéspedes de más por 0 y siempre salen 50 €.
   insert into public.listas_precio_lineas
     (lista_id, tipo_servicio, importe_base, huespedes_incluidos, importe_huesped_extra, notas)
-  select v_lista_id, 'salida', 50.00, 2, 10.00,
-         'Base confirmada. Huéspedes incluidos y extra SIN CONFIRMAR.'
+  select v_lista_id, 'salida', 50.00, 0, 0.00,
+         'Precio plano: 50 € con independencia del nº de huéspedes.'
   where not exists (
     select 1 from public.listas_precio_lineas
     where lista_id = v_lista_id and tipo_servicio = 'salida'
@@ -103,13 +108,13 @@ begin
 
   insert into public.listas_precio_lineas
     (lista_id, tipo_servicio, importe_base, huespedes_incluidos, importe_huesped_extra, notas)
-  select v_lista_id, 'repaso', 30.00, 0, 0.00, 'Confirmado en el briefing.'
+  select v_lista_id, 'repaso', 30.00, 0, 0.00, 'Precio plano.'
   where not exists (
     select 1 from public.listas_precio_lineas
     where lista_id = v_lista_id and tipo_servicio = 'repaso'
   );
 
-  raise notice 'Lista de Inversiones Brito lista. Revisar huéspedes incluidos y extra con Emma.';
+  raise notice 'Lista de Inversiones Brito cargada: 50 € salida / 30 € repaso, precio plano.';
 end;
 $$;
 

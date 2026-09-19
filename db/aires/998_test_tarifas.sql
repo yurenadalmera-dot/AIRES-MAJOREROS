@@ -21,19 +21,22 @@ begin;
 
 insert into public.clientes_facturacion (id, nombre) values
   ('c1000000-0000-0000-0000-000000000001', 'Cliente sin lista propia'),
-  ('c1000000-0000-0000-0000-000000000002', 'Inversiones Brito (prueba)');
+  ('c1000000-0000-0000-0000-000000000002', 'Cliente con suplemento por huésped'),
+  ('c1000000-0000-0000-0000-000000000004', 'Cliente con precio plano');
 
 insert into public.viviendas (id, nombre, cliente_facturacion_id) values
   ('da000000-0000-0000-0000-000000000001', 'Piso normal',
      'c1000000-0000-0000-0000-000000000001'),
-  ('da000000-0000-0000-0000-000000000002', 'Piso de Brito',
+  ('da000000-0000-0000-0000-000000000002', 'Piso con suplemento',
      'c1000000-0000-0000-0000-000000000002'),
   ('da000000-0000-0000-0000-000000000003', 'Villa con precio cerrado',
-     'c1000000-0000-0000-0000-000000000001');
+     'c1000000-0000-0000-0000-000000000001'),
+  ('da000000-0000-0000-0000-000000000004', 'Piso de tarifa plana',
+     'c1000000-0000-0000-0000-000000000004');
 
--- Lista propia de Brito: base 50, repaso 30.
+-- Lista con suplemento por huésped: base 50 (2 incluidos), +10 por extra.
 insert into public.listas_precio (id, nombre, cliente_facturacion_id, vigente_desde)
-values ('11000000-0000-0000-0000-000000000001', 'Brito prueba',
+values ('11000000-0000-0000-0000-000000000001', 'Con suplemento',
         'c1000000-0000-0000-0000-000000000002', date '2026-01-01');
 
 insert into public.listas_precio_lineas
@@ -41,6 +44,18 @@ insert into public.listas_precio_lineas
 values
   ('11000000-0000-0000-0000-000000000001', 'salida', 50.00, 2, 10.00),
   ('11000000-0000-0000-0000-000000000001', 'repaso', 30.00, 0, 0.00);
+
+-- Lista de precio plano, que es como quedó Inversiones Brito: el importe no
+-- depende del nº de huéspedes porque el extra es 0.
+insert into public.listas_precio (id, nombre, cliente_facturacion_id, vigente_desde)
+values ('11000000-0000-0000-0000-000000000002', 'Plana tipo Brito',
+        'c1000000-0000-0000-0000-000000000004', date '2026-01-01');
+
+insert into public.listas_precio_lineas
+  (lista_id, tipo_servicio, importe_base, huespedes_incluidos, importe_huesped_extra)
+values
+  ('11000000-0000-0000-0000-000000000002', 'salida', 50.00, 0, 0.00),
+  ('11000000-0000-0000-0000-000000000002', 'repaso', 30.00, 0, 0.00);
 
 -- Precio cerrado para la villa: 120 €, pase lo que pase con los huéspedes.
 insert into public.precios_cerrados
@@ -93,22 +108,50 @@ begin
   select * into r from app.calcular_precio_limpieza(
     'da000000-0000-0000-0000-000000000002', date '2026-03-15', 2, 'salida');
   if r.importe <> 50.00 then
-    raise exception 'Brito, 2 huéspedes: % €, esperaba 50 € (su lista, no la oficial)', r.importe;
+    raise exception
+      'Con suplemento, 2 huéspedes: % €, esperaba 50 € (su lista, no la oficial)', r.importe;
   end if;
 
   select * into r from app.calcular_precio_limpieza(
     'da000000-0000-0000-0000-000000000002', date '2026-03-15', 4, 'salida');
   if r.importe <> 70.00 then
-    raise exception 'Brito, 4 huéspedes: % €, esperaba 70 €', r.importe;
+    raise exception 'Con suplemento, 4 huéspedes: % €, esperaba 70 €', r.importe;
   end if;
 
   select * into r from app.calcular_precio_limpieza(
     'da000000-0000-0000-0000-000000000002', date '2026-03-15', 3, 'repaso');
   if r.importe <> 30.00 then
-    raise exception 'Brito, repaso: % €, esperaba 30 €', r.importe;
+    raise exception 'Con suplemento, repaso: % €, esperaba 30 €', r.importe;
   end if;
 
   raise notice 'OK · la lista del cliente tiene prioridad sobre la de por defecto';
+
+  -- --- Precio plano: el nº de huéspedes no mueve el importe ------------------
+  --
+  -- Es como quedó configurado Inversiones Brito el 19/09/2026. Si algún día
+  -- pasa a cobrar suplemento, este caso empezará a fallar y habrá que
+  -- actualizarlo junto con la lista.
+
+  select * into r from app.calcular_precio_limpieza(
+    'da000000-0000-0000-0000-000000000004', date '2026-03-15', 2, 'salida');
+  if r.importe <> 50.00 then
+    raise exception 'Tarifa plana, 2 huéspedes: % €, esperaba 50 €', r.importe;
+  end if;
+
+  select * into r from app.calcular_precio_limpieza(
+    'da000000-0000-0000-0000-000000000004', date '2026-03-15', 8, 'salida');
+  if r.importe <> 50.00 then
+    raise exception
+      'Tarifa plana, 8 huéspedes: % €, esperaba 50 € (plana = sin suplemento)', r.importe;
+  end if;
+
+  select * into r from app.calcular_precio_limpieza(
+    'da000000-0000-0000-0000-000000000004', date '2026-03-15', 8, 'repaso');
+  if r.importe <> 30.00 then
+    raise exception 'Tarifa plana, repaso con 8 huéspedes: % €, esperaba 30 €', r.importe;
+  end if;
+
+  raise notice 'OK · tarifa plana: 50 € la salida y 30 € el repaso, vengan los huéspedes que vengan';
 
   -- --- Precio cerrado: gana sobre cualquier lista y no mira huéspedes -------
 
