@@ -76,14 +76,10 @@ La aplicación está publicada en **https://airesmajoreros.pro**.
 
 ### Despliegue
 
-Hostinger construye desde el repositorio de GitHub, rama
-`claude/rental-cleaning-management-app-hrv9wg`. El progreso y los logs se ven en hPanel → el sitio
-→ Node.js → Compilaciones.
-
-> ⚠️ **El auto-despliegue por push no está configurado.** La cuenta tiene la instalación de GitHub
-> conectada, pero el sitio no tiene guardada ninguna regla de auto-despliegue, así que un push por
-> sí solo no construye nada: hay que lanzar la compilación desde hPanel. Si se quiere el
-> comportamiento automático, se configura en hPanel → el sitio → Avanzado → Git.
+Hostinger está conectado al repositorio de GitHub: **cada push a
+`claude/rental-cleaning-management-app-hrv9wg` lanza un build y un redespliegue automáticos**. El
+progreso y los logs se ven en hPanel → el sitio → Node.js → Compilaciones, y la conexión en
+hPanel → el sitio → Avanzado → Git.
 
 > ⚠️ **Un build que falla deja el sitio con la página por defecto de Hostinger.** El despliegue
 > sustituye el contenido antes de saber si la compilación va a terminar, así que un fallo no deja
