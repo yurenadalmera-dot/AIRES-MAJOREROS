@@ -13,6 +13,16 @@
 
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  // Con SELFTEST=1, la aplicación se prueba a sí misma unos segundos después
+  // de arrancar (cuando ya escucha) y deja el resultado en los logs. Ver
+  // `lib/autoprueba.ts`.
+  if (process.env.SELFTEST === "1") {
+    setTimeout(() => {
+      import("./lib/autoprueba").then(({ autoprueba }) => autoprueba());
+    }, 5000).unref?.();
+  }
+
   if (process.env.DB_AUTO_SETUP === "0") return;
 
   try {
