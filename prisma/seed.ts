@@ -10,6 +10,28 @@ const prisma = new PrismaClient();
 const DEMO_PASSWORD = "demo1234";
 
 async function main() {
+  // Este seed BORRA todo antes de sembrar, así que no puede correr a ciegas:
+  // se ejecuta en cada despliegue y, sin esta guarda, se llevaría por delante
+  // los datos reales que haya introducido la clienta.
+  //
+  // Con datos existentes no hace nada y sale bien, para que el despliegue no
+  // falle. Para reconstruir a propósito: `npm run db:seed -- --force`, o
+  // SEED_FORCE=1 en el entorno.
+  const forzar = process.argv.includes("--force") || process.env.SEED_FORCE === "1";
+  const yaHayDatos = (await prisma.organization.count()) > 0;
+
+  if (yaHayDatos && !forzar) {
+    console.log(
+      "ℹ️  La base de datos ya tiene datos: no se siembra nada.\n" +
+        "   Para reconstruirla desde cero (BORRA TODO): npm run db:seed -- --force"
+    );
+    return;
+  }
+
+  if (yaHayDatos && forzar) {
+    console.log("⚠️  --force: se borran los datos existentes antes de sembrar.");
+  }
+
   console.log("🌱 Sembrando datos de demostración (ficticios, sin datos bancarios reales)...");
 
   // Limpieza completa (idempotente para poder relanzar el seed)

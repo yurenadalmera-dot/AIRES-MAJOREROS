@@ -1,31 +1,32 @@
 // Schema de datos para la plataforma de gestión de alquileres vacacionales
 // y facturación de limpiezas.
 //
-// Nota sobre "enums": el modelo se diseñó originalmente para el motor de
-// desarrollo/demo SQLite, que no soporta enums nativos en Prisma. Los campos
-// que podrían ser enum se modelan como String con los valores válidos
-// documentados y validados en la capa de aplicación (ver lib/constants.ts).
-// Se mantiene así también en PostgreSQL (producción) para no reescribir el
-// modelo: el "datasource" es el único cambio real entre entornos.
+// Nota sobre "enums": los campos que podrían ser enum se modelan como String,
+// con los valores válidos documentados y validados en la capa de aplicación
+// (ver lib/constants.ts). Eso mantiene el modelo portable entre motores: el
+// "datasource" es el único cambio real entre entornos.
 //
-// Producción: PostgreSQL en Supabase. DATABASE_URL usa el connection pooler
-// (Supavisor, puerto 6543, pgbouncer=true) para las consultas de la app;
-// DIRECT_URL usa la conexión directa/sesión (puerto 5432) para migraciones
-// (`prisma db push` / `prisma migrate`), que no funcionan a través del
-// transaction pooler.
+// Producción: MySQL del propio hosting de Hostinger (srv2067.hstgr.io:3306),
+// que viene incluido en el plan y vive en la misma máquina que la aplicación.
+// Se eligió frente a una base de datos externa por tres razones: no añade
+// coste, da 3 GB (frente a los 500 MB del plan gratuito de Supabase) y evita
+// la capa de connection pooler, que fue la fuente del fallo de conexión más
+// difícil de diagnosticar de este proyecto.
+//
+// El esquema se aplica durante el despliegue (`prisma db push` dentro del
+// script de build), porque el build corre en Hostinger y es lo único que tiene
+// acceso de red a esa base de datos.
 
 generator client {
   provider = "prisma-client-js"
   // "native" para desarrollo local; el target de RHEL es el que usa el runtime
-  // de Node en Vercel/Hostinger, necesario para que el motor de Prisma
-  // funcione en esos entornos.
+  // de Node en Hostinger, necesario para que el motor de Prisma funcione allí.
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 // ---------------------------------------------------------------------------
