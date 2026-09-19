@@ -1,3 +1,5 @@
+import { ErrorDeNegocio } from "@/lib/errores";
+
 // Quién puede hacer qué.
 //
 // Hasta ahora `role` solo se usaba para pintar una etiqueta en la barra
@@ -42,7 +44,7 @@ export function puede(rol: string, permiso: Permiso): boolean {
 }
 
 /** Mensaje de error único, para que la interfaz lo muestre igual en todas partes. */
-export class SinPermiso extends Error {
+export class SinPermiso extends ErrorDeNegocio {
   constructor(permiso: Permiso) {
     super(`No tienes permiso para esta acción (${permiso}).`);
     this.name = "SinPermiso";

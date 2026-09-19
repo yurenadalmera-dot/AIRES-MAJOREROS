@@ -40,7 +40,7 @@ export default function BookingForm({
   initial?: Partial<BookingFormValues>;
   defaultPlatformPct: number;
   defaultBankPct: number;
-  action: (formData: FormData) => Promise<void | string>;
+  action: (formData: FormData) => Promise<void | { error: string } | unknown>;
   redirectTo: string;
 }) {
   const router = useRouter();
@@ -65,7 +65,14 @@ export default function BookingForm({
     setError(null);
     startTransition(async () => {
       try {
-        await action(formData);
+        const resultado = await action(formData);
+        // La acción devuelve el motivo en vez de lanzarlo: en producción Next
+        // borra el mensaje de los errores lanzados y deja un texto genérico
+        // en inglés, que no le dice nada a quien está usando la aplicación.
+        if (resultado && typeof resultado === "object" && "error" in resultado) {
+          setError(String((resultado as { error: string }).error));
+          return;
+        }
         router.push(redirectTo);
         router.refresh();
       } catch (e) {

@@ -48,9 +48,14 @@ function LoginForm() {
         </div>
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div>
-            <label className="label">Correo electrónico</label>
+            <label className="label" htmlFor="email">
+              Correo electrónico
+            </label>
             <input
+              id="email"
+              name="email"
               type="email"
+              autoComplete="email"
               required
               className="input"
               value={email}
@@ -59,14 +64,20 @@ function LoginForm() {
             />
           </div>
           <div>
-            <label className="label">Contraseña</label>
+            <label className="label" htmlFor="password">
+              Contraseña
+            </label>
+            {/* Sin `placeholder` con una contraseña: la de demostración estaba
+                aquí escrita, a la vista de cualquiera que abriera la web. */}
             <input
+              id="password"
+              name="password"
               type="password"
+              autoComplete="current-password"
               required
               className="input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="demo1234"
             />
           </div>
           {error && (

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 
 /**
@@ -22,18 +23,22 @@ function revalidateTaskViews() {
 }
 
 export async function assignEmployeeToTask(taskId: string, employeeId: string | null) {
-  const organizationId = await exigir("operativa.limpiezas");
-  await prisma.cleaningTask.updateMany({
-    where: { id: taskId, organizationId },
-    data: { employeeId: employeeId || null },
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.limpiezas");
+    await prisma.cleaningTask.updateMany({
+      where: { id: taskId, organizationId },
+      data: { employeeId: employeeId || null },
+    });
+    revalidateTaskViews();
   });
-  revalidateTaskViews();
 }
 
 export async function updateTaskStatus(taskId: string, status: string) {
-  const organizationId = await exigir("operativa.estado_tarea");
-  await prisma.cleaningTask.updateMany({ where: { id: taskId, organizationId }, data: { status } });
-  revalidateTaskViews();
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.estado_tarea");
+    await prisma.cleaningTask.updateMany({ where: { id: taskId, organizationId }, data: { status } });
+    revalidateTaskViews();
+  });
 }
 
 const maintenanceSchema = z.object({
@@ -44,32 +49,36 @@ const maintenanceSchema = z.object({
 });
 
 export async function createMaintenanceTask(formData: FormData) {
-  const organizationId = await exigir("operativa.limpiezas");
-  const raw = Object.fromEntries(formData.entries());
-  const data = maintenanceSchema.parse(raw);
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.limpiezas");
+    const raw = Object.fromEntries(formData.entries());
+    const data = maintenanceSchema.parse(raw);
 
-  await prisma.cleaningTask.create({
-    data: {
-      organizationId,
-      propertyId: data.propertyId,
-      type: "MAINTENANCE",
-      date: new Date(data.date),
-      status: "PENDING",
-      employeeId: data.employeeId || null,
-      billable: false,
-      price: 0,
-      notes: data.notes,
-    },
+    await prisma.cleaningTask.create({
+      data: {
+        organizationId,
+        propertyId: data.propertyId,
+        type: "MAINTENANCE",
+        date: new Date(data.date),
+        status: "PENDING",
+        employeeId: data.employeeId || null,
+        billable: false,
+        price: 0,
+        notes: data.notes,
+      },
+    });
+
+    revalidateTaskViews();
   });
-
-  revalidateTaskViews();
 }
 
 export async function deleteTask(taskId: string) {
-  const organizationId = await exigir("operativa.limpiezas");
-  const task = await prisma.cleaningTask.findFirst({ where: { id: taskId, organizationId } });
-  if (!task) throw new Error("Tarea no encontrada");
-  if (task.invoiceId) throw new Error("No se puede eliminar una tarea ya facturada");
-  await prisma.cleaningTask.deleteMany({ where: { id: taskId, organizationId } });
-  revalidateTaskViews();
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.limpiezas");
+    const task = await prisma.cleaningTask.findFirst({ where: { id: taskId, organizationId } });
+    if (!task) throw new ErrorDeNegocio("Tarea no encontrada");
+    if (task.invoiceId) throw new ErrorDeNegocio("No se puede eliminar una tarea ya facturada");
+    await prisma.cleaningTask.deleteMany({ where: { id: taskId, organizationId } });
+    revalidateTaskViews();
+  });
 }

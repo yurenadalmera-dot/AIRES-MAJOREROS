@@ -15,6 +15,10 @@ export default function SyncLodgifyButton() {
     startTransition(async () => {
       try {
         const result = await syncLodgifyReservations();
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
         setSummary(result);
         router.refresh();
       } catch (e) {

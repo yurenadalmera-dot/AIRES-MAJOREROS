@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader, EmptyState } from "@/components/ui";
 import TaskRow from "@/components/TaskRow";
 import { createMaintenanceTask } from "@/lib/actions/tasks";
+import FormularioConAviso from "@/components/FormularioConAviso";
 
 /**
  * Tablero de limpieza y mantenimiento. Es una vista compartida por los dos
@@ -43,7 +44,7 @@ export default async function TasksBoardView({
         <summary className="cursor-pointer text-sm font-medium text-slate-700">
           + Nueva tarea de mantenimiento
         </summary>
-        <form action={createMaintenanceTask} className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <FormularioConAviso action={createMaintenanceTask} className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
           <div>
             <label className="label">Vivienda</label>
             <select name="propertyId" required className="input">
@@ -80,7 +81,7 @@ export default async function TasksBoardView({
               Crear tarea
             </button>
           </div>
-        </form>
+        </FormularioConAviso>
       </details>
 
       {/* El formulario de filtro es un GET sin action explícita: se envía a la

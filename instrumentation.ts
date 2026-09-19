@@ -36,8 +36,9 @@ export async function register() {
       // El esquema ya estaba: no se siembra (la siembra ya se protege sola),
       // pero sí se revisa la cuenta de administración, que es lo que permite
       // recuperar el acceso cambiando ADMIN_PASSWORD y reiniciando.
-      const { asegurarAdministrador } = await import("./lib/seed-datos");
+      const { asegurarAdministrador, retirarUsuariosDemo } = await import("./lib/seed-datos");
       await asegurarAdministrador();
+      await retirarUsuariosDemo();
     }
   } catch (error) {
     console.error(

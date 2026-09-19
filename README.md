@@ -227,7 +227,15 @@ que haya escrito la clienta.
 
 ### Usuarios de demostración
 
-Contraseña para todos: `demo1234`
+> ⚠️ **Desactivados salvo que se pidan.** Llevan una contraseña conocida y publicada, así que en
+> una instalación real son una puerta abierta: cualquiera que llegue a la web entra como
+> administración. La aplicación **los desactiva al arrancar** si detecta cuentas `@example.com`, y
+> el seed no los crea. Para una demostración: `USUARIOS_DEMO=1`.
+>
+> Estuvieron activos en producción y se cerraron el 19/09/2026. Si el histórico de esa instalación
+> importa, conviene dar por comprometido lo que hubiera antes de esa fecha.
+
+Con `USUARIOS_DEMO=1`, contraseña para todos `demo1234`:
 
 | Email | Rol |
 |---|---|

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui";
 import { updatePartnerSplit, updatePartnerName } from "@/lib/actions/invoices";
 import { updateBusinessInfo } from "@/lib/actions/settings";
 import { BUSINESS_TYPES } from "@/lib/constants";
+import FormularioConAviso from "@/components/FormularioConAviso";
 
 export default async function CleaningSettingsPage() {
   const { organizationId } = await requireBusinessContext();
@@ -31,7 +32,7 @@ export default async function CleaningSettingsPage() {
         <p className="text-xs text-slate-500 mb-4">
           Por defecto 50/50. Se aplica a las próximas facturas que se generen (el histórico no cambia).
         </p>
-        <form action={updatePartnerSplit} className="space-y-3">
+        <FormularioConAviso action={updatePartnerSplit} className="space-y-3">
           <input type="hidden" name="partnerAId" value={partnerA?.id} />
           <input type="hidden" name="partnerBId" value={partnerB?.id} />
           <div className="flex items-center gap-3">
@@ -50,7 +51,7 @@ export default async function CleaningSettingsPage() {
           <button type="submit" className="btn-primary">
             Guardar reparto
           </button>
-        </form>
+        </FormularioConAviso>
       </div>
 
       <div className="card p-5">
@@ -62,7 +63,7 @@ export default async function CleaningSettingsPage() {
               await updatePartnerName(p.id, formData);
             }
             return (
-              <form key={p.id} action={renameAction} className="space-y-2 border border-slate-100 rounded-lg p-3">
+              <FormularioConAviso key={p.id} action={renameAction} className="space-y-2 border border-slate-100 rounded-lg p-3">
                 <div>
                   <label className="label">Nombre</label>
                   <input name="name" defaultValue={p.name} required className="input" />
@@ -74,7 +75,7 @@ export default async function CleaningSettingsPage() {
                 <button type="submit" className="btn-secondary text-xs">
                   Guardar
                 </button>
-              </form>
+              </FormularioConAviso>
             );
           })}
         </div>
@@ -83,7 +84,7 @@ export default async function CleaningSettingsPage() {
       {business && (
         <div className="card p-5">
           <h2 className="font-medium text-slate-800 mb-3">Datos de facturación de Aires Majoreros</h2>
-          <form action={businessAction} className="space-y-3">
+          <FormularioConAviso action={businessAction} className="space-y-3">
             <div>
               <label className="label">Nombre visible</label>
               <input name="name" defaultValue={business.name} required className="input" />
@@ -109,7 +110,7 @@ export default async function CleaningSettingsPage() {
             <button type="submit" className="btn-primary">
               Guardar datos
             </button>
-          </form>
+          </FormularioConAviso>
         </div>
       )}
     </div>

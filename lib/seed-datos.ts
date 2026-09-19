@@ -16,6 +16,40 @@ const prisma = new PrismaClient();
 
 const DEMO_PASSWORD = "demo1234";
 
+/** Dominio reservado para ejemplos (RFC 2606): nadie real lo usa. */
+const DOMINIO_DEMO = "@example.com";
+
+function usuariosDemoActivados() {
+  return process.env.USUARIOS_DEMO === "1";
+}
+
+/**
+ * Desactiva las cuentas de demostración salvo que se pidan expresamente.
+ *
+ * Estas cuentas llevan una contraseña conocida y publicada (está en el README
+ * y salía sugerida en la propia pantalla de acceso), así que en una
+ * instalación real son una puerta abierta: cualquiera que llegue a la web
+ * entra como administración.
+ *
+ * Se desactivan en lugar de borrarse, que es reversible: basta con volver a
+ * activarlas desde la base si hicieran falta para una demostración.
+ */
+export async function retirarUsuariosDemo() {
+  if (usuariosDemoActivados()) return;
+
+  const { count } = await prisma.user.updateMany({
+    where: { email: { endsWith: DOMINIO_DEMO }, active: true },
+    data: { active: false },
+  });
+
+  if (count > 0) {
+    console.log(
+      `🔒 Desactivadas ${count} cuenta(s) de demostración (${DOMINIO_DEMO}). ` +
+        "Llevaban una contraseña conocida. Para recuperarlas: USUARIOS_DEMO=1."
+    );
+  }
+}
+
 /**
  * Siembra los datos de demostración.
  *
@@ -89,7 +123,14 @@ export async function sembrar({ forzar = false }: { forzar?: boolean } = {}) {
 
   // ---------------------------------------------------------------------
   // Usuarios de acceso (demo)
+  //
+  // Solo con USUARIOS_DEMO=1. Son cuentas con una contraseña conocida y
+  // publicada; en una instalación real no pueden existir, porque cualquiera
+  // que llegue a la web entra con ellas.
   // ---------------------------------------------------------------------
+  if (!usuariosDemoActivados()) {
+    console.log("ℹ️  No se crean usuarios de demostración (USUARIOS_DEMO no está a 1).");
+  } else {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   await prisma.user.createMany({
     data: [
@@ -123,6 +164,7 @@ export async function sembrar({ forzar = false }: { forzar?: boolean } = {}) {
       },
     ],
   });
+  }
 
   // ---------------------------------------------------------------------
   // Propietarios (dueños de las viviendas gestionadas por Emma)
@@ -646,4 +688,5 @@ export async function asegurarAdministrador() {
 export async function prepararDatos({ forzar = false }: { forzar?: boolean } = {}) {
   await sembrar({ forzar });
   await asegurarAdministrador();
+  await retirarUsuariosDemo();
 }

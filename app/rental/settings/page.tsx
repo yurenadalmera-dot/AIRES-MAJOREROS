@@ -6,6 +6,7 @@ import { createEmployee, setEmployeeActive, createOwner } from "@/lib/actions/pr
 import { BUSINESS_TYPES, EMPLOYEE_ROLE_LABEL } from "@/lib/constants";
 import { formatDate } from "@/lib/money";
 import SyncLodgifyButton from "@/components/SyncLodgifyButton";
+import FormularioConAviso from "@/components/FormularioConAviso";
 
 export default async function RentalSettingsPage() {
   const { organizationId } = await requireBusinessContext();
@@ -35,7 +36,7 @@ export default async function RentalSettingsPage() {
           porcentajes sobre el precio total de cada reserva sincronizada. Una reserva ajustada manualmente nunca se
           sobrescribe.
         </p>
-        <form action={updateLodgifySettings} className="space-y-3">
+        <FormularioConAviso action={updateLodgifySettings} className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Comisión de plataforma por defecto (%)</label>
@@ -77,7 +78,7 @@ export default async function RentalSettingsPage() {
           <button type="submit" className="btn-secondary">
             Guardar ajustes de integración
           </button>
-        </form>
+        </FormularioConAviso>
 
         <div className="mt-4 pt-4 border-t border-slate-100">
           <SyncLodgifyButton />
@@ -105,12 +106,12 @@ export default async function RentalSettingsPage() {
                   <Badge className={e.active ? "bg-green-100 text-green-800 border-green-200" : "bg-slate-100 text-slate-500 border-slate-200"}>
                     {e.active ? "Activa" : "Inactiva"}
                   </Badge>
-                  <form action={toggleAction}>
+                  <FormularioConAviso action={toggleAction}>
                     <input type="hidden" name="active" value={(!e.active).toString()} />
                     <button type="submit" className="text-xs text-slate-500 hover:underline">
                       {e.active ? "Desactivar" : "Reactivar"}
                     </button>
-                  </form>
+                  </FormularioConAviso>
                 </div>
               </div>
             );
@@ -118,7 +119,7 @@ export default async function RentalSettingsPage() {
         </div>
         <details>
           <summary className="cursor-pointer text-sm text-brand-700">+ Añadir empleada</summary>
-          <form action={createEmployee} className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <FormularioConAviso action={createEmployee} className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
             <div>
               <label className="label">Nombre</label>
               <input name="name" required className="input" />
@@ -140,7 +141,7 @@ export default async function RentalSettingsPage() {
                 Añadir
               </button>
             </div>
-          </form>
+          </FormularioConAviso>
         </details>
       </div>
 
@@ -156,7 +157,7 @@ export default async function RentalSettingsPage() {
         </div>
         <details>
           <summary className="cursor-pointer text-sm text-brand-700">+ Añadir propietario</summary>
-          <form action={createOwner} className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <FormularioConAviso action={createOwner} className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
             <div>
               <label className="label">Nombre</label>
               <input name="name" required className="input" />
@@ -174,14 +175,14 @@ export default async function RentalSettingsPage() {
                 Añadir
               </button>
             </div>
-          </form>
+          </FormularioConAviso>
         </details>
       </div>
 
       {business && (
         <div className="card p-5">
           <h2 className="font-medium text-slate-800 mb-3">Datos del negocio de alquiler</h2>
-          <form action={businessAction} className="space-y-3">
+          <FormularioConAviso action={businessAction} className="space-y-3">
             <div>
               <label className="label">Nombre visible</label>
               <input name="name" defaultValue={business.name} required className="input" />
@@ -197,7 +198,7 @@ export default async function RentalSettingsPage() {
             <button type="submit" className="btn-primary">
               Guardar
             </button>
-          </form>
+          </FormularioConAviso>
         </div>
       )}
     </div>

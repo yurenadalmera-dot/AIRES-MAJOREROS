@@ -26,7 +26,11 @@ export default async function CalendarPage({
 }) {
   const { organizationId } = await requireBusinessContext();
   const params = await searchParams;
-  const weekOffset = Number(params.week ?? "0") || 0;
+  // Acotado: `?week=999999999` desbordaba la fecha y la página reventaba con
+  // «Invalid time value». Diez años arriba y abajo sobran de largo.
+  const MAX_SEMANAS = 520;
+  const pedido = Number(params.week ?? "0") || 0;
+  const weekOffset = Math.max(-MAX_SEMANAS, Math.min(MAX_SEMANAS, Math.trunc(pedido)));
 
   const weekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -88,27 +92,43 @@ export default async function CalendarPage({
                     </td>
                     {weekDays.map((day) => {
                       const dayStart = startOfDay(day);
-                      const booking = propBookings.find((b) =>
-                        isWithinInterval(dayStart, {
-                          start: startOfDay(b.checkIn),
-                          end: addDays(startOfDay(b.checkOut), -1) < startOfDay(b.checkIn)
-                            ? startOfDay(b.checkIn)
-                            : addDays(startOfDay(b.checkOut), -1),
-                        })
+
+                      // El huésped ocupa desde la entrada hasta la víspera de
+                      // la salida. El día de la salida se pinta igualmente,
+                      // porque es cuando toca limpiar: antes quedaba como
+                      // celda vacía y la etiqueta «Salida» no se veía nunca.
+                      const queOcupa = propBookings.find(
+                        (b) =>
+                          dayStart >= startOfDay(b.checkIn) && dayStart < startOfDay(b.checkOut)
                       );
-                      const isCheckIn = booking && isSameDay(booking.checkIn, day);
-                      const isCheckOut = booking && isSameDay(booking.checkOut, day);
+                      const queSeVa = propBookings.find((b) => isSameDay(b.checkOut, day));
+
+                      // Si ese día se va uno y entra otro, manda quien entra:
+                      // es quien ocupa la vivienda esa noche. La salida se
+                      // señala igualmente, que es lo que obliga a limpiar.
+                      const booking = queOcupa ?? queSeVa;
+                      const isCheckIn = !!queOcupa && isSameDay(queOcupa.checkIn, day);
+                      const isCheckOut = !!queSeVa;
+                      const soloSalida = !queOcupa && !!queSeVa;
                       return (
                         <td key={day.toISOString()} className="p-1.5">
                           {booking ? (
                             <Link
                               href={`/rental/bookings/${booking.id}`}
-                              className={`block rounded-md border px-2 py-1.5 text-xs ${colorClass}`}
+                              className={`block rounded-md border px-2 py-1.5 text-xs ${
+                                soloSalida ? "bg-white border-dashed text-slate-500" : colorClass
+                              }`}
                               title={`${booking.guestName} (${formatDate(booking.checkIn)} – ${formatDate(booking.checkOut)})`}
                             >
                               <p className="font-medium truncate">{booking.guestName}</p>
                               <p className="truncate opacity-75">
-                                {isCheckIn ? "Entrada" : isCheckOut ? "Salida" : "—"}
+                                {isCheckIn && isCheckOut
+                                  ? "Salida y entrada · limpieza"
+                                  : isCheckIn
+                                    ? "Entrada"
+                                    : soloSalida
+                                      ? "Salida · limpieza"
+                                      : "—"}
                               </p>
                             </Link>
                           ) : (
