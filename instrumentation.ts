@@ -15,6 +15,19 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.DB_AUTO_SETUP === "0") return;
 
+  // Diagnóstico temporal: distingue «la variable de entorno no es la que creo»
+  // de «la contraseña de la base no es la que creo». No imprime la contraseña,
+  // solo su longitud, que es lo que hace falta para comparar.
+  try {
+    const url = new URL(process.env.DATABASE_URL ?? "");
+    console.log(
+      `🔎 DATABASE_URL: usuario=${url.username} host=${url.hostname}:${url.port} ` +
+        `base=${url.pathname.slice(1)} longitud_contraseña=${decodeURIComponent(url.password).length}`
+    );
+  } catch {
+    console.log("🔎 DATABASE_URL ausente o con formato inválido.");
+  }
+
   try {
     const { crearEsquemaSiFalta } = await import("./lib/preparar-base");
     const { prepararDatos } = await import("./lib/seed-datos");
