@@ -76,10 +76,18 @@ La aplicación está publicada en **https://airesmajoreros.pro**.
 
 ### Despliegue
 
-Hostinger está conectado al repositorio de GitHub: **cada push a
-`claude/rental-cleaning-management-app-hrv9wg` lanza un build y un redespliegue automáticos**. El
-progreso y los logs se ven en hPanel → el sitio → Node.js → Compilaciones, y la conexión en
-hPanel → el sitio → Avanzado → Git.
+Hostinger construye desde el repositorio de GitHub, rama
+`claude/rental-cleaning-management-app-hrv9wg`. El progreso y los logs se ven en hPanel → el sitio
+→ Node.js → Compilaciones.
+
+> ⚠️ **El auto-despliegue está configurado pero no dispara.** La regla existe y está activa
+> (instalación de GitHub, repositorio y rama correctos), pero un push de prueba no lanzó ninguna
+> compilación en 13 minutos. Falta el webhook en el repositorio, que la API no instala: se
+> completa **entrando una vez en hPanel → el sitio → Avanzado → Git y guardando la conexión desde
+> allí**.
+>
+> Mientras tanto, cada despliegue hay que lanzarlo a mano desde hPanel → el sitio → Node.js →
+> Compilaciones.
 
 > ⚠️ **Un build que falla deja el sitio con la página por defecto de Hostinger.** El despliegue
 > sustituye el contenido antes de saber si la compilación va a terminar, así que un fallo no deja
