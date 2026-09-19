@@ -24,9 +24,9 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
   de API REST aparte. Tailwind CSS para el estilo, con hoja de impresión (`@media print`) para
   informes y facturas.
 - **Base de datos**: [Prisma ORM](https://www.prisma.io) sobre **MySQL**, la que viene incluida en
-  el propio plan de Hostinger (`srv2067.hstgr.io:3306`, base `u143635831_airesmaj`). Vive en la
-  misma máquina que la aplicación, así que la conexión no sale a internet y no hay *connection
-  pooler* de por medio. Una sola variable, `DATABASE_URL`; ver `.env.example`.
+  el propio plan de Hostinger. Vive en la misma máquina que la aplicación y se conecta por
+  `localhost:3306`, así que la conexión no sale a internet y no hay *connection pooler* de por
+  medio. Una sola variable, `DATABASE_URL`; ver `.env.example`.
 
   El esquema es portable a propósito: los campos que podrían ser `enum` se modelan como `String`
   y se validan en `lib/constants.ts`, así que cambiar de motor es cambiar el `datasource` de
@@ -70,7 +70,7 @@ La aplicación está publicada en **https://airesmajoreros.pro**.
 | Pieza | Dónde | Detalle |
 |---|---|---|
 | App | Hostinger, hosting Node.js (plan Business) | Next.js, Node 22, `npm run build` → `next start` |
-| Base de datos | Hostinger, MySQL incluido en el plan | `u143635831_airesmaj` en `srv2067.hstgr.io:3306`, 3 GB |
+| Base de datos | Hostinger, MySQL incluido en el plan | `u143635831_aires2`, usuario `u143635831_airesapp`, 3 GB. Se conecta por `localhost:3306` |
 | Dominio | Hostinger | `airesmajoreros.pro`, DNS gestionado en Hostinger |
 | Correo | Hostinger (Starter Business Email) | `info@airesmajoreros.pro`, con SPF, DKIM y DMARC |
 
@@ -102,11 +102,20 @@ variable y relanzar el build. No está escrita en ningún sitio del repositorio 
 Lo normal sería aplicar el esquema en el despliegue. Aquí no se puede, por una restricción que
 conviene tener clara antes de tocar nada:
 
-> **La base solo acepta conexiones desde el propio servidor de hosting.** No hay ninguna IP remota
-> dada de alta (hPanel → Bases de datos → Acceso remoto), así que ni el build —que corre en un
-> contenedor aparte— ni ninguna máquina de fuera llegan a ella. Un `prisma db push` desde el build
-> falla con `P1000: Authentication failed` **aunque la contraseña sea correcta**: lo que se
-> rechaza es el origen, no las credenciales, y el mensaje despista mucho.
+> ### ⚠️ El host de `DATABASE_URL` tiene que ser `localhost`
+>
+> El usuario de MySQL solo tiene permiso desde `localhost`. Conectar al nombre público del
+> servidor (`srv2067.hstgr.io`) **desde la propia máquina** también se rechaza, porque MySQL
+> concede permisos por pareja usuario+origen y ese origen no está concedido.
+>
+> El error que da es `P1000: Authentication failed ... credentials are not valid`, que apunta a la
+> contraseña y no al host. Esto costó varias horas: se cambió la contraseña dos veces y se creó
+> una base nueva antes de caer en que el problema era el host. **Si vuelve a aparecer ese error,
+> mirar primero el host.**
+>
+> La consecuencia es que el build **no puede** tocar la base: corre en un contenedor aparte, donde
+> `localhost` es otra máquina. Tampoco llega nada de fuera, porque no hay ninguna IP remota dada
+> de alta (hPanel → Bases de datos → Acceso remoto).
 
 El único proceso con acceso es la propia aplicación. Así que es ella quien prepara la base, al
 arrancar (`instrumentation.ts`, que Next.js ejecuta una vez por proceso antes de atender

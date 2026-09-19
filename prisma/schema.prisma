@@ -6,8 +6,8 @@
 // (ver lib/constants.ts). Eso mantiene el modelo portable entre motores: el
 // "datasource" es el único cambio real entre entornos.
 //
-// Producción: MySQL del propio hosting de Hostinger (srv2067.hstgr.io:3306),
-// que viene incluido en el plan y vive en la misma máquina que la aplicación.
+// Producción: MySQL del propio hosting de Hostinger, incluido en el plan y en
+// la misma máquina que la aplicación, que se conecta por `localhost:3306`.
 // Se eligió frente a una base de datos externa por tres razones: no añade
 // coste, da 3 GB (frente a los 500 MB del plan gratuito de Supabase) y evita
 // la capa de connection pooler, que fue la fuente del fallo de conexión más
