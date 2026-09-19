@@ -76,9 +76,19 @@ La aplicación está publicada en **https://airesmajoreros.pro**.
 
 ### Despliegue
 
-Hostinger está conectado al repositorio de GitHub: **cada push a la rama por defecto
-(`claude/rental-cleaning-management-app-hrv9wg`) lanza un build y un redespliegue automáticos**.
-El progreso y los logs se ven en hPanel → el sitio → Node.js → Compilaciones.
+Hostinger construye desde el repositorio de GitHub, rama
+`claude/rental-cleaning-management-app-hrv9wg`. El progreso y los logs se ven en hPanel → el sitio
+→ Node.js → Compilaciones.
+
+> ⚠️ **El auto-despliegue por push no está configurado.** La cuenta tiene la instalación de GitHub
+> conectada, pero el sitio no tiene guardada ninguna regla de auto-despliegue, así que un push por
+> sí solo no construye nada: hay que lanzar la compilación desde hPanel. Si se quiere el
+> comportamiento automático, se configura en hPanel → el sitio → Avanzado → Git.
+
+> ⚠️ **Un build que falla deja el sitio con la página por defecto de Hostinger.** El despliegue
+> sustituye el contenido antes de saber si la compilación va a terminar, así que un fallo no deja
+> la versión anterior en su sitio: deja el `default.php`. Conviene no lanzar compilaciones a
+> ciegas contra producción.
 
 Las variables de entorno se configuran en hPanel → el sitio → Node.js → Variables de entorno, y
 son tres: `DATABASE_URL`, `AUTH_SECRET` y `ADMIN_PASSWORD` (ver `.env.example` para el formato).
@@ -87,17 +97,26 @@ son tres: `DATABASE_URL`, `AUTH_SECRET` y `ADMIN_PASSWORD` (ver `.env.example` p
 le restablece la contraseña, si ya existe— en **cada** despliegue, así que cambiarla es cambiar la
 variable y relanzar el build. No está escrita en ningún sitio del repositorio a propósito.
 
-El script de `build` hace algo más que compilar:
+### Aplicar el esquema
+
+**El build no toca la base de datos**, y no puede: corre en un contenedor aparte del servidor de
+hosting, y esta base solo acepta conexiones desde el propio servidor. Un `prisma db push` desde el
+build falla con `P1000: Authentication failed` aunque la contraseña sea correcta — el rechazo es
+por origen, no por credenciales, y el mensaje despista.
+
+El esquema y la siembra se aplican **desde el servidor**, donde la conexión sí es local:
 
 ```
-prisma generate && prisma db push --skip-generate && tsx prisma/seed.ts && next build
+cd ~/domains/airesmajoreros.pro/public_html && npm run db:setup
 ```
 
-Aplica el esquema y siembra durante el despliegue **porque el build de Hostinger es lo único que
-tiene acceso de red a esa base de datos**: desde fuera del hosting el puerto 3306 no es
-alcanzable. El `db push` va sin `--accept-data-loss` a propósito: si un cambio de esquema fuera a
-destruir datos, el build falla en lugar de borrarlos en silencio. La siembra, por su parte, no
-hace nada si la base ya tiene datos (ver más abajo).
+En hPanel eso se lanza como **tarea programada** (Avanzado → Cron jobs), que es la única forma de
+ejecutar un comando en el servidor sin SSH. Hace falta después de cada cambio de esquema; mientras
+el esquema no cambie, no hace falta tocarlo en cada despliegue.
+
+`db:setup` es `prisma db push` seguido de la siembra. El `db push` va sin `--accept-data-loss` a
+propósito: si un cambio de esquema fuera a destruir datos, falla en lugar de borrarlos en
+silencio. La siembra no hace nada si la base ya tiene datos (ver más abajo).
 
 > ⚠️ **No definir `NODE_ENV` ahí.** Con `NODE_ENV=production`, el `npm install` del build omite
 > las `devDependencies`; sin `typescript` instalado, Next.js deja de leer los `paths` de

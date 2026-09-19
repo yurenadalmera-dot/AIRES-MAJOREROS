@@ -13,9 +13,13 @@
 // la capa de connection pooler, que fue la fuente del fallo de conexión más
 // difícil de diagnosticar de este proyecto.
 //
-// El esquema se aplica durante el despliegue (`prisma db push` dentro del
-// script de build), porque el build corre en Hostinger y es lo único que tiene
-// acceso de red a esa base de datos.
+// El esquema NO se aplica durante el build. El build de Hostinger corre en un
+// contenedor aparte, y esta base solo acepta conexiones desde el propio
+// servidor de hosting: desde el build, la autenticación se rechaza (P1000),
+// aunque la contraseña sea correcta.
+//
+// Se aplica desde el servidor con `npm run db:setup`, lanzado como tarea
+// programada del hosting. Ver README, «Aplicar el esquema».
 
 generator client {
   provider = "prisma-client-js"
