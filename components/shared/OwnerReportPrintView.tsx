@@ -125,7 +125,18 @@ export default async function OwnerReportPrintView({
   }
   const alTramo = (propertyId: string) => tramos.get(tramoDe.get(propertyId) ?? "");
 
+  // Las mismas reservas, agrupadas para pintarlas: el propietario las ve por
+  // complejo y con su subtotal, que es como se las viene dando el informe que
+  // ya recibe. Un listado corrido de veinte reservas no dice de dónde sale
+  // cada parte.
+  const reservasPorGrupo = new Map<string, { nombre: string; reservas: typeof bookings }>();
   for (const b of bookings) {
+    const clave = tramoDe.get(b.propertyId) ?? "";
+    if (!reservasPorGrupo.has(clave)) {
+      reservasPorGrupo.set(clave, { nombre: tramos.get(clave)?.nombre ?? "Sin grupo", reservas: [] });
+    }
+    reservasPorGrupo.get(clave)!.reservas.push(b);
+
     alTramo(b.propertyId)?.reservas.push({
       totalPrice: Number(b.totalPrice),
       platformCommissionAmt: Number(b.platformCommissionAmt),
@@ -146,6 +157,29 @@ export default async function OwnerReportPrintView({
     meses: mesesDelPeriodo(periodStart, new Date(end)),
   });
   const desglosePorGrupo = liquidacion.tramos.filter((t) => t.comisionDeGestion > 0);
+  const gruposDeReservas = [...reservasPorGrupo.entries()];
+
+  /** Los totales de un puñado de reservas, para el subtotal de cada grupo. */
+  const totalesDe = (rs: typeof bookings) =>
+    rs.reduce(
+      (a, b) => ({
+        total: round2(a.total + Number(b.totalPrice)),
+        platform: round2(a.platform + Number(b.platformCommissionAmt)),
+        bank: round2(a.bank + Number(b.bankCommissionAmt)),
+        net: round2(a.net + Number(b.netAmount)),
+      }),
+      { total: 0, platform: 0, bank: 0, net: 0 }
+    );
+
+  // Las cuatro cifras de cabecera, las mismas que trae el informe que el
+  // propietario ya recibe. «A percibir» es antes de gastos, como allí: los
+  // gastos van aparte porque no siempre los adelanta la gestora.
+  const cabecera = [
+    { etiqueta: "Precio total reservas", valor: round2(totals.total) },
+    { etiqueta: "Comisiones de venta", valor: round2(totals.platform + totals.bank) },
+    { etiqueta: "A percibir en cuenta", valor: round2(totals.net) },
+    { etiqueta: "Gastos del periodo", valor: round2(cleaningTotal + expensesTotal) },
+  ];
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -177,42 +211,84 @@ export default async function OwnerReportPrintView({
           </p>
         </div>
 
-        <h2 className="text-sm font-semibold text-slate-700 mb-2">Reservas del periodo ({bookings.length})</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {cabecera.map((c) => (
+            <div key={c.etiqueta} className="border border-slate-200 rounded-lg px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-slate-400">{c.etiqueta}</p>
+              <p className="text-base font-semibold text-slate-800">{formatCurrency(c.valor)}</p>
+            </div>
+          ))}
+        </div>
+
         {bookings.length === 0 ? (
-          <p className="text-sm text-slate-400 mb-6">No hay reservas con entrada en este periodo.</p>
+          <>
+            <h2 className="text-sm font-semibold text-slate-700 mb-2">Reservas del periodo (0)</h2>
+            <p className="text-sm text-slate-400 mb-6">No hay reservas con entrada en este periodo.</p>
+          </>
         ) : (
+          gruposDeReservas.map(([clave, grupo]) => {
+            const sub = totalesDe(grupo.reservas);
+            return (
+              <div key={clave} className="mb-5">
+                <h2 className="text-sm font-semibold text-slate-700 mb-2">
+                  {gruposDeReservas.length > 1 ? `${grupo.nombre} — reservas` : "Reservas del periodo"}
+                  <span className="font-normal text-slate-400">
+                    {" · "}
+                    {grupo.reservas.length}
+                    {grupo.reservas.length === 1 ? " reserva" : " reservas"}
+                  </span>
+                </h2>
+                <table className="table-base">
+                  <thead>
+                    <tr>
+                      <th>Vivienda</th>
+                      <th>Huésped</th>
+                      <th>Entrada</th>
+                      <th>Salida</th>
+                      <th>Canal</th>
+                      <th>Total</th>
+                      <th>Com. plataforma</th>
+                      <th>Com. banco</th>
+                      <th>A percibir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {grupo.reservas.map((b) => (
+                      <tr key={b.id}>
+                        <td>{b.property.name}</td>
+                        <td>{b.guestName}</td>
+                        <td>{formatDate(b.checkIn)}</td>
+                        <td>{formatDate(b.checkOut)}</td>
+                        <td>{b.channel}</td>
+                        <td>{formatCurrency(b.totalPrice)}</td>
+                        <td>-{formatCurrency(b.platformCommissionAmt)}</td>
+                        <td>-{formatCurrency(b.bankCommissionAmt)}</td>
+                        <td className="font-medium">{formatCurrency(b.netAmount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="font-semibold">
+                      <td colSpan={5}>
+                        {gruposDeReservas.length > 1 ? `Subtotal · ${grupo.nombre}` : "Totales"}
+                      </td>
+                      <td>{formatCurrency(sub.total)}</td>
+                      <td>-{formatCurrency(sub.platform)}</td>
+                      <td>-{formatCurrency(sub.bank)}</td>
+                      <td>{formatCurrency(sub.net)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            );
+          })
+        )}
+
+        {gruposDeReservas.length > 1 && (
           <table className="table-base mb-2">
-            <thead>
-              <tr>
-                <th>Vivienda</th>
-                <th>Huésped</th>
-                <th>Entrada</th>
-                <th>Salida</th>
-                <th>Canal</th>
-                <th>Total</th>
-                <th>Com. plataforma</th>
-                <th>Com. banco</th>
-                <th>Neto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => (
-                <tr key={b.id}>
-                  <td>{b.property.name}</td>
-                  <td>{b.guestName}</td>
-                  <td>{formatDate(b.checkIn)}</td>
-                  <td>{formatDate(b.checkOut)}</td>
-                  <td>{b.channel}</td>
-                  <td>{formatCurrency(b.totalPrice)}</td>
-                  <td>-{formatCurrency(b.platformCommissionAmt)}</td>
-                  <td>-{formatCurrency(b.bankCommissionAmt)}</td>
-                  <td className="font-medium">{formatCurrency(b.netAmount)}</td>
-                </tr>
-              ))}
-            </tbody>
             <tfoot>
               <tr className="font-semibold">
-                <td colSpan={5}>Totales</td>
+                <td colSpan={5}>Total de reservas</td>
                 <td>{formatCurrency(totals.total)}</td>
                 <td>-{formatCurrency(totals.platform)}</td>
                 <td>-{formatCurrency(totals.bank)}</td>
