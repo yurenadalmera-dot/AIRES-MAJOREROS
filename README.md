@@ -151,6 +151,17 @@ responde «no hay base de datos» se diagnostica; uno que no arranca, no.
 
 `DB_AUTO_SETUP=0` desactiva todo esto.
 
+### `/api/health/db`
+
+Ruta pública a propósito: sirve para diagnosticar un despliegue en el que todavía no puede entrar
+nadie. Si el login no va, dice si el problema es la base de datos o es otra cosa; exigir sesión la
+haría inútil justo cuando hace falta.
+
+Pública no quiere decir habladora. **Sin sesión** responde `{ok, ms}` y, si falla, una causa
+aproximada («la base de datos rechaza las credenciales», «no se alcanza el servidor»). **Con
+sesión** añade el usuario y el host de la base, cuántas personas hay dadas de alta y el error
+completo de Prisma. Antes publicaba todo eso a cualquiera que abriera la dirección.
+
 ### Comprobar que el sitio funciona de verdad
 
 Poniendo `SELFTEST=1` (y `SELFTEST_BASE=https://airesmajoreros.pro`) en las variables de entorno,

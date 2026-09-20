@@ -29,11 +29,22 @@ export async function autoprueba() {
   const fallos: string[] = [];
 
   try {
-    // 1 · Estado de la base de datos
+    // 1 · Estado de la base de datos.
+    // La ruta pública ya no dice cuántos usuarios hay —eso solo con sesión—,
+    // así que el recuento se hace aquí, que corre dentro del servidor.
     const salud = await fetch(`${BASE}/api/health/db`);
     const cuerpo = await salud.json();
-    linea.push(`salud=${salud.status} ok=${cuerpo.ok} usuarios=${cuerpo.usuarios}`);
+    const { PrismaClient } = await import("@prisma/client");
+    const usuarios = await new PrismaClient().user.count();
+    linea.push(`salud=${salud.status} ok=${cuerpo.ok} usuarios=${usuarios}`);
     if (!cuerpo.ok) fallos.push("la comprobación de base de datos no responde ok");
+
+    // Y que esa ruta no publique de más a quien no ha iniciado sesión.
+    for (const filtrado of ["target", "usuarios", "error"]) {
+      if (filtrado in cuerpo) {
+        fallos.push(`/api/health/db publica «${filtrado}» sin sesión`);
+      }
+    }
 
     // 2 · Login real con la cuenta de administración
     const email = process.env.ADMIN_EMAIL ?? "info@airesmajoreros.pro";
