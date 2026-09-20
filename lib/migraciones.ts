@@ -49,14 +49,41 @@ const TEXTOS_LIBRES: [string, string][] = [
   ["Owner", "notes"],
 ];
 
-const MIGRACIONES: Migracion[] = TEXTOS_LIBRES.map(([tabla, columna]) => ({
-  nombre: `${tabla}.${columna} → TEXT`,
-  haceFalta: () => esVarchar(tabla, columna),
-  aplicar: async () => {
-    // Nombres de tabla y columna vienen de esta lista, nunca de fuera.
-    await prisma.$executeRawUnsafe(`ALTER TABLE \`${tabla}\` MODIFY \`${columna}\` TEXT NULL`);
+/** ¿Falta esta columna en la tabla? */
+async function faltaColumna(tabla: string, columna: string): Promise<boolean> {
+  const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+    SELECT COUNT(*) AS n
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = ${tabla}
+      AND column_name = ${columna}
+  `;
+  return Number(filas[0]?.n ?? 0) === 0;
+}
+
+const MIGRACIONES: Migracion[] = [
+  ...TEXTOS_LIBRES.map(([tabla, columna]) => ({
+    nombre: `${tabla}.${columna} → TEXT`,
+    haceFalta: () => esVarchar(tabla, columna),
+    aplicar: async () => {
+      // Nombres de tabla y columna vienen de esta lista, nunca de fuera.
+      await prisma.$executeRawUnsafe(`ALTER TABLE \`${tabla}\` MODIFY \`${columna}\` TEXT NULL`);
+    },
+  })),
+
+  // Donde se guarda la clave de API de Lodgify, cifrada. Antes no se guardaba
+  // en ningún sitio: la que se escribía en Ajustes se tiraba, y la
+  // sincronización seguía inventándose las reservas sin decir nada.
+  {
+    nombre: "IntegrationSettings.apiKeyCifrada",
+    haceFalta: () => faltaColumna("IntegrationSettings", "apiKeyCifrada"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "ALTER TABLE `IntegrationSettings` ADD COLUMN `apiKeyCifrada` TEXT NULL"
+      );
+    },
   },
-}));
+];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */
 export async function aplicarMigraciones(): Promise<number> {

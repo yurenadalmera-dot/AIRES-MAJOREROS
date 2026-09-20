@@ -1,4 +1,6 @@
 import { fetchMockLodgifyPage, type LodgifyReservationRaw } from "@/lib/lodgify-mock-data";
+import { prisma } from "@/lib/prisma";
+import { descifrar } from "@/lib/secretos";
 
 export interface NormalizedReservation {
   externalId: string;
@@ -15,9 +17,24 @@ export interface NormalizedReservation {
 
 const LODGIFY_API_BASE = "https://api.lodgify.com/v2";
 
-/** true si hay una clave real configurada; si no, se usa el modo demo. */
-export function isLodgifyLiveMode(): boolean {
-  return !!process.env.LODGIFY_API_KEY;
+/**
+ * La clave de API de Lodgify, si la hay.
+ *
+ * Primero la que esté guardada en Ajustes (cifrada en la base de datos) y, si
+ * no hay, la variable de entorno del hosting. Ese orden importa: cambiar la
+ * clave desde la aplicación no debería exigir tocar el hosting ni recompilar.
+ */
+export async function claveLodgify(organizationId: string): Promise<string | null> {
+  const ajustes = await prisma.integrationSettings.findUnique({
+    where: { organizationId_provider: { organizationId, provider: "LODGIFY" } },
+    select: { apiKeyCifrada: true },
+  });
+  return descifrar(ajustes?.apiKeyCifrada) ?? process.env.LODGIFY_API_KEY ?? null;
+}
+
+/** ¿Se está trabajando contra Lodgify de verdad, o con datos inventados? */
+export async function isLodgifyLiveMode(organizationId: string): Promise<boolean> {
+  return (await claveLodgify(organizationId)) !== null;
 }
 
 async function fetchLivePage(apiKey: string, page: number) {
@@ -55,8 +72,9 @@ async function fetchLivePage(apiKey: string, page: number) {
  * filtrado de status se hace en el llamador para que quede explícito y
  * auditable en el log de sincronización).
  */
-export async function fetchAllLodgifyReservations(): Promise<NormalizedReservation[]> {
-  const apiKey = process.env.LODGIFY_API_KEY;
+export async function fetchAllLodgifyReservations(
+  apiKey: string | null
+): Promise<NormalizedReservation[]> {
   const results: LodgifyReservationRaw[] = [];
 
   let page = 1;

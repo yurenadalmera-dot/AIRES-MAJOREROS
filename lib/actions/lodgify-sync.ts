@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
-import { fetchAllLodgifyReservations, onlyConfirmed, isLodgifyLiveMode } from "@/lib/lodgify";
+import { fetchAllLodgifyReservations, onlyConfirmed, claveLodgify } from "@/lib/lodgify";
 import { calculateCommissions } from "@/lib/money";
 
 export interface SyncSummary {
@@ -40,7 +40,8 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     const platformPct = settings ? Number(settings.defaultPlatformPct) : 15;
     const bankPct = settings ? Number(settings.defaultBankPct) : 2.5;
 
-    const all = await fetchAllLodgifyReservations();
+    const apiKey = await claveLodgify(organizationId);
+    const all = await fetchAllLodgifyReservations(apiKey);
     const confirmed = onlyConfirmed(all);
 
     let created = 0;
@@ -193,7 +194,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     }
 
     const summary: SyncSummary = {
-      liveMode: isLodgifyLiveMode(),
+      liveMode: apiKey !== null,
       fetched: all.length,
       confirmed: confirmed.length,
       created,

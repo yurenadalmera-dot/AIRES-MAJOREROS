@@ -308,7 +308,11 @@ model IntegrationSettings {
   organization   Organization @relation(fields: [organizationId], references: [id])
   provider       String   @default("LODGIFY")
 
-  apiKeyMasked        String? // solo se guarda una versión enmascarada a modo informativo
+  apiKeyMasked        String? // versión enmascarada, para enseñarla sin enseñarla
+  /// Clave de API cifrada con AES-256-GCM (ver `lib/secretos.ts`). Antes no
+  /// se guardaba: la que se escribía en Ajustes se tiraba y la sincronización
+  /// seguía en modo demostración sin decir nada.
+  apiKeyCifrada       String? @db.Text
   defaultPlatformPct  Decimal @default(15)
   defaultBankPct      Decimal @default(2.5)
   syncEnabled         Boolean @default(true)

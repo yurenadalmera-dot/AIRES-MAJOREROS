@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
+import { cifrar, enmascarar } from "@/lib/secretos";
 
 const integrationSchema = z.object({
   defaultPlatformPct: z.coerce.number().min(0).max(100),
@@ -19,9 +20,18 @@ export async function updateLodgifySettings(formData: FormData) {
     const raw = Object.fromEntries(formData.entries());
     const data = integrationSchema.parse({ ...raw, syncEnabled: raw.syncEnabled === "on" });
 
-    const maskedKey = data.apiKey
-      ? `${"•".repeat(Math.max(data.apiKey.length - 4, 0))}${data.apiKey.slice(-4)}`
-      : undefined;
+    // La clave solo se toca cuando se escribe una nueva: dejar el campo
+    // vacío significa «no la cambies», no «bórrala». Para quitarla se escribe
+    // la palabra que dice la propia pantalla.
+    const escrita = data.apiKey?.trim() ?? "";
+    const quitar = escrita.toUpperCase() === "QUITAR";
+    const nueva = !quitar && escrita.length > 0 ? escrita : null;
+
+    const clave = quitar
+      ? { apiKeyCifrada: null, apiKeyMasked: null }
+      : nueva
+        ? { apiKeyCifrada: cifrar(nueva), apiKeyMasked: enmascarar(nueva) }
+        : {};
 
     await prisma.integrationSettings.upsert({
       where: { organizationId_provider: { organizationId, provider: "LODGIFY" } },
@@ -29,7 +39,7 @@ export async function updateLodgifySettings(formData: FormData) {
         defaultPlatformPct: data.defaultPlatformPct,
         defaultBankPct: data.defaultBankPct,
         syncEnabled: !!data.syncEnabled,
-        ...(maskedKey ? { apiKeyMasked: maskedKey } : {}),
+        ...clave,
       },
       create: {
         organizationId,
@@ -37,7 +47,8 @@ export async function updateLodgifySettings(formData: FormData) {
         defaultPlatformPct: data.defaultPlatformPct,
         defaultBankPct: data.defaultBankPct,
         syncEnabled: !!data.syncEnabled,
-        apiKeyMasked: maskedKey ?? null,
+        apiKeyCifrada: nueva ? cifrar(nueva) : null,
+        apiKeyMasked: nueva ? enmascarar(nueva) : null,
       },
     });
 

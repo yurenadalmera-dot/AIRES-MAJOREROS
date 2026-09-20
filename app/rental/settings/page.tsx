@@ -36,6 +36,8 @@ export default async function RentalSettingsPage() {
     prisma.owner.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
   ]);
 
+  const hayClave = Boolean(integration?.apiKeyCifrada);
+
   async function businessAction(formData: FormData) {
     "use server";
     if (business) await updateBusinessInfo(business.id, formData);
@@ -80,11 +82,32 @@ export default async function RentalSettingsPage() {
             </div>
           </div>
           <div>
-            <label className="label">Clave de API de Lodgify (opcional)</label>
-            <input name="apiKey" type="password" placeholder="Déjalo vacío para seguir en modo demo" className="input" />
+            <label className="label" htmlFor="apiKey">
+              Clave de API de Lodgify
+            </label>
+            {hayClave ? (
+              <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-2">
+                Hay una clave guardada (<span className="font-mono">{integration?.apiKeyMasked}</span>).
+                La sincronización trae reservas reales de Lodgify.
+              </p>
+            ) : (
+              <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 mb-2">
+                <strong>No hay clave.</strong> Mientras no la haya, «Sincronizar» no trae nada de
+                Lodgify: se inventa reservas de ejemplo para poder probar. Pega aquí la clave de la
+                cuenta de Lodgify y empezará a traer las de verdad.
+              </p>
+            )}
+            <input
+              id="apiKey"
+              name="apiKey"
+              type="password"
+              autoComplete="off"
+              placeholder={hayClave ? "Escribe otra para cambiarla" : "Pega aquí la clave"}
+              className="input"
+            />
             <p className="text-xs text-slate-400 mt-1">
-              Solo se guarda una versión enmascarada; la clave real se lee de la variable de entorno{" "}
-              <code>LODGIFY_API_KEY</code> en el servidor.
+              Se guarda cifrada, y no se puede volver a leer desde la aplicación. Si lo dejas vacío
+              se queda como está{hayClave ? "; escribe QUITAR para borrarla" : ""}.
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-600">

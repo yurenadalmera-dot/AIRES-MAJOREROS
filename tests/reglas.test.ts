@@ -19,6 +19,7 @@ import { numeroSiguiente } from "../lib/numeracion";
 import { computePropertyStatus } from "../lib/status";
 import { casillaDelDia } from "../lib/calendario";
 import { decidirCuentaAdmin } from "../lib/cuenta-admin";
+import { cifrar, descifrar, enmascarar } from "../lib/secretos";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -242,4 +243,54 @@ describe("cuenta de administración en cada arranque", () => {
   test("solo se restablece cuando se pide a propósito", () => {
     assert.equal(decidir(true, true), "restablecer");
   });
+});
+
+describe("guardar una credencial ajena", () => {
+  // La clave de API de Lodgify da acceso a las reservas de la clienta: un
+  // volcado de la base de datos no debe bastar para leerla.
+  const original = process.env.AUTH_SECRET;
+  process.env.AUTH_SECRET = "un-secreto-de-pruebas-largo-y-aleatorio";
+
+  test("lo cifrado vuelve a salir igual", () => {
+    const clave = "lodgify_ABC123xyz";
+    assert.equal(descifrar(cifrar(clave)), clave);
+  });
+
+  test("lo guardado no contiene la clave en claro", () => {
+    const guardado = cifrar("lodgify_ABC123xyz");
+    assert.ok(!guardado.includes("lodgify_ABC123xyz"));
+    assert.ok(!guardado.includes("ABC123"));
+  });
+
+  test("dos cifrados de lo mismo salen distintos", () => {
+    assert.notEqual(cifrar("misma"), cifrar("misma"));
+  });
+
+  test("un valor manipulado no descifra: devuelve null, no un texto falso", () => {
+    const guardado = cifrar("lodgify_ABC123xyz");
+    const partes = guardado.split(":");
+    partes[3] = Buffer.from("otra cosa").toString("base64");
+    assert.equal(descifrar(partes.join(":")), null);
+  });
+
+  test("con otro AUTH_SECRET no descifra, pero tampoco revienta", () => {
+    const guardado = cifrar("lodgify_ABC123xyz");
+    process.env.AUTH_SECRET = "otro-secreto-distinto-del-anterior";
+    assert.equal(descifrar(guardado), null);
+    process.env.AUTH_SECRET = "un-secreto-de-pruebas-largo-y-aleatorio";
+  });
+
+  test("nada guardado, nada que descifrar", () => {
+    assert.equal(descifrar(null), null);
+    assert.equal(descifrar(""), null);
+  });
+
+  test("enmascarar deja ver solo los cuatro últimos", () => {
+    const tapada = enmascarar("lodgify_ABC123xyz");
+    assert.ok(tapada.endsWith("3xyz"), tapada);
+    assert.ok(!tapada.includes("lodgify"), tapada);
+    assert.equal(tapada.length, "lodgify_ABC123xyz".length);
+  });
+
+  process.env.AUTH_SECRET = original;
 });
