@@ -77,5 +77,12 @@ export async function aplicarMigraciones(): Promise<number> {
     }
   }
 
+  // Decirlo también cuando no hay nada que hacer: en un arranque normal esta
+  // línea es la confirmación de que el esquema está al día. Sin ella, «no hay
+  // mensaje» tanto puede significar «todo bien» como «no llegó a ejecutarse».
+  if (aplicadas === 0) {
+    console.log(`🔧 Esquema al día: ${MIGRACIONES.length} migraciones comprobadas, ninguna pendiente.`);
+  }
+
   return aplicadas;
 }
