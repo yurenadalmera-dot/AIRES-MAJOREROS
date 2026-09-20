@@ -40,6 +40,41 @@ export async function POST(request: Request) {
 
   const volcado = revisarVolcado(bruto);
 
+  // ── Tarifas ─────────────────────────────────────────────────────────
+  // Antes que los propietarios, porque cada propietario apunta a la suya.
+  const idPorTarifa = new Map<string, string>();
+  for (const t of volcado.tarifas) {
+    const existente = await prisma.tarifa.findFirst({
+      where: { organizationId, name: t.nombre },
+      select: { id: true },
+    });
+    const id = existente
+      ? (await prisma.tarifa.update({
+          where: { id: existente.id },
+          data: { vigenteDesde: t.vigenteDesde, vigenteHasta: t.vigenteHasta },
+          select: { id: true },
+        })).id
+      : (await prisma.tarifa.create({
+          data: { organizationId, name: t.nombre, vigenteDesde: t.vigenteDesde, vigenteHasta: t.vigenteHasta },
+          select: { id: true },
+        })).id;
+    idPorTarifa.set(t.ref, id);
+
+    for (const l of t.lineas) {
+      await prisma.tarifaLinea.upsert({
+        where: { tarifaId_servicio: { tarifaId: id, servicio: l.servicio } },
+        update: { base: l.base, huespedesIncluidos: l.huespedesIncluidos, porHuespedAdicional: l.porHuespedAdicional },
+        create: {
+          tarifaId: id,
+          servicio: l.servicio,
+          base: l.base,
+          huespedesIncluidos: l.huespedesIncluidos,
+          porHuespedAdicional: l.porHuespedAdicional,
+        },
+      });
+    }
+  }
+
   // ── Propietarios ────────────────────────────────────────────────────
   // Se reconocen por el nombre: es lo estable entre los dos sistemas, y no
   // obliga a añadir una columna de referencia externa que solo serviría para
@@ -54,6 +89,7 @@ export async function POST(request: Request) {
       taxId: p.cif ?? null,
       address: p.direccion ?? null,
       email: p.email ?? null,
+      tarifaId: p.tarifaRef ? (idPorTarifa.get(p.tarifaRef) ?? null) : null,
       ...(p.cuotaFija !== undefined && p.cuotaFija !== null ? { monthlyFee: p.cuotaFija } : {}),
     };
     const id = existente
@@ -99,6 +135,17 @@ export async function POST(request: Request) {
       ? (await prisma.property.update({ where: { id: existente.id }, data: datos, select: { id: true } })).id
       : (await prisma.property.create({ data: { organizationId, locality: "Fuerteventura", ...datos }, select: { id: true } })).id;
     idPorVivienda.set(x.ref, id);
+  }
+
+  // ── Precios cerrados ────────────────────────────────────────────────
+  for (const pc of volcado.preciosCerrados) {
+    const propertyId = idPorVivienda.get(pc.viviendaRef);
+    if (!propertyId) continue;
+    await prisma.tarifaVivienda.upsert({
+      where: { propertyId_servicio: { propertyId, servicio: pc.servicio } },
+      update: { precioCerrado: pc.precio },
+      create: { propertyId, servicio: pc.servicio, precioCerrado: pc.precio },
+    });
   }
 
   // ── Movimientos ─────────────────────────────────────────────────────
@@ -153,6 +200,8 @@ export async function POST(request: Request) {
     propietarios: volcado.propietarios.length,
     grupos: volcado.grupos.length,
     viviendas: volcado.viviendas.length,
+    tarifas: volcado.tarifas.length,
+    preciosCerrados: volcado.preciosCerrados.length,
     movimientos: resumen,
     rechazados: volcado.rechazados,
   });

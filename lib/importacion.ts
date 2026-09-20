@@ -24,8 +24,13 @@ export type Reparto = "directo" | "compartido";
 const TIPOS: TipoDeMovimiento[] = ["gasto", "sueldo", "traspaso", "ingreso"];
 const REPARTOS: Reparto[] = ["directo", "compartido"];
 
+export type Servicio = "salida" | "repaso";
+const SERVICIOS: Servicio[] = ["salida", "repaso"];
+
 export interface PropietarioEntrante {
   ref: string;
+  /** La tarifa de limpieza que se le aplica. */
+  tarifaRef?: string | null;
   nombre: string;
   cif?: string | null;
   direccion?: string | null;
@@ -68,11 +73,46 @@ export interface MovimientoEntrante {
   propietarioRef?: string | null;
 }
 
+export interface TarifaEntrante {
+  ref: string;
+  nombre: string;
+  vigenteDesde?: string | null;
+  vigenteHasta?: string | null;
+  lineas?: {
+    servicio: string;
+    base: number | string;
+    huespedesIncluidos?: number | null;
+    porHuespedAdicional?: number | string | null;
+  }[];
+}
+
+export interface PrecioCerradoEntrante {
+  viviendaRef: string;
+  servicio: string;
+  precio: number | string;
+}
+
 export interface VolcadoEntrante {
   propietarios?: PropietarioEntrante[];
   grupos?: GrupoEntrante[];
   viviendas?: ViviendaEntrante[];
   movimientos?: MovimientoEntrante[];
+  tarifas?: TarifaEntrante[];
+  preciosCerrados?: PrecioCerradoEntrante[];
+}
+
+export interface TarifaLista {
+  ref: string;
+  nombre: string;
+  vigenteDesde: Date;
+  vigenteHasta: Date | null;
+  lineas: { servicio: Servicio; base: number; huespedesIncluidos: number; porHuespedAdicional: number }[];
+}
+
+export interface PrecioCerradoListo {
+  viviendaRef: string;
+  servicio: Servicio;
+  precio: number;
 }
 
 export interface MovimientoListo {
@@ -94,6 +134,8 @@ export interface VolcadoRevisado {
   grupos: GrupoEntrante[];
   viviendas: ViviendaEntrante[];
   movimientos: MovimientoListo[];
+  tarifas: TarifaLista[];
+  preciosCerrados: PrecioCerradoListo[];
   /** Lo que no se ha podido importar, con el porqué. Nunca se calla. */
   rechazados: { que: string; porque: string }[];
 }
@@ -221,7 +263,68 @@ export function revisarVolcado(bruto: unknown): VolcadoRevisado {
     });
   }
 
-  return { propietarios, grupos, viviendas, movimientos, rechazados };
+  // ── Tarifas de limpieza ─────────────────────────────────────────────
+  // Una tarifa sin línea que valga no sirve de nada: mejor rechazarla y que
+  // se vea, que dejarla vacía y que las limpiezas salgan sin precio.
+  const tarifas: TarifaLista[] = [];
+  for (const t of v.tarifas ?? []) {
+    if (!texto(t?.ref) || !texto(t?.nombre)) {
+      rechazados.push({ que: `tarifa ${t?.nombre ?? "sin nombre"}`, porque: "le falta el nombre o la referencia" });
+      continue;
+    }
+    const desde = leerFecha(t.vigenteDesde);
+    const hasta = leerFecha(t.vigenteHasta);
+    const lineas = (t.lineas ?? [])
+      .filter((l) => (SERVICIOS as string[]).includes(l?.servicio))
+      .map((l) => ({
+        servicio: l.servicio as Servicio,
+        base: leerImporte(l.base) ?? 0,
+        huespedesIncluidos: Number.isFinite(Number(l.huespedesIncluidos)) ? Number(l.huespedesIncluidos) : 0,
+        porHuespedAdicional: leerImporte(l.porHuespedAdicional) ?? 0,
+      }));
+    if (lineas.length === 0) {
+      rechazados.push({ que: `tarifa ${t.nombre}`, porque: "no trae ninguna línea de servicio que se entienda" });
+      continue;
+    }
+    tarifas.push({
+      ref: t.ref,
+      nombre: t.nombre,
+      // Sin fecha de inicio se toma el principio de los tiempos: así la
+      // tarifa vale desde siempre en vez de no valer nunca.
+      vigenteDesde: desde.fecha ?? new Date(Date.UTC(2000, 0, 1, 12)),
+      vigenteHasta: hasta.fecha,
+      lineas,
+    });
+  }
+
+  const refsTarifa = new Set(tarifas.map((t) => t.ref));
+  for (const p of propietarios) {
+    if (p.tarifaRef && !refsTarifa.has(p.tarifaRef)) {
+      rechazados.push({ que: `propietario ${p.nombre}`, porque: "su tarifa no viene en el volcado; entra sin tarifa" });
+      p.tarifaRef = null;
+    }
+  }
+
+  const preciosCerrados: PrecioCerradoListo[] = [];
+  for (const pc of v.preciosCerrados ?? []) {
+    const precio = leerImporte(pc?.precio);
+    if (!pc?.viviendaRef || !refsVivienda.has(pc.viviendaRef)) {
+      rechazados.push({ que: "precio cerrado", porque: "su vivienda no viene en el volcado" });
+      continue;
+    }
+    if (!(SERVICIOS as string[]).includes(pc.servicio)) {
+      rechazados.push({ que: `precio cerrado de ${pc.viviendaRef}`, porque: `no entiendo el servicio «${pc.servicio}»` });
+      continue;
+    }
+    // Aquí un 0 sí es válido: hay viviendas que no se facturan.
+    if (precio === null) {
+      rechazados.push({ que: `precio cerrado de ${pc.viviendaRef}`, porque: "el precio no es un número" });
+      continue;
+    }
+    preciosCerrados.push({ viviendaRef: pc.viviendaRef, servicio: pc.servicio as Servicio, precio });
+  }
+
+  return { propietarios, grupos, viviendas, movimientos, tarifas, preciosCerrados, rechazados };
 }
 
 /**

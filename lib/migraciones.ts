@@ -275,6 +275,30 @@ const MIGRACIONES: Migracion[] = [
       }
     },
   },
+  // Las tarifas de limpieza. Aquí el precio era uno fijo por vivienda; en los
+  // datos reales es base más tanto por huésped adicional, y eso cambia el
+  // importe: una salida de cuatro huéspedes cuesta 80 € donde una de dos
+  // cuesta 60. Con el precio fijo, todas las de cuatro se facturaban de menos.
+  {
+    nombre: "Tarifas de limpieza",
+    haceFalta: async () => {
+      const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = 'Tarifa'
+      `;
+      return Number(filas[0]?.n ?? 0) === 0;
+    },
+    aplicar: async () => {
+      for (const sql of [
+        "CREATE TABLE `Tarifa` (\n    `id` VARCHAR(191) NOT NULL,\n    `organizationId` VARCHAR(191) NOT NULL,\n    `name` VARCHAR(191) NOT NULL,\n    `vigenteDesde` DATETIME(3) NOT NULL,\n    `vigenteHasta` DATETIME(3) NULL,\n    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n\n    INDEX `Tarifa_organizationId_idx`(`organizationId`),\n    PRIMARY KEY (`id`)\n) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+        "CREATE TABLE `TarifaLinea` (\n    `id` VARCHAR(191) NOT NULL,\n    `tarifaId` VARCHAR(191) NOT NULL,\n    `servicio` VARCHAR(191) NOT NULL,\n    `base` DECIMAL(65, 30) NOT NULL DEFAULT 0,\n    `huespedesIncluidos` INTEGER NOT NULL DEFAULT 0,\n    `porHuespedAdicional` DECIMAL(65, 30) NOT NULL DEFAULT 0,\n\n    UNIQUE INDEX `TarifaLinea_tarifaId_servicio_key`(`tarifaId`, `servicio`),\n    PRIMARY KEY (`id`)\n) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+        "CREATE TABLE `TarifaVivienda` (\n    `id` VARCHAR(191) NOT NULL,\n    `propertyId` VARCHAR(191) NOT NULL,\n    `servicio` VARCHAR(191) NOT NULL,\n    `precioCerrado` DECIMAL(65, 30) NOT NULL,\n\n    UNIQUE INDEX `TarifaVivienda_propertyId_servicio_key`(`propertyId`, `servicio`),\n    PRIMARY KEY (`id`)\n) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+        "ALTER TABLE `Owner` ADD COLUMN `tarifaId` VARCHAR(191) NULL",
+      ]) {
+        await prisma.$executeRawUnsafe(sql);
+      }
+    },
+  },
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */

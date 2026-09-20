@@ -60,6 +60,7 @@ model Organization {
   channelCommissions  ChannelCommission[]
   expenses            Expense[]
   documentosOcr       DocumentoOcr[]
+  tarifas             Tarifa[]
   propertyGroups      PropertyGroup[]
 }
 
@@ -108,6 +109,10 @@ model Owner {
   monthlyFee     Decimal?
   createdAt      DateTime     @default(now())
 
+  /// La lista de precios de limpieza que se le aplica.
+  tarifaId String?
+  tarifa   Tarifa? @relation(fields: [tarifaId], references: [id])
+
   properties Property[]
   expenses   Expense[]
   groups     PropertyGroup[]
@@ -143,6 +148,7 @@ model Property {
   cleaningTasks      CleaningTask[]
   channelCommissions ChannelCommission[]
   expenses           Expense[]
+  TarifaVivienda     TarifaVivienda[]
 
   @@index([organizationId])
 }
@@ -551,4 +557,55 @@ model DocumentoOcr {
   @@index([organizationId])
   @@index([estado])
   @@index([archivoHash])
+}
+
+/// Una lista de precios de limpieza, con su vigencia.
+///
+/// Hay dos en marcha: «Oficial 2026» y una propia de Inversiones Brito, más
+/// barata por ser el cliente grande. Subir precios crea una tarifa nueva con
+/// su fecha, no se pisa la anterior: lo facturado el mes pasado no puede
+/// cambiar retroactivamente.
+model Tarifa {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  vigenteDesde   DateTime
+  vigenteHasta   DateTime?
+  createdAt      DateTime     @default(now())
+
+  lineas TarifaLinea[]
+  owners Owner[]
+
+  @@index([organizationId])
+}
+
+/// Lo que cuesta un servicio en una tarifa: una base con unos huéspedes
+/// incluidos y un suplemento por cada uno que pase de ahí.
+model TarifaLinea {
+  id                  String  @id @default(cuid())
+  tarifaId            String
+  tarifa              Tarifa  @relation(fields: [tarifaId], references: [id], onDelete: Cascade)
+  /// salida | repaso
+  servicio            String
+  base                Decimal @default(0)
+  huespedesIncluidos  Int     @default(0)
+  porHuespedAdicional Decimal @default(0)
+
+  @@unique([tarifaId, servicio])
+}
+
+/// El precio cerrado de una vivienda, que gana sobre la tarifa.
+///
+/// Villa Mónica son 120 € vengan los que vengan: es una casa de quince plazas
+/// y se limpia entera. Villa Gregorio y Villa Caliche, 100 €.
+model TarifaVivienda {
+  id            String   @id @default(cuid())
+  propertyId    String
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  /// salida | repaso
+  servicio      String
+  precioCerrado Decimal
+
+  @@unique([propertyId, servicio])
 }

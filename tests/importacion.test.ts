@@ -206,3 +206,95 @@ describe("el token de importación", () => {
     assert.equal(tokenDeLaCabecera(null), null);
   });
 });
+
+describe("las tarifas de limpieza que vienen de Mirador", () => {
+  const conTarifas = () => ({
+    ...volcado(),
+    propietarios: [
+      { ref: "p1", nombre: "Inversiones Brito Pérez S.L.", tarifaRef: "t2" },
+      { ref: "p2", nombre: "Academia Cañada del Río S.L.", tarifaRef: "t1", cuotaFija: 600 },
+    ],
+    tarifas: [
+      {
+        ref: "t1", nombre: "Oficial 2026", vigenteDesde: "2026-01-01" as string | null, vigenteHasta: null,
+        lineas: [
+          { servicio: "salida", base: 60, huespedesIncluidos: 2, porHuespedAdicional: 10 },
+          { servicio: "repaso", base: 40, huespedesIncluidos: 0, porHuespedAdicional: 0 },
+        ],
+      },
+      {
+        ref: "t2", nombre: "Inversiones Brito", vigenteDesde: "2026-01-01" as string | null, vigenteHasta: null,
+        lineas: [{ servicio: "salida", base: 50, huespedesIncluidos: 2, porHuespedAdicional: 10 }],
+      },
+    ],
+    preciosCerrados: [
+      { viviendaRef: "v1", servicio: "salida", precio: 120 },
+    ],
+  });
+
+  test("entran las dos con sus líneas", () => {
+    const r = revisarVolcado(conTarifas());
+    assert.equal(r.tarifas.length, 2);
+    assert.equal(r.tarifas[0].lineas.length, 2);
+    assert.equal(r.tarifas[0].lineas[0].base, 60);
+    assert.equal(r.tarifas[0].lineas[0].porHuespedAdicional, 10);
+    assert.deepEqual(r.rechazados, []);
+  });
+
+  test("y cada propietario con la suya", () => {
+    const r = revisarVolcado(conTarifas());
+    assert.equal(r.propietarios[0].tarifaRef, "t2");
+    assert.equal(r.propietarios[1].tarifaRef, "t1");
+  });
+
+  test("el precio cerrado de Villa Mónica entra", () => {
+    const r = revisarVolcado(conTarifas());
+    assert.deepEqual(r.preciosCerrados, [{ viviendaRef: "v1", servicio: "salida", precio: 120 }]);
+  });
+
+  // Una tarifa vacía dejaría las limpiezas sin precio y nadie se enteraría.
+  test("una tarifa sin líneas que valgan se rechaza", () => {
+    const v = conTarifas();
+    v.tarifas[0].lineas = [{ servicio: "loquesea", base: 60, huespedesIncluidos: 2, porHuespedAdicional: 10 }];
+    const r = revisarVolcado(v);
+    assert.equal(r.tarifas.length, 1);
+    assert.match(r.rechazados[0].porque, /ninguna línea/);
+  });
+
+  test("un propietario cuya tarifa no viene entra sin tarifa", () => {
+    const v = conTarifas();
+    v.propietarios[0].tarifaRef = "t-que-no-existe";
+    const r = revisarVolcado(v);
+    assert.equal(r.propietarios[0].tarifaRef, null);
+    assert.match(r.rechazados[0].porque, /entra sin tarifa/);
+  });
+
+  test("un precio cerrado de una vivienda que no viene se rechaza", () => {
+    const v = conTarifas();
+    v.preciosCerrados[0].viviendaRef = "v-que-no-existe";
+    const r = revisarVolcado(v);
+    assert.deepEqual(r.preciosCerrados, []);
+    assert.match(r.rechazados[0].porque, /vivienda/);
+  });
+
+  // Hay viviendas que no se facturan: un 0 es una decisión, no un hueco.
+  test("un precio cerrado de 0 € sí entra", () => {
+    const v = conTarifas();
+    v.preciosCerrados[0].precio = 0;
+    assert.equal(revisarVolcado(v).preciosCerrados[0].precio, 0);
+  });
+
+  // Mejor que valga desde siempre a que no valga nunca.
+  test("una tarifa sin fecha de inicio vale desde el principio", () => {
+    const v = conTarifas();
+    v.tarifas[0].vigenteDesde = null;
+    const r = revisarVolcado(v);
+    assert.ok(r.tarifas[0].vigenteDesde < new Date("2020-01-01"));
+  });
+
+  test("sin tarifas, el volcado sigue valiendo", () => {
+    const r = revisarVolcado(volcado());
+    assert.deepEqual(r.tarifas, []);
+    assert.deepEqual(r.preciosCerrados, []);
+  });
+});
