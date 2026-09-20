@@ -8,6 +8,8 @@ import { formatDate } from "@/lib/money";
 import SyncLodgifyButton from "@/components/SyncLodgifyButton";
 import FormularioConAviso from "@/components/FormularioConAviso";
 import GestionUsuarios from "@/components/GestionUsuarios";
+import EmpezarDeCero from "@/components/EmpezarDeCero";
+import { hayDatosDeDemostracion, resumenDeDatos } from "@/lib/datos-demo";
 
 export default async function RentalSettingsPage() {
   const { organizationId, session } = await requireBusinessContext("administracion");
@@ -19,6 +21,11 @@ export default async function RentalSettingsPage() {
       select: { id: true, name: true, email: true, role: true, active: true },
     })
   ).map((u) => ({ ...u, esYo: u.id === session.userId }));
+
+  const [resumen, esDemostracion] = await Promise.all([
+    resumenDeDatos(organizationId),
+    hayDatosDeDemostracion(organizationId),
+  ]);
 
   const [business, integration, employees, owners] = await Promise.all([
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
@@ -189,6 +196,8 @@ export default async function RentalSettingsPage() {
       </div>
 
       <GestionUsuarios usuarios={usuarios} />
+
+      <EmpezarDeCero resumen={resumen} esDemostracion={esDemostracion} />
 
       {business && (
         <div className="card p-5">

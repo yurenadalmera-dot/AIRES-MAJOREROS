@@ -20,6 +20,20 @@ La aplicación está en **https://airesmajoreros.pro**.
 > aterriza directamente en la parte que le corresponde; si intenta ir a otra, la aplicación le
 > devuelve a la suya.
 
+## Antes de empezar a trabajar: vaciar los datos de demostración
+
+La base de datos se creó vacía y el primer arranque la llenó con **siete viviendas, diecisiete
+reservas y cuatro propietarios inventados**, para poder enseñar y probar la aplicación. No
+corresponden a nada real.
+
+En **Alquileres → Ajustes → Datos de la aplicación** se ve qué hay y, si son de demostración, un
+aviso. Ahí mismo, «Empezar de cero» los borra: hay que escribir `BORRAR` para confirmar, porque
+no se puede deshacer y no hay copia de seguridad.
+
+Lo que **no** se toca: las cuentas de acceso y los datos fiscales de las dos empresas (CIF,
+dirección, numeración de facturas). Y una vez vaciado, no vuelven: los reinicios y despliegues
+no siembran nada mientras exista la organización.
+
 ## Dar de alta a alguien
 
 1. Entrar como administración y abrir **Alquileres → Ajustes**.
