@@ -7,9 +7,18 @@ import { BUSINESS_TYPES, EMPLOYEE_ROLE_LABEL } from "@/lib/constants";
 import { formatDate } from "@/lib/money";
 import SyncLodgifyButton from "@/components/SyncLodgifyButton";
 import FormularioConAviso from "@/components/FormularioConAviso";
+import GestionUsuarios from "@/components/GestionUsuarios";
 
 export default async function RentalSettingsPage() {
-  const { organizationId } = await requireBusinessContext("administracion");
+  const { organizationId, session } = await requireBusinessContext("administracion");
+
+  const usuarios = (
+    await prisma.user.findMany({
+      where: { organizationId },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      select: { id: true, name: true, email: true, role: true, active: true },
+    })
+  ).map((u) => ({ ...u, esYo: u.id === session.userId }));
 
   const [business, integration, employees, owners] = await Promise.all([
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
@@ -178,6 +187,8 @@ export default async function RentalSettingsPage() {
           </FormularioConAviso>
         </details>
       </div>
+
+      <GestionUsuarios usuarios={usuarios} />
 
       {business && (
         <div className="card p-5">

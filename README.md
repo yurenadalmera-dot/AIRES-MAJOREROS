@@ -220,6 +220,21 @@ Dar de alta un acceso remoto con `%` haría que el build pudiera aplicar el esqu
 cambio de dejar la base accesible desde cualquier host con solo la contraseña. No se ha hecho, y
 no conviene hacerlo.
 
+## Usuarios y accesos
+
+Cada persona entra con su propio correo, y el rol decide qué ve y qué puede hacer.
+
+- **Dar de alta** (Ajustes → Usuarios y accesos, solo administración): se pide nombre, correo y
+  rol. La aplicación **genera la contraseña** y la enseña **una sola vez**, para entregarla. No se
+  guarda en claro en ningún sitio, solo su hash: si se pierde, se restablece — no se recupera.
+- **Cada quien cambia la suya** en «Mi cuenta» (el nombre, arriba a la derecha). Pide la actual,
+  para que una sesión abierta en un ordenador ajeno no sirva para cambiarla.
+- **Restablecer, cambiar de rol y desactivar** desde la misma pantalla. No se puede desactivar la
+  propia cuenta, ni la última administración activa: dejaría la aplicación sin quien la gestione.
+
+Las contraseñas generadas evitan los caracteres que se confunden al dictarlas (`l/1/I`, `O/0`) y
+no llevan símbolos, que dan guerra al pegarlos desde el móvil.
+
 ## Pruebas
 
 ```bash

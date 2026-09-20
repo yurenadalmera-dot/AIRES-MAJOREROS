@@ -119,10 +119,10 @@ export default function Shell({
             {activeBusiness === "rental" ? "Gestión de alquileres vacacionales" : "Facturación de servicios de limpieza"}
           </p>
           <div className="flex items-center gap-3">
-            <div className="text-right leading-tight">
+            <Link href="/cuenta" className="text-right leading-tight hover:underline">
               <p className="text-sm font-medium text-slate-800">{userName}</p>
-              <p className="text-xs text-slate-400">{userRole}</p>
-            </div>
+              <p className="text-xs text-slate-400">{userRole} · Mi cuenta</p>
+            </Link>
             <button onClick={handleLogout} disabled={loggingOut} className="btn-secondary text-xs py-1.5">
               Salir
             </button>
