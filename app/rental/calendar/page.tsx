@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { addDays, addWeeks, startOfWeek, isSameDay, isWithinInterval, startOfDay } from "date-fns";
+import { addDays, addWeeks, startOfWeek, isSameDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { formatDate } from "@/lib/money";
+import { casillaDelDia } from "@/lib/calendario";
 
 const DAY_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
@@ -91,25 +92,12 @@ export default async function CalendarPage({
                       <p className="text-xs text-slate-400 font-normal">{property.locality}</p>
                     </td>
                     {weekDays.map((day) => {
-                      const dayStart = startOfDay(day);
-
-                      // El huésped ocupa desde la entrada hasta la víspera de
-                      // la salida. El día de la salida se pinta igualmente,
-                      // porque es cuando toca limpiar: antes quedaba como
-                      // celda vacía y la etiqueta «Salida» no se veía nunca.
-                      const queOcupa = propBookings.find(
-                        (b) =>
-                          dayStart >= startOfDay(b.checkIn) && dayStart < startOfDay(b.checkOut)
+                      // La decisión de qué va en cada casilla vive en
+                      // `lib/calendario.ts`, para poder probarla.
+                      const { reserva: booking, soloSalida, etiqueta } = casillaDelDia(
+                        propBookings,
+                        day
                       );
-                      const queSeVa = propBookings.find((b) => isSameDay(b.checkOut, day));
-
-                      // Si ese día se va uno y entra otro, manda quien entra:
-                      // es quien ocupa la vivienda esa noche. La salida se
-                      // señala igualmente, que es lo que obliga a limpiar.
-                      const booking = queOcupa ?? queSeVa;
-                      const isCheckIn = !!queOcupa && isSameDay(queOcupa.checkIn, day);
-                      const isCheckOut = !!queSeVa;
-                      const soloSalida = !queOcupa && !!queSeVa;
                       return (
                         <td key={day.toISOString()} className="p-1.5">
                           {booking ? (
@@ -122,13 +110,7 @@ export default async function CalendarPage({
                             >
                               <p className="font-medium truncate">{booking.guestName}</p>
                               <p className="truncate opacity-75">
-                                {isCheckIn && isCheckOut
-                                  ? "Salida y entrada · limpieza"
-                                  : isCheckIn
-                                    ? "Entrada"
-                                    : soloSalida
-                                      ? "Salida · limpieza"
-                                      : "—"}
+                                {etiqueta}
                               </p>
                             </Link>
                           ) : (

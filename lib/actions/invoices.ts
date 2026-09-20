@@ -8,6 +8,7 @@ import { exigir } from "@/lib/auth";
 import { splitAmount, round2 } from "@/lib/money";
 import { format } from "date-fns";
 import { INVOICE_STATUS_LABEL, puedeCambiarEstadoFactura } from "@/lib/constants";
+import { numeroSiguiente, prefijoFacturas } from "@/lib/numeracion";
 
 const generateSchema = z.object({
   periodStart: z.string().min(1),
@@ -26,7 +27,7 @@ const generateSchema = z.object({
  * ser correlativa y no reutilizar números, aunque haya huecos por anulación.
  */
 async function siguienteNumeroFactura(organizationId: string) {
-  const prefijo = `AM-${format(new Date(), "yyyy")}-`;
+  const prefijo = prefijoFacturas();
 
   const ultima = await prisma.invoice.findFirst({
     where: { organizationId, invoiceNumber: { startsWith: prefijo } },
@@ -34,10 +35,7 @@ async function siguienteNumeroFactura(organizationId: string) {
     select: { invoiceNumber: true },
   });
 
-  const ultimoOrdinal = ultima ? Number(ultima.invoiceNumber.slice(prefijo.length)) : 0;
-  const siguiente = Number.isFinite(ultimoOrdinal) ? ultimoOrdinal + 1 : 1;
-
-  return `${prefijo}${String(siguiente).padStart(4, "0")}`;
+  return numeroSiguiente(prefijo, ultima?.invoiceNumber ?? null);
 }
 
 /**

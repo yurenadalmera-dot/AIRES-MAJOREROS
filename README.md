@@ -220,6 +220,28 @@ Dar de alta un acceso remoto con `%` haría que el build pudiera aplicar el esqu
 cambio de dejar la base accesible desde cualquier host con solo la contraseña. No se ha hecho, y
 no conviene hacerlo.
 
+## Pruebas
+
+```bash
+npm test
+```
+
+27 pruebas, sin base de datos ni servidor: todo lo que comprueban es lógica pura, y por eso se
+sacó de donde estaba enterrada (`lib/numeracion.ts`, `lib/calendario.ts`).
+
+**No están escritas por completismo.** Cada bloque fija un fallo que llegó a estar en producción:
+el reparto entre socias que ignoraba el porcentaje de la segunda, la numeración de facturas que
+salía de contar en vez del último emitido, el mantenimiento futuro que bloqueaba una vivienda
+desde hoy, el día de salida que no se veía en el calendario, los permisos que no existían, y la
+factura emitida que podía volver a borrador.
+
+Comprobado que saben fallar: reintroduciendo a propósito dos de esos fallos, la suite pasa de
+27/27 a 25/27 señalando exactamente los dos. Una prueba que no puede fallar no comprueba nada.
+
+Aparte está la **autoprueba** (`SELFTEST=1`), que se ejecuta sobre el sitio desplegado y cubre lo
+que estas no pueden: que la base responde, que el login entra, que las cuentas de demostración no,
+y que las pantallas cargan.
+
 ## Facturación: lo que la aplicación hace cumplir
 
 - **Numeración correlativa.** El número sale del más alto emitido, no de cuántas facturas hay, así
