@@ -4,7 +4,10 @@ import { jwtVerify } from "jose";
 // `/api/health/db` es pública a propósito: sirve para diagnosticar un
 // despliegue que todavía no deja entrar a nadie, así que exigir sesión la
 // haría inútil. No expone datos: solo si hay conexión a la base de datos.
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health/db"];
+// `/api/importar` no lleva sesión de navegador porque quien llama es un
+// workflow de n8n: se autentica con su propio token de escritura, que la
+// propia ruta comprueba. Dejarlo fuera del middleware no lo abre.
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health/db", "/api/importar"];
 
 function isPublic(pathname: string) {
   return (

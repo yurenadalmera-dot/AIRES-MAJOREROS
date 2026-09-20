@@ -6,6 +6,7 @@ import { createEmployee, setEmployeeActive, createOwner } from "@/lib/actions/pr
 import { BUSINESS_TYPES, EMPLOYEE_ROLE_LABEL } from "@/lib/constants";
 import { formatDate } from "@/lib/money";
 import SyncLodgifyButton from "@/components/SyncLodgifyButton";
+import TokenDeImportacion from "@/components/TokenDeImportacion";
 import FormularioConAviso from "@/components/FormularioConAviso";
 import GestionUsuarios from "@/components/GestionUsuarios";
 import EmpezarDeCero from "@/components/EmpezarDeCero";
@@ -73,7 +74,7 @@ export default async function RentalSettingsPage() {
     select: { id: true, name: true },
   });
 
-  const [business, integration, ocr, employees, owners] = await Promise.all([
+  const [business, integration, ocr, importacion, employees, owners] = await Promise.all([
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
     prisma.integrationSettings.findUnique({
       where: { organizationId_provider: { organizationId, provider: "LODGIFY" } },
@@ -81,12 +82,16 @@ export default async function RentalSettingsPage() {
     prisma.integrationSettings.findUnique({
       where: { organizationId_provider: { organizationId, provider: "OCR" } },
     }),
+    prisma.integrationSettings.findUnique({
+      where: { organizationId_provider: { organizationId, provider: "IMPORT" } },
+    }),
     prisma.employee.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
     prisma.owner.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
   ]);
 
   const hayClave = Boolean(integration?.apiKeyCifrada);
   const hayClaveOcr = Boolean(ocr?.apiKeyCifrada);
+  const hayToken = Boolean(importacion?.apiKeyCifrada);
 
   async function businessAction(formData: FormData) {
     "use server";
@@ -335,6 +340,8 @@ export default async function RentalSettingsPage() {
           </button>
         </FormularioConAviso>
       </div>
+
+      <TokenDeImportacion hayToken={hayToken} />
 
       <GruposDePropietario propietarios={propietariosConGrupos} />
 

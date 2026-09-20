@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 import { cifrar, enmascarar } from "@/lib/secretos";
+import { generarToken, huellaDelToken } from "@/lib/token-importacion";
 import { normalizarCanal } from "@/lib/comisiones-canal";
 
 const integrationSchema = z.object({
@@ -196,5 +197,33 @@ export async function updateOcrSettings(formData: FormData) {
 
     revalidatePath("/rental/settings");
     revalidatePath("/rental/gastos");
+  });
+}
+
+/**
+ * Genera el token con el que n8n puede empujar datos de Mirador.
+ *
+ * Devuelve el token **una sola vez**: de él solo se guarda la huella, así que
+ * si se pierde hay que generar otro. Generar uno nuevo invalida el anterior,
+ * que es justo lo que se quiere si se ha escapado.
+ */
+export async function generarTokenDeImportacion() {
+  return conErroresLegibles<{ token: string }>(async () => {
+    const organizationId = await exigir("administracion");
+    const token = generarToken();
+
+    await prisma.integrationSettings.upsert({
+      where: { organizationId_provider: { organizationId, provider: "IMPORT" } },
+      update: { apiKeyCifrada: huellaDelToken(token), apiKeyMasked: enmascarar(token) },
+      create: {
+        organizationId,
+        provider: "IMPORT",
+        apiKeyCifrada: huellaDelToken(token),
+        apiKeyMasked: enmascarar(token),
+      },
+    });
+
+    revalidatePath("/rental/settings");
+    return { token };
   });
 }
