@@ -30,12 +30,16 @@ Lodgify) no la toca nunca.
 | Apto 8209 | Lodgify | activa |
 | Apto 8226 | Lodgify | activa |
 | Apto 8241 | Lodgify | activa |
-| Apto 27 | — | **ya no existe** (Emma, 20/09) |
+| Apto 27 | Lodgify (histórico) | **ya no está en servicio** (Emma, 20/09) |
 
 Propietario: **Inversiones Brito**.
 
-«Grupo Villa Mónica» es la villa más cinco apartamentos. **Villa Monikka es otra cosa**: eran dos
-nombres distintos, no uno mal escrito, y esa era la duda que arrastraba Emma.
+La villa más **cinco** apartamentos: 8206, 8209, 8226, 8241 y **27**. El 27 sigue siendo del
+grupo aunque ya no se lleve — por eso está en esta tabla, no fuera: sus 21 reservas de 2026
+cuentan para los números del año. Se da de alta y se marca como inactiva.
+
+**Villa Monikka es otra cosa**: eran dos nombres distintos, no uno mal escrito, y esa era la duda
+que arrastraba Emma.
 
 ### Villa Monikka — cinco apartamentos
 
@@ -66,7 +70,7 @@ Propietario: **Costa Calma Express Inmobiliaria S.L.** · CIF **B35709062** · l
 
 ### Viviendas que ya no se llevan
 
-**Apto 27** y **Apto 103**. Sus reservas de 2026 cuentan para los números del año, así que hay que
+**Apto 27** (del Grupo Villa Mónica) y **Apto 103**. Sus reservas de 2026 cuentan para los números del año, así que hay que
 darlas de alta y luego pulsar **«Marcar como inactiva»** en su ficha: desaparecen del panel, del
 calendario y de las limpiezas, pero su historial se queda.
 
@@ -74,12 +78,12 @@ calendario y de las limpiezas, pero su historial se queda.
 
 | Propietario | Viviendas |
 |---|---|
-| **Inversiones Brito** | Villa Mónica + 8206, 8209, 8226, 8241 + los cinco de Villa Monikka = **10** |
+| **Inversiones Brito** | Grupo Villa Mónica (la villa + 8206, 8209, 8226, 8241 y 27) y los cinco de Villa Monikka → **11**, de las cuales el 27 inactiva |
 | **Academia Cañada** | Apto 24, Apto 25 |
 | **Costa Calma Express Inmobiliaria S.L.** | Villa Caliche, Villa Gregorio |
 
 El propietario es lo que **agrupa la factura de limpiezas**: a Inversiones Brito le sale una sola
-factura con las limpiezas de sus diez viviendas.
+factura con las limpiezas de todas sus viviendas.
 
 ### Pendiente
 
