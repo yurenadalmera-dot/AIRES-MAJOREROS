@@ -97,7 +97,13 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
       const property = propertyByExternalId.get(res.propertyExternalId);
       if (!property) {
         unmatchedProperty++;
-        unmatchedDetails.push(`${res.externalId} (property_id ${res.propertyExternalId} sin emparejar)`);
+        // Se listan unas cuantas, no todas: el contador ya dice cuántas son, y
+        // este resumen se guarda en la base de datos.
+        if (unmatchedDetails.length < 20) {
+          unmatchedDetails.push(
+            `${res.externalId} (property_id ${res.propertyExternalId} sin emparejar)`
+          );
+        }
         continue;
       }
 

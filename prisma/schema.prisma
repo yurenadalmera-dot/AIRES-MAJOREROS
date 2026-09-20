@@ -18,8 +18,9 @@
 // servidor de hosting: desde el build, la autenticación se rechaza (P1000),
 // aunque la contraseña sea correcta.
 //
-// Se aplica desde el servidor con `npm run db:setup`, lanzado como tarea
-// programada del hosting. Ver README, «Aplicar el esquema».
+// Lo aplica la propia aplicación al arrancar (`instrumentation.ts`), que es el
+// único proceso con acceso: crea el esquema si falta (`lib/preparar-base.ts`) y
+// aplica los cambios posteriores (`lib/migraciones.ts`). Ver el README.
 
 generator client {
   provider = "prisma-client-js"
@@ -87,7 +88,7 @@ model Owner {
   name           String
   email          String?
   phone          String?
-  notes          String?
+  notes          String?  @db.Text
   createdAt      DateTime @default(now())
 
   properties Property[]
@@ -166,7 +167,7 @@ model Booking {
   netAmount              Decimal @default(0)
 
   manuallyAdjusted Boolean @default(false) // true = el sync de Lodgify nunca debe tocar esta reserva
-  notes            String?
+  notes            String?  @db.Text
 
   source    String   @default("MANUAL") // MANUAL | LODGIFY
   createdAt DateTime @default(now())
@@ -206,7 +207,7 @@ model CleaningTask {
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id])
 
-  notes     String?
+  notes     String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -272,7 +273,7 @@ model Invoice {
   partnerAAmount  Decimal @default(0)
   partnerBAmount  Decimal @default(0)
 
-  notes     String?
+  notes     String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -312,7 +313,7 @@ model IntegrationSettings {
   defaultBankPct      Decimal @default(2.5)
   syncEnabled         Boolean @default(true)
   lastSyncAt          DateTime?
-  lastSyncSummary     String?
+  lastSyncSummary     String?  @db.Text
 
   @@unique([organizationId, provider])
 }

@@ -172,6 +172,11 @@ hay manera de saber si el login funciona salvo pedírselo a alguien. Ojo: bajo P
 aplicación **no** escucha en `127.0.0.1:3000`, así que `SELFTEST_BASE` tiene que ser la URL
 pública. Se deja apagada en el día a día y se enciende para verificar un despliegue.
 
+**Cambios de esquema sobre una base que ya existe** van en `lib/migraciones.ts`: una lista de
+cambios que dicen cómo saber si hacen falta antes de tocar nada, así que se aplican solos al
+arrancar y ejecutarlos mil veces da igual. Ninguno destruye datos — ensanchar una columna es
+seguro, estrecharla no lo sería. Aquí no hay `prisma migrate` porque el build no alcanza la base.
+
 **Cuando cambie `prisma/schema.prisma`** hay que regenerar `lib/esquema-inicial.ts`:
 
 ```bash
