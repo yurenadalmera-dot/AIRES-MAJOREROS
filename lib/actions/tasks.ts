@@ -41,6 +41,59 @@ export async function updateTaskStatus(taskId: string, status: string) {
   });
 }
 
+const limpiezaManualSchema = z.object({
+  propertyId: z.string().min(1),
+  date: z.string().min(1),
+  employeeId: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+/**
+ * Una limpieza que no sale de ninguna reserva.
+ *
+ * Hasta ahora las limpiezas solo nacían de una reserva de Lodgify, y a mano
+ * solo se podían crear mantenimientos —que no se facturan—. Pero hay
+ * viviendas que no están en Lodgify: las de Domingo Javier, por ejemplo, cuyas
+ * limpiezas las encarga él. Sin esto no había forma de apuntarlas, y por tanto
+ * tampoco de cobrarlas.
+ *
+ * El precio se copia del de la vivienda, igual que hace la sincronización.
+ */
+export async function crearLimpiezaManual(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.limpiezas");
+    const data = limpiezaManualSchema.parse(Object.fromEntries(formData.entries()));
+
+    const vivienda = await prisma.property.findFirst({
+      where: { id: data.propertyId, organizationId },
+      select: { cleaningPrice: true, name: true },
+    });
+    if (!vivienda) throw new ErrorDeNegocio("Esa vivienda no existe.");
+
+    if (Number(vivienda.cleaningPrice) === 0) {
+      throw new ErrorDeNegocio(
+        `«${vivienda.name}» no tiene precio de limpieza: ponlo en Viviendas antes, o la limpieza entraría a 0 € y no se podría cobrar.`
+      );
+    }
+
+    await prisma.cleaningTask.create({
+      data: {
+        organizationId,
+        propertyId: data.propertyId,
+        type: "CLEANING",
+        date: new Date(data.date),
+        status: "PENDING",
+        employeeId: data.employeeId || null,
+        billable: true,
+        price: vivienda.cleaningPrice,
+        notes: data.notes || null,
+      },
+    });
+
+    revalidateTaskViews();
+  });
+}
+
 const maintenanceSchema = z.object({
   propertyId: z.string().min(1),
   date: z.string().min(1),
