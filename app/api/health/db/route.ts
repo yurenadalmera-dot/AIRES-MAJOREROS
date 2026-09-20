@@ -18,6 +18,15 @@ export const dynamic = "force-dynamic";
  * Antes los publicaba a cualquiera que abriera la dirección.
  */
 
+/**
+ * Cuándo se compiló lo que está corriendo. Lo inyecta `next.config.mjs`.
+ *
+ * Es lo que permite distinguir «el sitio responde» de «el sitio responde con
+ * la versión nueva»: un despliegue que falla deja la anterior en pie, y sin
+ * este dato nada lo delata.
+ */
+const COMPILADO_EN = process.env.COMPILADO_EN ?? "desconocido";
+
 /** Causa aproximada, sin decir contra qué servidor ni con qué usuario. */
 function causaAproximada(mensaje: string): string {
   if (/Authentication failed|Access denied/i.test(mensaje)) {
@@ -40,7 +49,7 @@ export async function GET() {
     const usuarios = await prisma.user.count();
 
     if (!session) {
-      return NextResponse.json({ ok: true, ms: Date.now() - started });
+      return NextResponse.json({ ok: true, compilado: COMPILADO_EN, ms: Date.now() - started });
     }
 
     // Host y usuario de DATABASE_URL, nunca la contraseña.
@@ -57,6 +66,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
+      compilado: COMPILADO_EN,
       target,
       usuarios,
       authSecretPresente: Boolean(process.env.AUTH_SECRET),

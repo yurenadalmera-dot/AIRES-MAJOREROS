@@ -109,6 +109,17 @@ Node.js → Compilaciones, y la conexión en hPanel → el sitio → Avanzado �
 > la versión anterior en su sitio: deja el `default.php`. Conviene no lanzar compilaciones a
 > ciegas contra producción.
 
+> ⚠️ **Y a veces el build falla sin dejar ni una línea de log** (pasó el 20/09: falló a los nueve
+> segundos, y relanzarlo a mano sin tocar nada funcionó a la primera). Cuando falla *antes* de
+> publicar, el sitio sigue en pie con la versión anterior y nada lo delata. Por eso la aplicación
+> lleva grabada la fecha en que se compiló —`COMPILADO_EN`, que inyecta `next.config.mjs` y
+> publica `/api/health/db`— y el flujo de trabajo `Despliegue` exige, tras cada push a la rama de
+> despliegue, que la versión viva sea posterior al push. Si no llega en diez minutos, falla y
+> GitHub avisa.
+>
+> **Si ese flujo falla:** hPanel → el sitio → Node.js → mirar si el último build salió `failed` y
+> relanzarlo a mano. Suele bastar.
+
 Las variables de entorno se configuran en hPanel → el sitio → Node.js → Variables de entorno, y
 son tres: `DATABASE_URL`, `AUTH_SECRET` y `ADMIN_PASSWORD` (ver `.env.example` para el formato).
 

@@ -1,0 +1,105 @@
+# ¿Ha llegado de verdad a airesmajoreros.pro lo que acabamos de subir?
+#
+# Hostinger construye por su cuenta al recibir un push, y ya ha fallado dos
+# veces por motivos ajenos al código: una vez por una variable de entorno que
+# rompía el `npm install`, y otra sin dejar ni una línea de log. Ninguna de las
+# dos avisó a nadie.
+#
+# Hay dos formas de que un despliegue salga mal, y solo se distinguen mirando
+# desde fuera:
+#
+#   - El build falla al publicar: el sitio se queda con la página por defecto
+#     de Hostinger. Se nota porque la comprobación de estado deja de responder
+#     JSON.
+#   - El build falla antes de publicar: el sitio sigue en pie, pero con la
+#     versión ANTERIOR. Nada lo delata. Por eso la aplicación lleva grabada la
+#     fecha en que se compiló, y aquí se exige que sea posterior al push.
+#
+# Esto no impide el fallo —Hostinger despliega sin preguntar— pero lo convierte
+# en un correo de GitHub en lugar de en una sorpresa dentro de tres días.
+
+name: Despliegue
+
+on:
+  push:
+    branches: ["claude/rental-cleaning-management-app-hrv9wg"]
+  workflow_dispatch:
+
+jobs:
+  comprobar-el-sitio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SITIO: https://airesmajoreros.pro
+
+    steps:
+      - name: Esperar y comprobar que la versión nueva está viva
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          # Margen por si el reloj del servidor de compilación va algo atrasado
+          # respecto al de GitHub: 5 minutos.
+          limite=$(date -u -d '5 minutes ago' +%s)
+          echo "Se exige una compilación posterior a $(date -u -d @$limite --iso-8601=seconds)"
+
+          intento=0
+          maximo=30          # 30 × 20 s = 10 minutos
+          ultimo=""
+
+          while [ $intento -lt $maximo ]; do
+            intento=$((intento + 1))
+            sleep 20
+
+            respuesta=$(curl -sS --max-time 20 "$SITIO/api/health/db" 2>&1) || {
+              echo "· intento $intento: el sitio no responde"
+              ultimo="sin respuesta"
+              continue
+            }
+
+            if ! echo "$respuesta" | jq -e . >/dev/null 2>&1; then
+              # Si no es JSON, lo más probable es que sea la página por defecto
+              # de Hostinger: el build ha fallado al publicar.
+              echo "· intento $intento: la respuesta no es JSON (¿página por defecto?)"
+              ultimo="no es JSON: $(echo "$respuesta" | head -c 200)"
+              continue
+            fi
+
+            ok=$(echo "$respuesta" | jq -r '.ok')
+            compilado=$(echo "$respuesta" | jq -r '.compilado // "desconocido"')
+            ultimo="ok=$ok compilado=$compilado"
+
+            if [ "$ok" != "true" ]; then
+              causa=$(echo "$respuesta" | jq -r '.causa // "sin causa"')
+              echo "· intento $intento: la aplicación responde pero la base de datos no ($causa)"
+              continue
+            fi
+
+            if [ "$compilado" = "desconocido" ]; then
+              echo "· intento $intento: viva, pero sin marca de compilación (versión antigua)"
+              continue
+            fi
+
+            cuando=$(date -u -d "$compilado" +%s 2>/dev/null || echo 0)
+            if [ "$cuando" -lt "$limite" ]; then
+              echo "· intento $intento: sigue corriendo la versión de $compilado"
+              continue
+            fi
+
+            echo
+            echo "✅ Desplegado: la versión viva se compiló el $compilado."
+            exit 0
+          done
+
+          echo
+          echo "❌ Diez minutos después del push, airesmajoreros.pro no sirve esta versión."
+          echo "   Último estado: $ultimo"
+          echo
+          echo "   Qué mirar, por este orden:"
+          echo "   1. hPanel → el sitio → Node.js → si el último build salió 'failed',"
+          echo "      relanzarlo a mano: suele funcionar sin tocar nada."
+          echo "   2. Que no falten las variables de entorno (DATABASE_URL, AUTH_SECRET,"
+          echo "      ADMIN_PASSWORD): algún despliegue las ha vaciado."
+          echo "   3. Que no haya reaparecido NODE_ENV=production, que rompe el npm install."
+          exit 1
