@@ -94,3 +94,24 @@ export function calcularLiquidacion({
     alPropietario: round2(baseDeGestion - comisionDeGestion),
   };
 }
+
+/**
+ * Qué comisión de gestión le toca a una vivienda.
+ *
+ * Lo normal es que venga de su grupo: Inversiones Brito tiene dos, el Grupo
+ * Villa Mónica al 30 % y Villa Monikka al 10 %. Poner el porcentaje en cada
+ * vivienda obligaría a repetirlo once veces y bastaría olvidarse de una para
+ * que la liquidación saliera mal.
+ *
+ * Una vivienda suelta, sin grupo, puede llevar el suyo propio. Y si no tiene
+ * ni grupo ni porcentaje, no se cobra gestión — es el caso de las de Domingo
+ * Javier, a las que solo se les gestiona la limpieza.
+ */
+export function comisionDeGestionDe(vivienda: {
+  managementPct: number | null;
+  group: { managementPct: number | null } | null;
+}): number | null {
+  const delGrupo = vivienda.group?.managementPct;
+  if (delGrupo !== null && delGrupo !== undefined) return delGrupo;
+  return vivienda.managementPct;
+}

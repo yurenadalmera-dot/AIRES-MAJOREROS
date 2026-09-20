@@ -22,7 +22,7 @@ import { decidirCuentaAdmin } from "../lib/cuenta-admin";
 import { cifrar, descifrar, enmascarar } from "../lib/secretos";
 import { comisionAplicable } from "../lib/comisiones-canal";
 import { leerFechas } from "../lib/fechas";
-import { calcularLiquidacion } from "../lib/liquidacion";
+import { calcularLiquidacion, comisionDeGestionDe } from "../lib/liquidacion";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -511,6 +511,44 @@ describe("liquidación al propietario", () => {
     assert.deepEqual(
       [r.ingresos, r.baseDeGestion, r.comisionDeGestion, r.alPropietario],
       [0, 0, 0, 0]
+    );
+  });
+});
+
+describe("de dónde sale la comisión de gestión", () => {
+  test("del grupo de la vivienda", () => {
+    assert.equal(
+      comisionDeGestionDe({ managementPct: null, group: { managementPct: 30 } }),
+      30
+    );
+    assert.equal(
+      comisionDeGestionDe({ managementPct: null, group: { managementPct: 10 } }),
+      10
+    );
+  });
+
+  // El grupo manda: si no, habría dos sitios donde mirar y acabarían diciendo
+  // cosas distintas.
+  test("el grupo manda sobre lo puesto en la vivienda", () => {
+    assert.equal(
+      comisionDeGestionDe({ managementPct: 99, group: { managementPct: 30 } }),
+      30
+    );
+  });
+
+  test("una vivienda suelta puede llevar el suyo", () => {
+    assert.equal(comisionDeGestionDe({ managementPct: 12, group: null }), 12);
+  });
+
+  // Las de Domingo Javier: solo se les gestiona la limpieza.
+  test("sin grupo y sin porcentaje, no se cobra gestión", () => {
+    assert.equal(comisionDeGestionDe({ managementPct: null, group: null }), null);
+  });
+
+  test("un grupo sin porcentaje no fuerza el de la vivienda", () => {
+    assert.equal(
+      comisionDeGestionDe({ managementPct: 12, group: { managementPct: null } }),
+      12
     );
   });
 });

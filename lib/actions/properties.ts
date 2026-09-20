@@ -63,6 +63,8 @@ const propertySchema = z.object({
   lodgifyPropertyId: z.string().optional(),
   /** Vacío = a esta vivienda no se le cobra gestión. */
   managementPct: z.string().optional(),
+  /** El grupo del que hereda la comisión. Vacío = vivienda suelta. */
+  groupId: z.string().optional(),
 });
 
 export async function createProperty(formData: FormData) {
@@ -84,6 +86,7 @@ export async function createProperty(formData: FormData) {
         ownerId: data.ownerId || null,
         lodgifyPropertyId: data.lodgifyPropertyId || null,
         managementPct: leerPorcentaje(data.managementPct),
+        groupId: data.groupId || null,
         active: true,
       },
     });
@@ -111,6 +114,7 @@ export async function updateProperty(propertyId: string, formData: FormData) {
         ownerId: data.ownerId || null,
         lodgifyPropertyId: data.lodgifyPropertyId || null,
         managementPct: leerPorcentaje(data.managementPct),
+        groupId: data.groupId || null,
       },
     });
 
@@ -217,5 +221,68 @@ export async function setEmployeeActive(employeeId: string, active: boolean) {
     await prisma.employee.updateMany({ where: { id: employeeId, organizationId }, data: { active } });
     revalidatePath("/rental/settings");
     revalidatePath("/rental/tasks");
+  });
+}
+
+const grupoSchema = z.object({
+  ownerId: z.string().min(1, "Falta el propietario"),
+  name: z.string().min(1, "Falta el nombre del grupo"),
+  managementPct: z.string().optional(),
+});
+
+/**
+ * Un grupo de viviendas de un propietario, con su comisión de gestión.
+ *
+ * Inversiones Brito tiene dos y cobran distinto (30 % y 10 %). Poner el
+ * porcentaje vivienda a vivienda obligaría a repetirlo once veces.
+ */
+export async function crearGrupo(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    const data = grupoSchema.parse(Object.fromEntries(formData.entries()));
+
+    const propietario = await prisma.owner.findFirst({
+      where: { id: data.ownerId, organizationId },
+      select: { id: true },
+    });
+    if (!propietario) throw new ErrorDeNegocio("Ese propietario no existe.");
+
+    await prisma.propertyGroup.create({
+      data: {
+        organizationId,
+        ownerId: propietario.id,
+        name: data.name.trim(),
+        managementPct: leerPorcentaje(data.managementPct),
+      },
+    });
+
+    revalidarVistasDeViviendas();
+  });
+}
+
+export async function cambiarComisionDeGrupo(groupId: string, porcentaje: string) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    await prisma.propertyGroup.updateMany({
+      where: { id: groupId, organizationId },
+      data: { managementPct: leerPorcentaje(porcentaje) },
+    });
+    revalidarVistasDeViviendas();
+  });
+}
+
+export async function borrarGrupo(groupId: string) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+
+    const cuantas = await prisma.property.count({ where: { groupId, organizationId } });
+    if (cuantas > 0) {
+      throw new ErrorDeNegocio(
+        `Ese grupo todavía tiene ${cuantas} ${cuantas === 1 ? "vivienda" : "viviendas"}. Sácalas del grupo antes de borrarlo.`
+      );
+    }
+
+    await prisma.propertyGroup.deleteMany({ where: { id: groupId, organizationId } });
+    revalidarVistasDeViviendas();
   });
 }

@@ -10,6 +10,7 @@ import FormularioConAviso from "@/components/FormularioConAviso";
 import GestionUsuarios from "@/components/GestionUsuarios";
 import EmpezarDeCero from "@/components/EmpezarDeCero";
 import ComisionesPorCanal from "@/components/ComisionesPorCanal";
+import GruposDePropietario from "@/components/GruposDePropietario";
 import { hayDatosDeDemostracion, resumenDeDatos } from "@/lib/datos-demo";
 
 export default async function RentalSettingsPage() {
@@ -41,6 +42,29 @@ export default async function RentalSettingsPage() {
     bankPct: c.bankPct === null ? null : Number(c.bankPct),
     propertyId: c.propertyId,
     propertyName: c.property?.name ?? null,
+  }));
+
+  const propietariosConGrupos = (
+    await prisma.owner.findMany({
+      where: { organizationId },
+      orderBy: { name: "asc" },
+      include: {
+        groups: {
+          orderBy: { name: "asc" },
+          include: { _count: { select: { properties: true } } },
+        },
+      },
+    })
+  ).map((o) => ({
+    id: o.id,
+    name: o.name,
+    monthlyFee: o.monthlyFee === null ? null : Number(o.monthlyFee),
+    grupos: o.groups.map((g) => ({
+      id: g.id,
+      name: g.name,
+      managementPct: g.managementPct === null ? null : Number(g.managementPct),
+      viviendas: g._count.properties,
+    })),
   }));
 
   const viviendasParaComisiones = await prisma.property.findMany({
@@ -273,6 +297,8 @@ export default async function RentalSettingsPage() {
           </FormularioConAviso>
         </details>
       </div>
+
+      <GruposDePropietario propietarios={propietariosConGrupos} />
 
       <ComisionesPorCanal
         comisiones={comisionesCanal}

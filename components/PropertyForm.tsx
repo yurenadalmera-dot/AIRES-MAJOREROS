@@ -8,7 +8,15 @@ interface OwnerOption {
   name: string;
 }
 
+interface GroupOption {
+  id: string;
+  name: string;
+  ownerName: string;
+  managementPct: number | null;
+}
+
 interface PropertyFormValues {
+  groupId?: string | null;
   managementPct?: number | null;
   name: string;
   locality: string;
@@ -23,11 +31,13 @@ interface PropertyFormValues {
 
 export default function PropertyForm({
   owners,
+  groups = [],
   initial,
   action,
   redirectTo,
 }: {
   owners: OwnerOption[];
+  groups?: GroupOption[];
   initial?: Partial<PropertyFormValues>;
   action: (formData: FormData) => Promise<void | { error: string } | unknown>;
   redirectTo: string;
@@ -103,18 +113,31 @@ export default function PropertyForm({
           </select>
         </div>
         <div>
-          <label className="label">Comisión de gestión (%)</label>
+          <label className="label">Grupo</label>
+          <select name="groupId" defaultValue={initial?.groupId ?? ""} className="input">
+            <option value="">Sin grupo</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.ownerName} · {g.name}
+                {g.managementPct !== null ? ` (${g.managementPct} %)` : ""}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-400 mt-1">
+            La comisión de gestión sale del grupo. Se configura en Ajustes.
+          </p>
+        </div>
+        <div>
+          <label className="label">Comisión de gestión propia (%)</label>
           <input
             name="managementPct"
             inputMode="decimal"
             defaultValue={initial?.managementPct ?? ""}
             className="input"
-            placeholder="vacío = no se cobra gestión"
+            placeholder="vacío"
           />
           <p className="text-xs text-slate-400 mt-1">
-            Lo que se lleva Aires por gestionar esta vivienda, sobre lo que queda después de las
-            comisiones de venta y de los gastos. Déjalo vacío si a esta casa solo se le gestiona
-            la limpieza.
+            Solo para una vivienda suelta, sin grupo. Si pertenece a uno, manda el del grupo.
           </p>
         </div>
         <div>

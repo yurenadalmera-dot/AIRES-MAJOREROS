@@ -33,6 +33,19 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
     return setPropertyActive(id, formData.get("active") === "true");
   }
 
+  const grupos = (
+    await prisma.propertyGroup.findMany({
+      where: { organizationId },
+      orderBy: [{ owner: { name: "asc" } }, { name: "asc" }],
+      include: { owner: { select: { name: true } } },
+    })
+  ).map((g) => ({
+    id: g.id,
+    name: g.name,
+    ownerName: g.owner.name,
+    managementPct: g.managementPct === null ? null : Number(g.managementPct),
+  }));
+
   return (
     <div className="max-w-2xl">
       <PageHeader
@@ -70,6 +83,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
 
       <PropertyForm
         owners={owners}
+        groups={grupos}
         initial={{
           name: property.name,
           locality: property.locality,
@@ -79,6 +93,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
           bathrooms: property.bathrooms,
           cleaningPrice: Number(property.cleaningPrice),
           managementPct: property.managementPct === null ? null : Number(property.managementPct),
+          groupId: property.groupId,
           ownerId: property.ownerId,
           lodgifyPropertyId: property.lodgifyPropertyId,
         }}

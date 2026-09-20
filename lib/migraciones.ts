@@ -179,6 +179,31 @@ const MIGRACIONES: Migracion[] = [
     },
   })),
 
+  // Los grupos de viviendas. Inversiones Brito tiene dos y cobran distinto:
+  // Grupo Villa Mónica al 30 % y Villa Monikka al 10 %.
+  {
+    nombre: "PropertyGroup",
+    haceFalta: async () => {
+      const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = 'PropertyGroup'
+      `;
+      return Number(filas[0]?.n ?? 0) === 0;
+    },
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe("CREATE TABLE `PropertyGroup` ( `id` VARCHAR(191) NOT NULL, `organizationId` VARCHAR(191) NOT NULL, `ownerId` VARCHAR(191) NOT NULL, `name` VARCHAR(191) NOT NULL, `managementPct` DECIMAL(65, 30) NULL, `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), INDEX `PropertyGroup_organizationId_idx`(`organizationId`), INDEX `PropertyGroup_ownerId_idx`(`ownerId`), PRIMARY KEY (`id`) ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    },
+  },
+
+  {
+    nombre: "Property.groupId",
+    haceFalta: () => faltaColumna("Property", "groupId"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe("ALTER TABLE `Property` ADD COLUMN `groupId` VARCHAR(191) NULL");
+      await prisma.$executeRawUnsafe("CREATE INDEX `Property_groupId_idx` ON `Property`(`groupId`)");
+    },
+  },
+
   {
     nombre: "Expense",
     haceFalta: async () => {

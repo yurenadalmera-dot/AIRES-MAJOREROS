@@ -59,6 +59,7 @@ model Organization {
   partnerSplitConfigs PartnerSplitConfig[]
   channelCommissions  ChannelCommission[]
   expenses            Expense[]
+  propertyGroups      PropertyGroup[]
 }
 
 /// Una "unidad de negocio" dentro de la organización. type identifica su
@@ -108,6 +109,7 @@ model Owner {
 
   properties Property[]
   expenses   Expense[]
+  groups     PropertyGroup[]
 
   @@index([organizationId])
 }
@@ -126,11 +128,11 @@ model Property {
   bathrooms         Int      @default(1)
   active            Boolean  @default(true)
   cleaningPrice     Decimal  @default(0)
-  /// Lo que se lleva Aires por gestionar esta vivienda, en porcentaje sobre
-  /// lo que queda después de las comisiones de venta y de los gastos. 30 % en
-  /// el Grupo Villa Mónica, 10 % en Villa Monikka, nada en las de Domingo
-  /// Javier —a esas solo se les gestiona la limpieza—.
-  managementPct     Decimal? // precio que Aires Majoreros factura por limpieza estándar de esta vivienda
+  /// Solo para una vivienda suelta, que no pertenezca a ningún grupo. Lo
+  /// normal es que la comisión venga del grupo: ver `PropertyGroup`.
+  managementPct     Decimal?
+  groupId           String?
+  group             PropertyGroup? @relation(fields: [groupId], references: [id]) // precio que Aires Majoreros factura por limpieza estándar de esta vivienda
   manualStatus      String?  // override manual opcional: OCCUPIED | AVAILABLE | CLEANING_NEEDED | MAINTENANCE
   lodgifyPropertyId String?  @unique // para emparejar con la integración Lodgify
   createdAt         DateTime @default(now())
@@ -361,6 +363,32 @@ model ChannelCommission {
   @@unique([organizationId, channel, propertyId])
   @@index([organizationId])
   @@index([propertyId])
+}
+
+/// Un grupo de viviendas de un mismo propietario, con su comisión.
+///
+/// Inversiones Brito tiene dos, y cobran distinto: el Grupo Villa Mónica al
+/// 30 % y Villa Monikka al 10 %. Sin esto habría que repetir el porcentaje en
+/// cada una de las once viviendas, y a la primera que se olvidara, descuadra.
+///
+/// La cuota fija (Academia Cañada, 600 € al mes) no va aquí: esa es del
+/// propietario entero, no de un grupo.
+model PropertyGroup {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  ownerId        String
+  owner          Owner    @relation(fields: [ownerId], references: [id])
+  name           String
+  /// Lo que se lleva Aires por gestionar las viviendas de este grupo, sobre
+  /// lo que queda después de las comisiones de venta y de los gastos.
+  managementPct  Decimal?
+  createdAt      DateTime @default(now())
+
+  properties Property[]
+
+  @@index([organizationId])
+  @@index([ownerId])
 }
 
 /// Un gasto de una vivienda: luz, agua, una reparación, la comunidad.
