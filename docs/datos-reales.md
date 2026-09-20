@@ -338,6 +338,65 @@ La reserva de 180 € del 15 al 16 de julio (Beach & Ocean, huésped Gigliola Sc
 comisión de Booking pero con 4,75 € de banco —un 2,64 %—. Con `OH` al 0 % de canal, ese cargo
 tiene que venir de otro sitio. Sigue sin explicar.
 
+## La mudanza de Mirador al SaaS
+
+Decidido el 20/09: los datos se traen aquí y ese Supabase queda libre para otro proyecto.
+
+### Cómo se hace
+
+n8n alcanza airesmajoreros.pro (yo no, el proxy lo bloquea), así que empuja él:
+
+1. **En el SaaS**: Alquileres → Ajustes → «Traerse los datos de Mirador» → **Generar el token**.
+   Se enseña una sola vez; aquí solo queda su huella.
+2. **En n8n**: workflow **«Mirador → SaaS · traer cartera y movimientos»**. En el nodo «Empujar
+   al SaaS», crear la credencial de cabecera con `Authorization` = `Bearer imp_...`.
+3. Ejecutar. El último nodo da el parte: cuántos entran, cuántos ya estaban, cuántos se han
+   **perdido por el camino** y el motivo de cada rechazo.
+
+Se puede repetir las veces que haga falta: cada apunte va con su huella y no se duplica.
+
+### Lo que se mueve, comprobado contra los datos reales
+
+| | |
+|---|---|
+| Propietarios | 3 |
+| Grupos | 3 |
+| Viviendas | 17 (12 con listing de Lodgify) |
+| Movimientos | 267 — 184 gastos, **41 sueldos**, **40 traspasos**, 2 ingresos |
+
+Ni un apunte sin huella, ni una huella repetida, y **uno sin fecha** que entra marcado en vez
+de perderse.
+
+Los 81 sueldos y traspasos —**46.580 €**— se habrían volcado dentro de «gastos» y habrían
+restado en la liquidación de alguien. Un traspaso entre cuentas no es un gasto de nadie. Por eso
+`Expense` lleva ahora `type`.
+
+### Lo que NO se mueve
+
+**Las reservas.** Lodgify es su origen y la aplicación ya sabe traerlas sola; de Mirador solo
+hacía falta el emparejamiento de cada vivienda con su listing, que viaja en el volcado.
+
+### La regla que se deja en blanco a propósito
+
+Grupo Chano entra con su 30 % y Academia con sus 600 € fijos, porque en los dos sitios
+significan lo mismo. **Villa Monikka entra sin porcentaje.** Su regla en Mirador es `pct_ventas`
+(10 % sobre ventas) y aquí se aplicaría sobre el beneficio: serían dos números distintos
+presentados como el mismo.
+
+Se ve vacío en Ajustes —que se nota— en vez de salir un número que parece bueno y no lo es. En
+cuanto Emma diga el criterio, se pone.
+
+### Lo que hay que portar antes de apagar Mirador
+
+Ya hecho: `groupId`, `type`, `reparto`, `origen`, `origenHash` y `revisar` en los gastos, y la
+fecha nullable.
+
+Pendiente: las **tarifas de limpieza por número de huéspedes** (`tarifas`, `tarifa_lineas`,
+`tarifa_vivienda`, y la vista `v_limpieza_teorica`). Aquí el precio de limpieza es uno fijo por
+vivienda; allí es base + tanto por huésped adicional, con precio cerrado para Villa Mónica
+(120 €), Villa Gregorio (100 €) y Villa Caliche (100 €), y dos tarifas distintas — «Oficial
+2026» (salida 60 €, repaso 40 €) y «Inversiones Brito» (salida 50 €, repaso 30 €).
+
 ## VeriFactu
 
 Una factura emitida ya no vuelve a borrador: la ley no permite modificar ni anular una factura
