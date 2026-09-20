@@ -25,12 +25,14 @@ Lodgify) no la toca nunca.
 
 | Vivienda | Entra por | Estado |
 |---|---|---|
-| Villa Mónica (la villa) | Lodgify | activa · **Inversiones Brito** |
+| Villa Mónica (la villa) | Lodgify | activa |
 | Apto 8206 | Lodgify | activa |
 | Apto 8209 | Lodgify | activa |
 | Apto 8226 | Lodgify | activa |
 | Apto 8241 | Lodgify | activa |
 | Apto 27 | — | **ya no existe** (Emma, 20/09) |
+
+Propietario: **Inversiones Brito**.
 
 «Grupo Villa Mónica» es la villa más cinco apartamentos. **Villa Monikka es otra cosa**: eran dos
 nombres distintos, no uno mal escrito, y esa era la duda que arrastraba Emma.
@@ -39,7 +41,9 @@ nombres distintos, no uno mal escrito, y esa era la duda que arrastraba Emma.
 
 Sand Beach · Beach Ocean · Gold View · Waves Dreams · White Sand
 
-*No aparecen en ninguno de los dos Excel. Falta saber si están en Lodgify y de quién son.*
+Propietario: **Inversiones Brito**, igual que el otro grupo.
+
+*No aparecen en ninguno de los dos Excel. Falta saber si están en Lodgify: si no, van a mano.*
 
 ### Academia Cañada
 
@@ -66,11 +70,23 @@ Propietario: **Costa Calma Express Inmobiliaria S.L.** · CIF **B35709062** · l
 darlas de alta y luego pulsar **«Marcar como inactiva»** en su ficha: desaparecen del panel, del
 calendario y de las limpiezas, pero su historial se queda.
 
+### Quién es de quién
+
+| Propietario | Viviendas |
+|---|---|
+| **Inversiones Brito** | Villa Mónica + 8206, 8209, 8226, 8241 + los cinco de Villa Monikka = **10** |
+| **Academia Cañada** | Apto 24, Apto 25 |
+| **Costa Calma Express Inmobiliaria S.L.** | Villa Caliche, Villa Gregorio |
+
+El propietario es lo que **agrupa la factura de limpiezas**: a Inversiones Brito le sale una sola
+factura con las limpiezas de sus diez viviendas.
+
 ### Pendiente
 
-- CIF y domicilio de **Inversiones Brito**, si sus casas se facturan.
-- De quién son los cinco de **Villa Monikka**, y si están en Lodgify.
-- Quién es el propietario de los apartamentos del Grupo Villa Mónica (8206, 8209, 8226, 8241).
+- **CIF y domicilio de Inversiones Brito**. Sin ellos su factura no es válida, y es el cliente
+  más grande.
+- Si los cinco de **Villa Monikka** están en Lodgify o hay que darlos de alta a mano.
+- De quién era el **Apto 103**, para su histórico.
 
 ## Comisiones reales (de las 152 reservas de 2026)
 
