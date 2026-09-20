@@ -43,6 +43,11 @@ export async function register() {
       await asegurarAdministrador();
       await retirarUsuariosDemo();
     }
+
+    // Las cuentas del equipo. Solo crea las que falten; una que ya existe no
+    // se toca. Ver `lib/altas-iniciales.ts`.
+    const { crearAltasIniciales } = await import("./lib/altas-iniciales");
+    await crearAltasIniciales();
   } catch (error) {
     console.error(
       "⚠️  No se ha podido preparar la base de datos al arrancar:",

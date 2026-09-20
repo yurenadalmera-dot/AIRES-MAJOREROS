@@ -55,6 +55,18 @@ administración activa.
 
 - `info@airesmajoreros.pro` — **Administración**. Es la cuenta con la que se dan de alta las
   demás. Su contraseña se entrega aparte, nunca por escrito en este repositorio.
+- `emma@airesmajoreros.pro` — **Gestión de alquiler**.
+- `alejandra@airesmajoreros.pro` — **Socia**.
+- `limpieza@airesmajoreros.pro` — **Personal**. Cuenta compartida del equipo de limpieza.
+
+  Estas tres se crean en el arranque desde `lib/altas-iniciales.ts`, que solo guarda el hash de
+  la contraseña, nunca la contraseña. Ese módulo **solo crea lo que falta**: una cuenta que ya
+  existe no se toca, ni su contraseña, ni su rol, ni si está activa.
+
+  > ⚠️ Los tres correos son **nombres de usuario**, no buzones. El plan de correo contratado
+  > tiene **una sola cuenta**, `info@airesmajoreros.pro`, así que escribir a `emma@…`,
+  > `alejandra@…` o `limpieza@…` no llega a nadie. Para entrar en la aplicación funcionan
+  > perfectamente; para recibir correo habría que ampliar el plan.
 - Cuatro cuentas `@example.com` de la demostración inicial (`emma@`, `socia1@`, `socia2@`,
   `admin@`): **desactivadas a propósito** y comprobado en cada arranque que no dejan entrar. No
   hay que hacer nada con ellas.
