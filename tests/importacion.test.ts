@@ -370,12 +370,21 @@ describe("las comisiones de canal", () => {
     assert.equal(del(r, "BookingCom")?.platformPct, 15, "y la general no se contagia");
   });
 
-  // El Apto 27 iba al 17 % según el Excel, pero en Mirador no existe con ese
-  // nombre. Callárselo dejaría un porcentaje comprobado sin aplicar y nadie
-  // se enteraría.
+  // El 17 % del Excel está escrito a nombre de «Apto 27», que es como se
+  // llamaba Montaña Guerime. Si el alias no llegara hasta aquí, ese piso se
+  // liquidaría al 15 % sin que nadie lo notara.
+  test("el 17 % del «Apto 27» acaba en Montaña Guerime", () => {
+    const v = conComisiones();
+    v.viviendas.push({ ref: "v4", propietarioRef: "p1", grupoRef: "g1", nombre: "Montaña Guerime", plazas: 3, lodgifyId: "639389" });
+    const r = revisarVolcado(v);
+    assert.equal(del(r, "BookingCom", "v4")?.platformPct, 17);
+    assert.equal(del(r, "BookingCom")?.platformPct, 15, "y las demás siguen al 15 %");
+  });
+
+  // Callárselo dejaría un porcentaje comprobado sin aplicar y nadie se
+  // enteraría.
   test("una vivienda contrastada que no viene en el volcado se dice", () => {
     const r = revisarVolcado(conComisiones());
-    assert.equal(del(r, "BookingCom", "v-apto-27"), undefined);
     assert.ok(
       r.avisos.some((x) => /Apto 27/.test(x.que) && /no viene en el volcado/.test(x.porque)),
       "y sale como aviso, no como rechazo: nadie nos lo mandó"
@@ -482,6 +491,10 @@ describe("los alias de vivienda confirmados", () => {
 
   test("la clave no depende de tildes ni mayúsculas", () => {
     assert.equal(claveDeVivienda("BEACHS & OCEAN"), claveDeVivienda("Beach & Ocean"));
+  });
+
+  test("Apto 27 es Montaña Guerime", () => {
+    assert.equal(claveDeVivienda("Apto 27"), claveDeVivienda("Montaña Guerime"));
   });
 
   test("lo que no es alias no se toca", () => {

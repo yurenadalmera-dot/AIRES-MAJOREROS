@@ -30,7 +30,7 @@ Lodgify) no la toca nunca.
 | Apto 8209 | Lodgify | activa |
 | Apto 8226 | Lodgify | activa |
 | Apto 8241 | Lodgify | activa |
-| Apto 27 | Lodgify (histórico) | **ya no está en servicio** (Emma, 20/09) |
+| Apto 27 → **Montaña Guerime** | Lodgify | activa; era el nombre lo que dejó de usarse (Yurena, 20/09) |
 
 Propietario: **Inversiones Brito**.
 
@@ -70,7 +70,7 @@ Propietario: **Costa Calma Express Inmobiliaria S.L.** · CIF **B35709062** · l
 
 ### Viviendas que ya no se llevan
 
-**Apto 27** (del Grupo Villa Mónica) y **Apto 103**. Sus reservas de 2026 cuentan para los números del año, así que hay que
+~~**Apto 27**~~ (resultó ser Montaña Guerime, que sigue activa) y **Apto 103**. Sus reservas de 2026 cuentan para los números del año, así que hay que
 darlas de alta y luego pulsar **«Marcar como inactiva»** en su ficha: desaparecen del panel, del
 calendario y de las limpiezas, pero su historial se queda.
 
@@ -389,6 +389,7 @@ volcado real:
 | AirbnbIntegration | **15,5 %** | 0 % | contrastado aquí (el 15 % de Mirador era supuesto) |
 | BookingCom · todas | 15 % | **1,3 %** | contrastado dos veces; Mirador no contempla el banco |
 | BookingCom · Apto 8206 | **17 %** | 1,3 % | contrastado: 20 de 20 reservas |
+| BookingCom · Montaña Guerime | **17 %** | 1,3 % | contrastado: 21 de 21 (es el «Apto 27» del Excel) |
 | OH (directa) | 0 % | 0 % | **de Mirador**, que lo da por bueno |
 | Manual | 0 % | 0 % | **de Mirador**, que lo da por bueno |
 
@@ -403,13 +404,20 @@ inventar de menos, se inventa de menos y se deja dicho en la nota.
 En Ajustes, **una comisión sin contrastar sale marcada en ámbar** con su nota. En cuanto alguien
 escribe el porcentaje a mano deja de estarlo: escribirlo es una decisión, no una herencia.
 
-#### Lo que no se puede aplicar, y se dice
+#### Resuelto: el «Apto 27» del Excel es Montaña Guerime
 
-El Excel decía que el **Apto 27** también iba al 17 %, pero **en Mirador no existe ninguna
-vivienda con ese nombre**: el Grupo Chano tiene Villa Mónica, 8206, 8209, 8226, 8241, **Montaña
-Guerime** y el 103 (inactivo). El porcentaje se queda escrito y la importación lo avisa en vez de
-callárselo. Si «Apto 27» era **Montaña Guerime** —lo más probable por fechas— hay que decirlo y
-se aplica solo.
+Confirmado por Yurena el 20/09, y encaja con los datos:
+
+- El Grupo Chano tiene **siete** viviendas en Mirador: Villa Mónica, 8206, 8209, 8226, 8241,
+  Montaña Guerime y el 103 (inactivo). En el Excel estaban las mismas menos Guerime, y con un
+  «Apto 27» que allí no existe. Es el único par que quedaba sin emparejar.
+- «Ya no está en servicio» era el **nombre**, no el apartamento: Guerime tiene reservas hasta
+  febrero de 2027 y 40 en 2026.
+- Las 21 reservas de 2026 del Excel caben dentro de esas 40: aquel Excel era parcial (152 de 330).
+
+Con el alias puesto, **su 17 % de Booking se aplica solo** y la importación ya no deja ningún
+aviso pendiente. Importa: sobre las ventas de 2026 de ese piso (17.910 €), la diferencia entre
+el 15 % y el 17 % son unos **358 €** que estaban mal repartidos, más lo de 2025.
 
 ### La pregunta que sigue abierta
 
@@ -479,6 +487,7 @@ dijo y cuándo. De momento hay uno:
 | Escrito así | Es en realidad | Quién lo confirmó |
 |---|---|---|
 | Beachs & Ocean | **Beach & Ocean** | Yurena, 20/09/2026 |
+| Apto 27 | **Montaña Guerime** | Yurena, 20/09/2026 |
 
 Ahí la importación **une de verdad**: probado con «Beachs & Ocean» dada de alta a mano y con una
 reserva suya dentro, quedan **17 viviendas y no 18** — la ficha conserva su precio de limpieza y

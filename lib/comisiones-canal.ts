@@ -4,8 +4,9 @@
  * Esto salió de mirar el Excel de reservas de 2026, y no es lo que parecía:
  *
  *   - **Airbnb: 15,5 %** en todos los apartamentos, y sin comisión bancaria.
- *   - **Booking: 17 %** en el Apto 27 y el Apto 8206, **15 %** en los demás.
- *     No es un redondeo ni una excepción: 21 de 21 y 20 de 20 reservas.
+ *   - **Booking: 17 %** en el Apto 8206 y en el que el Excel llama «Apto 27»
+ *     —que es Montaña Guerime—, **15 %** en los demás. No es un redondeo ni
+ *     una excepción: 20 de 20 y 21 de 21 reservas.
  *   - **Bancaria: 1,3 %**, y solo en Booking.
  *
  * Es decir, la comisión depende del canal **y** del apartamento. Con un único
@@ -66,15 +67,15 @@ export const COMISIONES_CONTRASTADAS: ComisionContrastada[] = [
     nota: "Contrastado: 20 de 20 reservas al 17 %, no al 15 % de las demás. El informe semanal de Brito lo confirma por separado.",
   },
   {
-    // El Excel decía que el Apto 27 también iba al 17 % (21 de 21 reservas),
-    // pero en Mirador no hay ninguna vivienda con ese nombre. Se deja escrito:
-    // si algún día aparece, entra con su porcentaje; y mientras no aparezca, la
-    // importación lo dice en vez de callárselo.
+    // El Excel lo llama «Apto 27»; en Mirador ese piso es **Montaña Guerime**
+    // (confirmado por Yurena el 20/09). Se deja escrito con el nombre del
+    // Excel, que es de donde salió el 17 %, y el alias lo lleva hasta la
+    // vivienda buena: así no se pierde de dónde viene el dato.
     canal: "BookingCom",
     vivienda: "Apto 27",
     platformPct: 17,
     bankPct: 1.3,
-    nota: "Contrastado: 21 de 21 reservas al 17 %. Ojo: esta vivienda no está en Mirador con ese nombre.",
+    nota: "Contrastado: 21 de 21 reservas al 17 %. En el Excel es «Apto 27»; aquí es Montaña Guerime, el mismo piso con otro nombre.",
   },
 ];
 

@@ -227,6 +227,11 @@ export function normalizarNombre(nombre: string): string {
 export const ALIAS_DE_VIVIENDA: { nombre: string; esLaMisma: string; quien: string }[] = [
   // El informe semanal de Brito lo escribe con una «s» de más.
   { nombre: "Beachs & Ocean", esLaMisma: "Beach & Ocean", quien: "Yurena, 20/09/2026" },
+  // El Excel de 2026 lo llama «Apto 27»; en Mirador es «Montaña Guerime». Es
+  // el mismo piso con el nombre cambiado, no uno que se dejó de llevar: tiene
+  // reservas hasta febrero de 2027. Importa más de lo que parece, porque
+  // arrastra su comisión propia del 17 % en Booking.
+  { nombre: "Apto 27", esLaMisma: "Montaña Guerime", quien: "Yurena, 20/09/2026" },
 ];
 
 /**
@@ -317,7 +322,9 @@ export function fusionarComisiones(
 } {
   const rechazados: { que: string; porque: string }[] = [];
   const avisos: { que: string; porque: string }[] = [];
-  const refPorNombre = new Map(viviendas.map((v) => [normalizarNombre(v.nombre), v.ref]));
+  // Por la clave y no por el nombre pelado: el 17 % está escrito a nombre de
+  // «Apto 27», que es como se llamaba Montaña Guerime.
+  const refPorNombre = new Map(viviendas.map((v) => [claveDeVivienda(v.nombre), v.ref]));
 
   const comisiones: ComisionLista[] = [];
   const clave = (c: { canal: string; viviendaRef: string | null }) =>
@@ -327,7 +334,7 @@ export function fusionarComisiones(
   for (const c of COMISIONES_CONTRASTADAS) {
     let viviendaRef: string | null = null;
     if (c.vivienda) {
-      const ref = refPorNombre.get(normalizarNombre(c.vivienda));
+      const ref = refPorNombre.get(claveDeVivienda(c.vivienda));
       if (!ref) {
         avisos.push({
           que: `comisión de ${c.canal} en ${c.vivienda}`,
