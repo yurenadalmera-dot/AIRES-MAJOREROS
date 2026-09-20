@@ -28,7 +28,7 @@ on:
 jobs:
   comprobar-el-sitio:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     env:
       SITIO: https://airesmajoreros.pro
@@ -44,15 +44,18 @@ jobs:
           limite=$(date -u -d '5 minutes ago' +%s)
           echo "Se exige una compilación posterior a $(date -u -d @$limite --iso-8601=seconds)"
 
+          # Diez minutos de reloj, no «treinta intentos»: con un curl lento,
+          # contar intentos se iba al doble y chocaba con el tiempo máximo del
+          # trabajo, que lo mataba sin llegar a dar el diagnóstico.
+          fin=$(( $(date +%s) + 600 ))
           intento=0
-          maximo=30          # 30 × 20 s = 10 minutos
           ultimo=""
 
-          while [ $intento -lt $maximo ]; do
+          while [ "$(date +%s)" -lt "$fin" ]; do
             intento=$((intento + 1))
             sleep 20
 
-            respuesta=$(curl -sS --max-time 20 "$SITIO/api/health/db" 2>&1) || {
+            respuesta=$(curl -sS --connect-timeout 5 --max-time 15 "$SITIO/api/health/db" 2>&1) || {
               echo "· intento $intento: el sitio no responde"
               ultimo="sin respuesta"
               continue
@@ -102,4 +105,14 @@ jobs:
           echo "   2. Que no falten las variables de entorno (DATABASE_URL, AUTH_SECRET,"
           echo "      ADMIN_PASSWORD): algún despliegue las ha vaciado."
           echo "   3. Que no haya reaparecido NODE_ENV=production, que rompe el npm install."
+          echo
+          echo "   === Qué contesta exactamente el sitio ==="
+          for ruta in /api/health/db /login /; do
+            echo "--- $SITIO$ruta"
+            curl -sS -o /tmp/cuerpo -D /tmp/cabeceras -w 'codigo=%{http_code} tipo=%{content_type} redirecciones=%{num_redirects}\n' \
+              --connect-timeout 5 --max-time 15 -L "$SITIO$ruta" || echo "(sin respuesta)"
+            grep -iE '^(server|x-|cf-|location|content-type):' /tmp/cabeceras | head -8 || true
+            echo "primeros 400 caracteres del cuerpo:"
+            head -c 400 /tmp/cuerpo; echo; echo
+          done
           exit 1
