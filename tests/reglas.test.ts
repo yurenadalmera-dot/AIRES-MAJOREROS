@@ -20,7 +20,7 @@ import { computePropertyStatus } from "../lib/status";
 import { casillaDelDia } from "../lib/calendario";
 import { decidirCuentaAdmin } from "../lib/cuenta-admin";
 import { cifrar, descifrar, enmascarar } from "../lib/secretos";
-import { comisionParaCanal } from "../lib/comisiones-canal";
+import { comisionAplicable } from "../lib/comisiones-canal";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -323,53 +323,70 @@ describe("IGIC en las facturas", () => {
   });
 });
 
-describe("comisión según el canal de venta", () => {
-  const configuradas = [
-    { canal: "Airbnb", platformPct: 15 },
-    { canal: "Booking.com", platformPct: 18 },
-  ];
+describe("comisión según canal y vivienda", () => {
+  // Salido del Excel de reservas de 2026: Airbnb 15,5 % en todas las casas y
+  // sin comisión bancaria; Booking 17 % en dos pisos y 15 % en el resto, con
+  // un 1,3 % de comisión bancaria.
+  const APTO_27 = "id-apto-27";
+  const APTO_8206 = "id-apto-8206";
+  const APTO_8241 = "id-apto-8241";
 
-  test("cada canal se lleva lo suyo", () => {
-    assert.equal(comisionParaCanal("Airbnb", configuradas, 0), 15);
-    assert.equal(comisionParaCanal("Booking.com", configuradas, 0), 18);
+  const configuradas = [
+    { canal: "Airbnb", propertyId: null, platformPct: 15.5, bankPct: 0 },
+    { canal: "Booking.com", propertyId: null, platformPct: 15, bankPct: 1.3 },
+    { canal: "Booking.com", propertyId: APTO_27, platformPct: 17, bankPct: 1.3 },
+    { canal: "Booking.com", propertyId: APTO_8206, platformPct: 17, bankPct: 1.3 },
+  ];
+  const porDefecto = { platformPct: 15, bankPct: 2.5 };
+
+  test("Booking cobra el 17 % en los dos pisos que lo tienen", () => {
+    assert.equal(comisionAplicable("Booking.com", APTO_27, configuradas, porDefecto).platformPct, 17);
+    assert.equal(comisionAplicable("Booking.com", APTO_8206, configuradas, porDefecto).platformPct, 17);
   });
 
-  // Lodgify no escribe siempre igual el nombre del canal.
-  test("da igual cómo venga escrito", () => {
-    for (const forma of ["booking.com", "BOOKING.COM", "Booking .com", " booking com "]) {
-      assert.equal(comisionParaCanal(forma, configuradas, 0), 18, forma);
+  test("y el 15 % en los demás", () => {
+    assert.equal(comisionAplicable("Booking.com", APTO_8241, configuradas, porDefecto).platformPct, 15);
+  });
+
+  test("Airbnb, 15,5 % en todos y sin comisión bancaria", () => {
+    for (const piso of [APTO_27, APTO_8206, APTO_8241]) {
+      const r = comisionAplicable("Airbnb", piso, configuradas, porDefecto);
+      assert.equal(r.platformPct, 15.5, piso);
+      assert.equal(r.bankPct, 0, piso);
     }
   });
 
-  test("un canal sin configurar usa el porcentaje general", () => {
-    assert.equal(comisionParaCanal("VRBO", configuradas, 12), 12);
-    assert.equal(comisionParaCanal("Directo", configuradas, 0), 0);
+  test("la bancaria del canal manda sobre la general", () => {
+    assert.equal(comisionAplicable("Booking.com", APTO_8241, configuradas, porDefecto).bankPct, 1.3);
   });
 
-  test("sin canal, el general", () => {
-    assert.equal(comisionParaCanal(null, configuradas, 15), 15);
-    assert.equal(comisionParaCanal("", configuradas, 15), 15);
+  // Lodgify no escribe siempre igual el nombre del canal.
+  test("da igual cómo venga escrito el canal", () => {
+    for (const forma of ["booking.com", "BOOKING.COM", "Booking .com", " booking com "]) {
+      assert.equal(comisionAplicable(forma, APTO_27, configuradas, porDefecto).platformPct, 17, forma);
+    }
+  });
+
+  test("un canal sin configurar usa los porcentajes generales", () => {
+    const r = comisionAplicable("VRBO", APTO_27, configuradas, porDefecto);
+    assert.deepEqual(r, porDefecto);
   });
 
   test("sin nada configurado, todo va al general — como antes", () => {
-    assert.equal(comisionParaCanal("Airbnb", [], 15), 15);
+    assert.deepEqual(comisionAplicable("Booking.com", APTO_27, [], porDefecto), porDefecto);
   });
 
-  // El caso que nos ocupa: 15 % en Airbnb y 18 % en Booking, sobre el mismo
-  // importe, tienen que dar netos distintos.
-  test("el neto cambia según el canal", () => {
-    const airbnb = calculateCommissions({
-      totalPrice: 1000,
-      platformCommissionPct: comisionParaCanal("Airbnb", configuradas, 15),
-      bankCommissionPct: 0,
+  // Los números reales del Excel, sobre una reserva concreta de Villa Mónica:
+  // 1.126,51 € → 168,98 € de comisión y 14,64 € de banco → 942,89 € a percibir.
+  test("reproduce una reserva real del Excel", () => {
+    const aplica = comisionAplicable("Booking.com", "villa-monica", configuradas, porDefecto);
+    const r = calculateCommissions({
+      totalPrice: 1126.51,
+      platformCommissionPct: aplica.platformPct,
+      bankCommissionPct: aplica.bankPct,
     });
-    const booking = calculateCommissions({
-      totalPrice: 1000,
-      platformCommissionPct: comisionParaCanal("Booking.com", configuradas, 15),
-      bankCommissionPct: 0,
-    });
-    assert.equal(airbnb.platformCommissionAmt, 150);
-    assert.equal(booking.platformCommissionAmt, 180);
-    assert.equal(airbnb.netAmount - booking.netAmount, 30);
+    assert.equal(r.platformCommissionAmt, 168.98);
+    assert.equal(r.bankCommissionAmt, 14.64);
+    assert.equal(r.netAmount, 942.89);
   });
 });

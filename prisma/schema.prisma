@@ -125,6 +125,7 @@ model Property {
 
   bookings      Booking[]
   cleaningTasks CleaningTask[]
+  channelCommissions ChannelCommission[]
 
   @@index([organizationId])
 }
@@ -330,13 +331,22 @@ model ChannelCommission {
   id             String   @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
-  /// Nombre del canal, normalizado a minúsculas.
+  /// Nombre del canal tal como lo manda Lodgify.
   channel        String
+  /// Si se indica, esta comisión vale solo para esa vivienda; si es nula, vale
+  /// para todas las de ese canal. Booking no cobra lo mismo a todos los pisos:
+  /// en los datos reales son 17 % en dos de ellos y 15 % en el resto.
+  propertyId     String?
+  property       Property? @relation(fields: [propertyId], references: [id])
   platformPct    Decimal  @default(0)
+  /// Comisión bancaria de este canal. Nula = la general. Airbnb no cobra
+  /// ninguna; Booking, un 1,3 %.
+  bankPct        Decimal?
   createdAt      DateTime @default(now())
 
-  @@unique([organizationId, channel])
+  @@unique([organizationId, channel, propertyId])
   @@index([organizationId])
+  @@index([propertyId])
 }
 
 model IntegrationSettings {

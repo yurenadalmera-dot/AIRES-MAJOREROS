@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
-import { conErroresLegibles } from "@/lib/errores";
+import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 import { cifrar, enmascarar } from "@/lib/secretos";
 import { normalizarCanal } from "@/lib/comisiones-canal";
@@ -98,6 +98,10 @@ export async function updateBusinessInfo(businessId: string, formData: FormData)
 const comisionCanalSchema = z.object({
   channel: z.string().min(1, "Falta el nombre del canal"),
   platformPct: z.coerce.number().min(0).max(100),
+  /** Vacío = vale para todas las viviendas de ese canal. */
+  propertyId: z.string().optional(),
+  /** Vacío = se usa la comisión bancaria general. */
+  bankPct: z.string().optional(),
 });
 
 /**
@@ -111,20 +115,38 @@ export async function guardarComisionCanal(formData: FormData) {
     const organizationId = await exigir("operativa.alquiler");
     const data = comisionCanalSchema.parse(Object.fromEntries(formData.entries()));
     const channel = data.channel.trim();
+    const propertyId = data.propertyId?.trim() || null;
+
+    // La bancaria vacía significa «la general», no «cero».
+    const bankPct =
+      data.bankPct === undefined || data.bankPct.trim() === ""
+        ? null
+        : Number(String(data.bankPct).replace(",", "."));
+    if (bankPct !== null && (Number.isNaN(bankPct) || bankPct < 0 || bankPct > 100)) {
+      throw new ErrorDeNegocio("La comisión bancaria tiene que estar entre 0 y 100.");
+    }
+
+    if (propertyId) {
+      const suya = await prisma.property.findFirst({
+        where: { id: propertyId, organizationId },
+        select: { id: true },
+      });
+      if (!suya) throw new ErrorDeNegocio("Esa vivienda no existe.");
+    }
 
     const existentes = await prisma.channelCommission.findMany({ where: { organizationId } });
     const yaEsta = existentes.find(
-      (c) => normalizarCanal(c.channel) === normalizarCanal(channel)
+      (c) => normalizarCanal(c.channel) === normalizarCanal(channel) && c.propertyId === propertyId
     );
 
     if (yaEsta) {
       await prisma.channelCommission.update({
         where: { id: yaEsta.id },
-        data: { platformPct: data.platformPct, channel },
+        data: { platformPct: data.platformPct, channel, bankPct },
       });
     } else {
       await prisma.channelCommission.create({
-        data: { organizationId, channel, platformPct: data.platformPct },
+        data: { organizationId, channel, propertyId, platformPct: data.platformPct, bankPct },
       });
     }
 

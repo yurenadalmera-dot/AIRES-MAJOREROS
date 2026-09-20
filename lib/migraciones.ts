@@ -118,6 +118,49 @@ const MIGRACIONES: Migracion[] = [
     },
   },
 
+  // La comisión no depende solo del canal: Booking cobra un 17 % a dos de los
+  // pisos y un 15 % al resto. Y la bancaria es del canal (1,3 % en Booking,
+  // ninguna en Airbnb), no un número único para todo.
+  ...([
+    ["ChannelCommission", "propertyId", "VARCHAR(191) NULL"],
+    ["ChannelCommission", "bankPct", "DECIMAL(65,30) NULL"],
+  ] as [string, string, string][]).map(([tabla, columna, tipo]) => ({
+    nombre: `${tabla}.${columna}`,
+    haceFalta: () => faltaColumna(tabla, columna),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE \`${tabla}\` ADD COLUMN \`${columna}\` ${tipo}`
+      );
+    },
+  })),
+
+  // La clave única pasa a incluir la vivienda: sin esto, no se podría tener a
+  // la vez «Booking en general» y «Booking en el Apto 27».
+  {
+    nombre: "ChannelCommission: clave única con la vivienda",
+    haceFalta: async () => {
+      const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT COUNT(*) AS n FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'ChannelCommission'
+          AND index_name = 'ChannelCommission_organizationId_channel_key'
+      `;
+      return Number(filas[0]?.n ?? 0) > 0;
+    },
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "ALTER TABLE `ChannelCommission` DROP INDEX `ChannelCommission_organizationId_channel_key`"
+      );
+      await prisma.$executeRawUnsafe(
+        "CREATE UNIQUE INDEX `ChannelCommission_organizationId_channel_propertyId_key` " +
+          "ON `ChannelCommission`(`organizationId`, `channel`, `propertyId`)"
+      );
+      await prisma.$executeRawUnsafe(
+        "CREATE INDEX `ChannelCommission_propertyId_idx` ON `ChannelCommission`(`propertyId`)"
+      );
+    },
+  },
+
   // Donde se guarda la clave de API de Lodgify, cifrada. Antes no se guardaba
   // en ningún sitio: la que se escribía en Ajustes se tiraba, y la
   // sincronización seguía inventándose las reservas sin decir nada.

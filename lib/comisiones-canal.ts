@@ -1,14 +1,19 @@
 /**
- * Qué comisión se lleva cada canal de venta.
+ * Qué comisión se lleva cada reserva.
  *
- * Hasta ahora la aplicación aplicaba un único porcentaje a todas las reservas,
- * y eso no se parece a la realidad: Airbnb se queda el 15 % y Booking.com el
- * 18 %. Con un solo número, el neto de cada reserva sale mal y con él todos
- * los informes del año.
+ * Esto salió de mirar el Excel de reservas de 2026, y no es lo que parecía:
  *
- * El nombre del canal llega tal como lo escribe Lodgify, que no es constante:
- * «Booking.com», «booking.com», «Booking .com». Se compara normalizado —en
- * minúsculas, sin espacios ni puntos— para que las tres sean la misma.
+ *   - **Airbnb: 15,5 %** en todos los apartamentos, y sin comisión bancaria.
+ *   - **Booking: 17 %** en el Apto 27 y el Apto 8206, **15 %** en los demás.
+ *     No es un redondeo ni una excepción: 21 de 21 y 20 de 20 reservas.
+ *   - **Bancaria: 1,3 %**, y solo en Booking.
+ *
+ * Es decir, la comisión depende del canal **y** del apartamento. Con un único
+ * porcentaje —como estaba— el neto de cada reserva sale mal, y con él los
+ * informes del año.
+ *
+ * El nombre del canal llega de Lodgify sin forma fija («Booking.com»,
+ * «booking.com», «Booking .com»), así que se compara normalizado.
  */
 
 /** La forma canónica de un nombre de canal, para compararlos. */
@@ -21,25 +26,48 @@ export function normalizarCanal(canal: string): string {
     .trim();
 }
 
-export interface ComisionDeCanal {
+export interface ComisionConfigurada {
   canal: string;
+  /** `null` = vale para todas las viviendas de ese canal. */
+  propertyId: string | null;
   platformPct: number;
+  /** `null` = se usa la comisión bancaria general. */
+  bankPct: number | null;
+}
+
+export interface ComisionAplicable {
+  platformPct: number;
+  bankPct: number;
 }
 
 /**
- * Busca el porcentaje del canal de una reserva.
+ * Busca qué comisión toca, de lo más concreto a lo más general:
  *
- * Si ese canal no está configurado se usa el porcentaje general, que es lo que
- * había antes: así, no configurar nada deja la aplicación como estaba, y
- * configurar solo Airbnb y Booking arregla justo esas dos.
+ *   1. la de ese canal **en esa vivienda**,
+ *   2. la de ese canal en general,
+ *   3. los porcentajes por defecto.
+ *
+ * No configurar nada deja la aplicación exactamente como estaba.
  */
-export function comisionParaCanal(
+export function comisionAplicable(
   canal: string | null | undefined,
-  configuradas: ComisionDeCanal[],
-  porDefecto: number
-): number {
-  if (!canal) return porDefecto;
+  propertyId: string | null | undefined,
+  configuradas: ComisionConfigurada[],
+  porDefecto: { platformPct: number; bankPct: number }
+): ComisionAplicable {
+  if (!canal) return { ...porDefecto };
+
   const buscado = normalizarCanal(canal);
-  const encontrada = configuradas.find((c) => normalizarCanal(c.canal) === buscado);
-  return encontrada ? encontrada.platformPct : porDefecto;
+  const delCanal = configuradas.filter((c) => normalizarCanal(c.canal) === buscado);
+
+  const elegida =
+    (propertyId ? delCanal.find((c) => c.propertyId === propertyId) : undefined) ??
+    delCanal.find((c) => c.propertyId === null);
+
+  if (!elegida) return { ...porDefecto };
+
+  return {
+    platformPct: elegida.platformPct,
+    bankPct: elegida.bankPct ?? porDefecto.bankPct,
+  };
 }

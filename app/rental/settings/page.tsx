@@ -29,8 +29,25 @@ export default async function RentalSettingsPage() {
   ]);
 
   const comisionesCanal = (
-    await prisma.channelCommission.findMany({ where: { organizationId }, orderBy: { channel: "asc" } })
-  ).map((c) => ({ id: c.id, channel: c.channel, platformPct: Number(c.platformPct) }));
+    await prisma.channelCommission.findMany({
+      where: { organizationId },
+      orderBy: [{ channel: "asc" }, { propertyId: "asc" }],
+      include: { property: { select: { name: true } } },
+    })
+  ).map((c) => ({
+    id: c.id,
+    channel: c.channel,
+    platformPct: Number(c.platformPct),
+    bankPct: c.bankPct === null ? null : Number(c.bankPct),
+    propertyId: c.propertyId,
+    propertyName: c.property?.name ?? null,
+  }));
+
+  const viviendasParaComisiones = await prisma.property.findMany({
+    where: { organizationId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 
   const [business, integration, employees, owners] = await Promise.all([
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
@@ -229,7 +246,9 @@ export default async function RentalSettingsPage() {
 
       <ComisionesPorCanal
         comisiones={comisionesCanal}
+        viviendas={viviendasParaComisiones}
         porDefecto={integration ? Number(integration.defaultPlatformPct) : 15}
+        bancoPorDefecto={integration ? Number(integration.defaultBankPct) : 2.5}
       />
 
       <GestionUsuarios usuarios={usuarios} />

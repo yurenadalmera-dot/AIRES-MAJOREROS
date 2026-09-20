@@ -11,7 +11,7 @@ import {
   claveLodgify,
 } from "@/lib/lodgify";
 import { calculateCommissions } from "@/lib/money";
-import { comisionParaCanal } from "@/lib/comisiones-canal";
+import { comisionAplicable } from "@/lib/comisiones-canal";
 
 export interface SyncSummary {
   liveMode: boolean;
@@ -121,7 +121,12 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     // porcentaje general.
     const comisiones = (
       await prisma.channelCommission.findMany({ where: { organizationId } })
-    ).map((c) => ({ canal: c.channel, platformPct: Number(c.platformPct) }));
+    ).map((c) => ({
+      canal: c.channel,
+      propertyId: c.propertyId,
+      platformPct: Number(c.platformPct),
+      bankPct: c.bankPct === null ? null : Number(c.bankPct),
+    }));
 
     const apiKey = await claveLodgify(organizationId);
 
@@ -226,11 +231,14 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
           skippedManuallyAdjusted++;
           continue;
         }
-        const pctDelCanal = comisionParaCanal(res.channel, comisiones, platformPct);
+        const aplica = comisionAplicable(res.channel, property.id, comisiones, {
+          platformPct,
+          bankPct,
+        });
         const { platformCommissionAmt, bankCommissionAmt, netAmount } = calculateCommissions({
           totalPrice: res.totalPrice,
-          platformCommissionPct: pctDelCanal,
-          bankCommissionPct: bankPct,
+          platformCommissionPct: aplica.platformPct,
+          bankCommissionPct: aplica.bankPct,
         });
         await prisma.booking.updateMany({
           where: { id: existing.id, organizationId },
@@ -243,9 +251,9 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
             checkOut: res.checkOut,
             channel: res.channel,
             totalPrice: res.totalPrice,
-            platformCommissionPct: pctDelCanal,
+            platformCommissionPct: aplica.platformPct,
             platformCommissionAmt,
-            bankCommissionPct: bankPct,
+            bankCommissionPct: aplica.bankPct,
             bankCommissionAmt,
             netAmount,
             status: "CONFIRMED",
@@ -258,11 +266,14 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
         });
         updated++;
       } else {
-        const pctDelCanal = comisionParaCanal(res.channel, comisiones, platformPct);
+        const aplica = comisionAplicable(res.channel, property.id, comisiones, {
+          platformPct,
+          bankPct,
+        });
         const { platformCommissionAmt, bankCommissionAmt, netAmount } = calculateCommissions({
           totalPrice: res.totalPrice,
-          platformCommissionPct: pctDelCanal,
-          bankCommissionPct: bankPct,
+          platformCommissionPct: aplica.platformPct,
+          bankCommissionPct: aplica.bankPct,
         });
         const booking = await prisma.booking.create({
           data: {
@@ -277,9 +288,9 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
             channel: res.channel,
             status: "CONFIRMED",
             totalPrice: res.totalPrice,
-            platformCommissionPct: pctDelCanal,
+            platformCommissionPct: aplica.platformPct,
             platformCommissionAmt,
-            bankCommissionPct: bankPct,
+            bankCommissionPct: aplica.bankPct,
             bankCommissionAmt,
             netAmount,
             source: "LODGIFY",
