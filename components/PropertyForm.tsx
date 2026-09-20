@@ -9,6 +9,7 @@ interface OwnerOption {
 }
 
 interface PropertyFormValues {
+  managementPct?: number | null;
   name: string;
   locality: string;
   address?: string | null;
@@ -100,6 +101,21 @@ export default function PropertyForm({
               </option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="label">Comisión de gestión (%)</label>
+          <input
+            name="managementPct"
+            inputMode="decimal"
+            defaultValue={initial?.managementPct ?? ""}
+            className="input"
+            placeholder="vacío = no se cobra gestión"
+          />
+          <p className="text-xs text-slate-400 mt-1">
+            Lo que se lleva Aires por gestionar esta vivienda, sobre lo que queda después de las
+            comisiones de venta y de los gastos. Déjalo vacío si a esta casa solo se le gestiona
+            la limpieza.
+          </p>
         </div>
         <div>
           <label className="label">ID de propiedad en Lodgify (opcional)</label>

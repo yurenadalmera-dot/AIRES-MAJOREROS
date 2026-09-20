@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { conErroresLegibles } from "@/lib/errores";
+import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 
 
@@ -29,6 +29,28 @@ function revalidarVistasDeViviendas() {
   }
 }
 
+/** Vacío significa «no paga cuota fija», no «cuota de cero». */
+function leerCuota(texto: string | undefined): number | null {
+  const limpio = (texto ?? "").trim().replace(",", ".");
+  if (!limpio) return null;
+  const n = Number(limpio);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new ErrorDeNegocio("La cuota mensual tiene que ser un número.");
+  }
+  return n;
+}
+
+/** Vacío significa «no se cobra gestión», no «cero por ciento escrito». */
+function leerPorcentaje(texto: string | undefined): number | null {
+  const limpio = (texto ?? "").trim().replace(",", ".");
+  if (!limpio) return null;
+  const n = Number(limpio);
+  if (!Number.isFinite(n) || n < 0 || n > 100) {
+    throw new ErrorDeNegocio("La comisión de gestión tiene que estar entre 0 y 100.");
+  }
+  return n;
+}
+
 const propertySchema = z.object({
   name: z.string().min(1),
   locality: z.string().min(1),
@@ -39,6 +61,8 @@ const propertySchema = z.object({
   cleaningPrice: z.coerce.number().min(0).default(0),
   ownerId: z.string().optional(),
   lodgifyPropertyId: z.string().optional(),
+  /** Vacío = a esta vivienda no se le cobra gestión. */
+  managementPct: z.string().optional(),
 });
 
 export async function createProperty(formData: FormData) {
@@ -59,6 +83,7 @@ export async function createProperty(formData: FormData) {
         cleaningPrice: data.cleaningPrice,
         ownerId: data.ownerId || null,
         lodgifyPropertyId: data.lodgifyPropertyId || null,
+        managementPct: leerPorcentaje(data.managementPct),
         active: true,
       },
     });
@@ -85,6 +110,7 @@ export async function updateProperty(propertyId: string, formData: FormData) {
         cleaningPrice: data.cleaningPrice,
         ownerId: data.ownerId || null,
         lodgifyPropertyId: data.lodgifyPropertyId || null,
+        managementPct: leerPorcentaje(data.managementPct),
       },
     });
 
@@ -133,6 +159,11 @@ const ownerSchema = z.object({
   name: z.string().min(1),
   email: z.string().optional(),
   phone: z.string().optional(),
+  /** NIF/CIF y domicilio: hacen falta para poder facturarle. */
+  taxId: z.string().optional(),
+  address: z.string().optional(),
+  /** Cuota fija mensual de gestión, si la paga. Vacío = cobra por porcentaje. */
+  monthlyFee: z.string().optional(),
 });
 
 export async function createOwner(formData: FormData) {
@@ -146,6 +177,9 @@ export async function createOwner(formData: FormData) {
         name: data.name,
         email: data.email || null,
         phone: data.phone || null,
+        taxId: data.taxId || null,
+        address: data.address || null,
+        monthlyFee: leerCuota(data.monthlyFee),
       },
     });
     revalidatePath("/rental/settings");

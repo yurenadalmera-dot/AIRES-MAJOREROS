@@ -161,6 +161,38 @@ const MIGRACIONES: Migracion[] = [
     },
   },
 
+  // Comisión de gestión y gastos. La comisión de Aires se calcula sobre lo
+  // que queda después de las comisiones de venta y de los gastos, así que sin
+  // gastos el número sale siempre alto.
+  ...([
+    ["Property", "managementPct", "DECIMAL(65,30) NULL"],
+    ["Owner", "monthlyFee", "DECIMAL(65,30) NULL"],
+    ["Owner", "taxId", "VARCHAR(191) NULL"],
+    ["Owner", "address", "TEXT NULL"],
+  ] as [string, string, string][]).map(([tabla, columna, tipo]) => ({
+    nombre: `${tabla}.${columna}`,
+    haceFalta: () => faltaColumna(tabla, columna),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE \`${tabla}\` ADD COLUMN \`${columna}\` ${tipo}`
+      );
+    },
+  })),
+
+  {
+    nombre: "Expense",
+    haceFalta: async () => {
+      const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = 'Expense'
+      `;
+      return Number(filas[0]?.n ?? 0) === 0;
+    },
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe("CREATE TABLE `Expense` ( `id` VARCHAR(191) NOT NULL, `organizationId` VARCHAR(191) NOT NULL, `propertyId` VARCHAR(191) NULL, `ownerId` VARCHAR(191) NULL, `date` DATETIME(3) NOT NULL, `concept` VARCHAR(191) NOT NULL, `supplier` VARCHAR(191) NULL, `amount` DECIMAL(65, 30) NOT NULL DEFAULT 0, `notes` TEXT NULL, `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), `updatedAt` DATETIME(3) NOT NULL, INDEX `Expense_organizationId_idx`(`organizationId`), INDEX `Expense_propertyId_idx`(`propertyId`), INDEX `Expense_date_idx`(`date`), PRIMARY KEY (`id`) ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    },
+  },
+
   // Donde se guarda la clave de API de Lodgify, cifrada. Antes no se guardaba
   // en ningún sitio: la que se escribía en Ajustes se tiraba, y la
   // sincronización seguía inventándose las reservas sin decir nada.

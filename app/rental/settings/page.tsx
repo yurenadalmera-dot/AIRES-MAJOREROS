@@ -201,6 +201,21 @@ export default async function RentalSettingsPage() {
               <label className="label">Teléfono</label>
               <input name="phone" className="input" />
             </div>
+            <div>
+              <label className="label">NIF/CIF</label>
+              <input name="taxId" className="input" placeholder="B35709062" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Domicilio</label>
+              <input name="address" className="input" placeholder="Calle, número, CP y municipio" />
+            </div>
+            <div>
+              <label className="label">Cuota fija mensual (€)</label>
+              <input name="monthlyFee" inputMode="decimal" className="input" placeholder="vacío" />
+              <p className="text-xs text-slate-400 mt-1">
+                Solo si paga una cuota en vez de un porcentaje. Academia Cañada paga 600 € al mes.
+              </p>
+            </div>
             <div className="sm:col-span-3">
               <button type="submit" className="btn-secondary">
                 Añadir
@@ -234,6 +249,21 @@ export default async function RentalSettingsPage() {
             <div>
               <label className="label">Teléfono</label>
               <input name="phone" className="input" />
+            </div>
+            <div>
+              <label className="label">NIF/CIF</label>
+              <input name="taxId" className="input" placeholder="B35709062" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Domicilio</label>
+              <input name="address" className="input" placeholder="Calle, número, CP y municipio" />
+            </div>
+            <div>
+              <label className="label">Cuota fija mensual (€)</label>
+              <input name="monthlyFee" inputMode="decimal" className="input" placeholder="vacío" />
+              <p className="text-xs text-slate-400 mt-1">
+                Solo si paga una cuota en vez de un porcentaje. Academia Cañada paga 600 € al mes.
+              </p>
             </div>
             <div className="sm:col-span-3">
               <button type="submit" className="btn-secondary">

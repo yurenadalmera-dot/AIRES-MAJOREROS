@@ -22,6 +22,7 @@ import { decidirCuentaAdmin } from "../lib/cuenta-admin";
 import { cifrar, descifrar, enmascarar } from "../lib/secretos";
 import { comisionAplicable } from "../lib/comisiones-canal";
 import { leerFechas } from "../lib/fechas";
+import { calcularLiquidacion } from "../lib/liquidacion";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -433,5 +434,83 @@ describe("leer fechas pegadas de un Excel", () => {
     const { fechas } = leerFechas("01/01/2026");
     assert.equal(fechas[0].toISOString().slice(0, 10), "2026-01-01");
     assert.equal(fechas[0].getUTCHours(), 12);
+  });
+});
+
+describe("liquidación al propietario", () => {
+  // La reserva de Villa Mónica que sale en el Excel de Emma.
+  const villaMonica = [{ totalPrice: 1126.51, platformCommissionAmt: 168.98, bankCommissionAmt: 14.64 }];
+
+  test("sin gastos, el 30 % va sobre lo que queda tras Booking y banco", () => {
+    const r = calcularLiquidacion({
+      reservas: villaMonica, gastos: [], managementPct: 30, cuotaFijaMensual: null,
+    });
+    assert.equal(r.ingresos, 1126.51);
+    assert.equal(r.comisionesDeVenta, 183.62);
+    assert.equal(r.baseDeGestion, 942.89);
+    assert.equal(r.comisionDeGestion, 282.87);
+    assert.equal(r.alPropietario, 660.02);
+  });
+
+  // Lo que cambia de verdad al tener gastos: la base baja y la comisión también.
+  test("con gastos, la comisión baja", () => {
+    const r = calcularLiquidacion({
+      reservas: villaMonica, gastos: [120.5, 45], managementPct: 30, cuotaFijaMensual: null,
+    });
+    assert.equal(r.gastos, 165.5);
+    assert.equal(r.baseDeGestion, 777.39);
+    assert.equal(r.comisionDeGestion, 233.22);
+    assert.equal(r.alPropietario, 544.17);
+  });
+
+  test("Villa Monikka va al 10 %", () => {
+    const r = calcularLiquidacion({
+      reservas: villaMonica, gastos: [], managementPct: 10, cuotaFijaMensual: null,
+    });
+    assert.equal(r.comisionDeGestion, 94.29);
+  });
+
+  test("Academia paga 600 € al mes, no un porcentaje", () => {
+    const r = calcularLiquidacion({
+      reservas: villaMonica, gastos: [], managementPct: 30, cuotaFijaMensual: 600,
+    });
+    assert.equal(r.comisionDeGestion, 600);
+    assert.match(r.detalleDeLaComision, /Cuota fija mensual/);
+  });
+
+  test("y 1.800 € en un trimestre", () => {
+    const r = calcularLiquidacion({
+      reservas: villaMonica, gastos: [], managementPct: null, cuotaFijaMensual: 600, meses: 3,
+    });
+    assert.equal(r.comisionDeGestion, 1800);
+  });
+
+  // A las de Domingo Javier solo se les gestiona la limpieza.
+  test("sin porcentaje ni cuota, no se cobra gestión", () => {
+    const r = calcularLiquidacion({
+      reservas: villaMonica, gastos: [80], managementPct: null, cuotaFijaMensual: null,
+    });
+    assert.equal(r.comisionDeGestion, 0);
+    assert.equal(r.alPropietario, 862.89);
+    assert.match(r.detalleDeLaComision, /Sin comisión/);
+  });
+
+  // Un mes malo no genera comisión: genera pérdida.
+  test("si los gastos se comen los ingresos, no se cobra comisión", () => {
+    const r = calcularLiquidacion({
+      reservas: villaMonica, gastos: [2000], managementPct: 30, cuotaFijaMensual: null,
+    });
+    assert.ok(r.baseDeGestion < 0, String(r.baseDeGestion));
+    assert.equal(r.comisionDeGestion, 0);
+  });
+
+  test("un periodo sin reservas no revienta", () => {
+    const r = calcularLiquidacion({
+      reservas: [], gastos: [], managementPct: 30, cuotaFijaMensual: null,
+    });
+    assert.deepEqual(
+      [r.ingresos, r.baseDeGestion, r.comisionDeGestion, r.alPropietario],
+      [0, 0, 0, 0]
+    );
   });
 });

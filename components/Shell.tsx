@@ -30,7 +30,8 @@ const RENTAL_NAV: NavItem[] = [
   { href: "/rental/bookings", label: "Reservas", icon: "🛎️", permiso: "operativa.alquiler" },
   { href: "/rental/properties", label: "Viviendas", icon: "🏠", permiso: "operativa.alquiler" },
   { href: "/rental/tasks", label: "Limpieza y mantenimiento", icon: "🧹", permiso: "operativa.estado_tarea" },
-  { href: "/rental/reports", label: "Informes propietarios", icon: "🧾", permiso: "operativa.alquiler" },
+  { href: "/rental/gastos", label: "Gastos", icon: "🧾", permiso: "operativa.alquiler" },
+  { href: "/rental/reports", label: "Informes propietarios", icon: "📊", permiso: "operativa.alquiler" },
   { href: "/rental/settings", label: "Ajustes", icon: "⚙️", permiso: "administracion" },
 ];
 

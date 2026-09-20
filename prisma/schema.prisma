@@ -58,6 +58,7 @@ model Organization {
   integrationSettings IntegrationSettings[]
   partnerSplitConfigs PartnerSplitConfig[]
   channelCommissions  ChannelCommission[]
+  expenses            Expense[]
 }
 
 /// Una "unidad de negocio" dentro de la organización. type identifica su
@@ -97,9 +98,16 @@ model Owner {
   email          String?
   phone          String?
   notes          String?  @db.Text
+  /// NIF/CIF y domicilio: hacen falta para facturarle.
+  taxId          String?
+  address        String?  @db.Text
+  /// Cuota fija mensual de gestión, si la hay. Academia Cañada paga 600 € al
+  /// mes en vez de un porcentaje.
+  monthlyFee     Decimal?
   createdAt      DateTime @default(now())
 
   properties Property[]
+  expenses   Expense[]
 
   @@index([organizationId])
 }
@@ -117,7 +125,12 @@ model Property {
   bedrooms          Int      @default(1)
   bathrooms         Int      @default(1)
   active            Boolean  @default(true)
-  cleaningPrice     Decimal  @default(0) // precio que Aires Majoreros factura por limpieza estándar de esta vivienda
+  cleaningPrice     Decimal  @default(0)
+  /// Lo que se lleva Aires por gestionar esta vivienda, en porcentaje sobre
+  /// lo que queda después de las comisiones de venta y de los gastos. 30 % en
+  /// el Grupo Villa Mónica, 10 % en Villa Monikka, nada en las de Domingo
+  /// Javier —a esas solo se les gestiona la limpieza—.
+  managementPct     Decimal? // precio que Aires Majoreros factura por limpieza estándar de esta vivienda
   manualStatus      String?  // override manual opcional: OCCUPIED | AVAILABLE | CLEANING_NEEDED | MAINTENANCE
   lodgifyPropertyId String?  @unique // para emparejar con la integración Lodgify
   createdAt         DateTime @default(now())
@@ -126,6 +139,7 @@ model Property {
   bookings      Booking[]
   cleaningTasks CleaningTask[]
   channelCommissions ChannelCommission[]
+  expenses      Expense[]
 
   @@index([organizationId])
 }
@@ -347,6 +361,36 @@ model ChannelCommission {
   @@unique([organizationId, channel, propertyId])
   @@index([organizationId])
   @@index([propertyId])
+}
+
+/// Un gasto de una vivienda: luz, agua, una reparación, la comunidad.
+///
+/// Hace falta para los informes al propietario: la comisión de gestión se
+/// calcula sobre lo que queda **después de gastos**, así que sin ellos el
+/// número sale siempre alto. Los sube Emma.
+model Expense {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  /// La vivienda a la que se imputa. Si es nula, es un gasto del propietario
+  /// que no va contra una casa concreta.
+  propertyId     String?
+  property       Property? @relation(fields: [propertyId], references: [id])
+  ownerId        String?
+  owner          Owner?    @relation(fields: [ownerId], references: [id])
+
+  date           DateTime
+  concept        String
+  supplier       String?
+  amount         Decimal  @default(0)
+  notes          String?  @db.Text
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([date])
 }
 
 model IntegrationSettings {

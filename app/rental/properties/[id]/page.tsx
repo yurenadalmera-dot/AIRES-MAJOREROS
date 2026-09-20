@@ -78,6 +78,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
           bedrooms: property.bedrooms,
           bathrooms: property.bathrooms,
           cleaningPrice: Number(property.cleaningPrice),
+          managementPct: property.managementPct === null ? null : Number(property.managementPct),
           ownerId: property.ownerId,
           lodgifyPropertyId: property.lodgifyPropertyId,
         }}
