@@ -264,7 +264,11 @@ export function revisarFactura(
   }
   if (faltantes.length > 0) {
     score -= 0.15 * faltantes.length;
-    motivos.push(`faltan ${faltantes.length} campos imprescindibles`);
+    motivos.push(
+      faltantes.length === 1
+        ? "falta un campo imprescindible"
+        : `faltan ${faltantes.length} campos imprescindibles`
+    );
   }
   if (!datos.num_documento) score -= 0.05;
 

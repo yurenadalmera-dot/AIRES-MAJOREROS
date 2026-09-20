@@ -162,3 +162,39 @@ export async function borrarComisionCanal(id: string) {
     revalidatePath("/rental/settings");
   });
 }
+
+/**
+ * La clave con la que se leen las facturas de gasto.
+ *
+ * Mismo trato que la de Lodgify: se guarda cifrada, no se puede volver a leer
+ * desde la aplicación, y dejar el campo vacío significa «no la cambies», no
+ * «bórrala». Se apoya en `IntegrationSettings` con otro proveedor, que es
+ * justo para lo que está la columna.
+ */
+export async function updateOcrSettings(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("administracion");
+
+    const escrita = String(formData.get("apiKey") ?? "").trim();
+    const quitar = escrita.toUpperCase() === "QUITAR";
+    const nueva = !quitar && escrita.length > 0 ? escrita : null;
+
+    if (!quitar && !nueva) return; // nada que cambiar
+
+    await prisma.integrationSettings.upsert({
+      where: { organizationId_provider: { organizationId, provider: "OCR" } },
+      update: quitar
+        ? { apiKeyCifrada: null, apiKeyMasked: null }
+        : { apiKeyCifrada: cifrar(nueva!), apiKeyMasked: enmascarar(nueva!) },
+      create: {
+        organizationId,
+        provider: "OCR",
+        apiKeyCifrada: nueva ? cifrar(nueva) : null,
+        apiKeyMasked: nueva ? enmascarar(nueva) : null,
+      },
+    });
+
+    revalidatePath("/rental/settings");
+    revalidatePath("/rental/gastos");
+  });
+}

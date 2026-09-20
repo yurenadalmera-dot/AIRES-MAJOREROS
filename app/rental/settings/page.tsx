@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PageHeader, Badge } from "@/components/ui";
-import { updateLodgifySettings, updateBusinessInfo } from "@/lib/actions/settings";
+import { updateLodgifySettings, updateBusinessInfo, updateOcrSettings } from "@/lib/actions/settings";
 import { createEmployee, setEmployeeActive, createOwner } from "@/lib/actions/properties";
 import { BUSINESS_TYPES, EMPLOYEE_ROLE_LABEL } from "@/lib/constants";
 import { formatDate } from "@/lib/money";
@@ -73,16 +73,20 @@ export default async function RentalSettingsPage() {
     select: { id: true, name: true },
   });
 
-  const [business, integration, employees, owners] = await Promise.all([
+  const [business, integration, ocr, employees, owners] = await Promise.all([
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
     prisma.integrationSettings.findUnique({
       where: { organizationId_provider: { organizationId, provider: "LODGIFY" } },
+    }),
+    prisma.integrationSettings.findUnique({
+      where: { organizationId_provider: { organizationId, provider: "OCR" } },
     }),
     prisma.employee.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
     prisma.owner.findMany({ where: { organizationId }, orderBy: { name: "asc" } }),
   ]);
 
   const hayClave = Boolean(integration?.apiKeyCifrada);
+  const hayClaveOcr = Boolean(ocr?.apiKeyCifrada);
 
   async function businessAction(formData: FormData) {
     "use server";
@@ -296,6 +300,40 @@ export default async function RentalSettingsPage() {
             </div>
           </FormularioConAviso>
         </details>
+      </div>
+
+      <div className="card p-5">
+        <h2 className="font-medium text-slate-800 mb-1">Lectura de facturas</h2>
+        <p className="text-xs text-slate-500 mb-3">
+          Para que las facturas de gasto se lean solas al subirlas. Sin clave se pueden subir
+          igual —el archivo se guarda siempre— pero los datos hay que escribirlos a mano.
+        </p>
+        <FormularioConAviso action={updateOcrSettings} className="space-y-3">
+          {hayClaveOcr ? (
+            <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              Hay una clave guardada (<span className="font-mono">{ocr?.apiKeyMasked}</span>).
+            </p>
+          ) : (
+            <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
+              <strong>No hay clave.</strong> Las facturas se guardan al subirlas, pero no se leen
+              solas.
+            </p>
+          )}
+          <input
+            name="apiKey"
+            type="password"
+            autoComplete="off"
+            placeholder={hayClaveOcr ? "Escribe otra para cambiarla" : "Pega aquí la clave"}
+            className="input"
+          />
+          <p className="text-xs text-slate-400">
+            Se guarda cifrada y no se puede volver a leer desde la aplicación. Si lo dejas vacío
+            se queda como está{hayClaveOcr ? "; escribe QUITAR para borrarla" : ""}.
+          </p>
+          <button type="submit" className="btn-secondary">
+            Guardar la clave de lectura
+          </button>
+        </FormularioConAviso>
       </div>
 
       <GruposDePropietario propietarios={propietariosConGrupos} />

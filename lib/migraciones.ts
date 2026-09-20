@@ -230,6 +230,23 @@ const MIGRACIONES: Migracion[] = [
       );
     },
   },
+  // Donde caen las facturas de gasto que lee la máquina, antes de que nadie
+  // las confirme. Nada de lo que devuelve el modelo entra directo en
+  // `Expense`: un total mal leído se descontaría en la liquidación de un
+  // propietario sin que nadie lo notara.
+  {
+    nombre: "DocumentoOcr",
+    haceFalta: async () => {
+      const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = 'DocumentoOcr'
+      `;
+      return Number(filas[0]?.n ?? 0) === 0;
+    },
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe("CREATE TABLE `DocumentoOcr` (\n    `id` VARCHAR(191) NOT NULL,\n    `organizationId` VARCHAR(191) NOT NULL,\n    `subidoPorId` VARCHAR(191) NULL,\n    `estado` VARCHAR(191) NOT NULL DEFAULT 'pendiente',\n    `archivoNombre` VARCHAR(191) NOT NULL,\n    `archivoMime` VARCHAR(191) NOT NULL,\n    `archivoBytes` INTEGER NOT NULL,\n    `archivoHash` VARCHAR(191) NOT NULL,\n    `contenido` LONGBLOB NOT NULL,\n    `datosIa` TEXT NULL,\n    `confianzaIa` VARCHAR(191) NULL,\n    `fiabilidad` DECIMAL(65, 30) NULL,\n    `motivos` TEXT NULL,\n    `avisos` TEXT NULL,\n    `datosRevisados` TEXT NULL,\n    `revisadoPorId` VARCHAR(191) NULL,\n    `revisadoEn` DATETIME(3) NULL,\n    `modelo` VARCHAR(191) NULL,\n    `promptVersion` VARCHAR(191) NULL,\n    `tokensEntrada` INTEGER NULL,\n    `tokensSalida` INTEGER NULL,\n    `tokensCache` INTEGER NULL,\n    `errorLectura` TEXT NULL,\n    `expenseId` VARCHAR(191) NULL,\n    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n\n    INDEX `DocumentoOcr_organizationId_idx`(`organizationId`),\n    INDEX `DocumentoOcr_estado_idx`(`estado`),\n    INDEX `DocumentoOcr_archivoHash_idx`(`archivoHash`),\n    PRIMARY KEY (`id`)\n) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    },
+  },
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */

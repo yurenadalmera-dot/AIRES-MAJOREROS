@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PageHeader } from "@/components/ui";
 import Gastos from "@/components/Gastos";
+import SubirFactura from "@/components/SubirFactura";
 
 export default async function GastosPage() {
   const { organizationId } = await requireBusinessContext("operativa.alquiler");
@@ -35,6 +36,9 @@ export default async function GastosPage() {
         title="Gastos"
         subtitle="Lo que se gasta en cada vivienda. Entra en el informe al propietario y baja la base sobre la que se calcula la comisión de gestión."
       />
+      <div className="mb-4">
+        <SubirFactura viviendas={viviendas} />
+      </div>
       <Gastos
         viviendas={viviendas}
         gastos={visibles}

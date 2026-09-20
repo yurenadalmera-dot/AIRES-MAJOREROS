@@ -23,7 +23,7 @@
 // aplica los cambios posteriores (`lib/migraciones.ts`). Ver el README.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // "native" para desarrollo local; el target de RHEL es el que usa el runtime
   // de Node en Hostinger, necesario para que el motor de Prisma funcione allí.
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
@@ -46,19 +46,20 @@ model Organization {
   name      String
   createdAt DateTime @default(now())
 
-  businesses  Business[]
-  owners      Owner[]
-  properties  Property[]
-  employees   Employee[]
-  bookings    Booking[]
-  cleaningTasks CleaningTask[]
-  partners    Partner[]
-  invoices    Invoice[]
-  users       User[]
+  businesses          Business[]
+  owners              Owner[]
+  properties          Property[]
+  employees           Employee[]
+  bookings            Booking[]
+  cleaningTasks       CleaningTask[]
+  partners            Partner[]
+  invoices            Invoice[]
+  users               User[]
   integrationSettings IntegrationSettings[]
   partnerSplitConfigs PartnerSplitConfig[]
   channelCommissions  ChannelCommission[]
   expenses            Expense[]
+  documentosOcr       DocumentoOcr[]
   propertyGroups      PropertyGroup[]
 }
 
@@ -66,23 +67,23 @@ model Organization {
 /// función funcional dentro de la app (RENTAL_MANAGEMENT / CLEANING_BILLING)
 /// pero el nombre visible es libre, para no hardcodear "Emma"/"Aires".
 model Business {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
-  type           String   // RENTAL_MANAGEMENT | CLEANING_BILLING
+  type           String // RENTAL_MANAGEMENT | CLEANING_BILLING
   name           String
-  legalName      String?  // razón social / nombre fiscal a mostrar en informes y facturas
-  taxId          String?  // NIF/CIF
+  legalName      String? // razón social / nombre fiscal a mostrar en informes y facturas
+  taxId          String? // NIF/CIF
   contactEmail   String?
   contactPhone   String?
   /// Domicilio fiscal. Una factura sin el domicilio de quien la emite no es
   /// válida (art. 6 del Reglamento de facturación).
-  address        String?  @db.Text
+  address        String?      @db.Text
   /// Tipo impositivo que se repercute, en porcentaje. Aquí es IGIC, no IVA:
   /// en Canarias el tipo general es el 7 %. Se copia a cada factura al
   /// emitirla, para que cambiarlo no altere las ya emitidas.
-  taxRate        Decimal  @default(7)
-  createdAt      DateTime @default(now())
+  taxRate        Decimal      @default(7)
+  createdAt      DateTime     @default(now())
 
   @@unique([organizationId, type])
 }
@@ -92,20 +93,20 @@ model Business {
 // ---------------------------------------------------------------------------
 
 model Owner {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   name           String
   email          String?
   phone          String?
-  notes          String?  @db.Text
+  notes          String?      @db.Text
   /// NIF/CIF y domicilio: hacen falta para facturarle.
   taxId          String?
-  address        String?  @db.Text
+  address        String?      @db.Text
   /// Cuota fija mensual de gestión, si la hay. Academia Cañada paga 600 € al
   /// mes en vez de un porcentaje.
   monthlyFee     Decimal?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   properties Property[]
   expenses   Expense[]
@@ -115,46 +116,46 @@ model Owner {
 }
 
 model Property {
-  id                String   @id @default(cuid())
+  id                String         @id @default(cuid())
   organizationId    String
-  organization      Organization @relation(fields: [organizationId], references: [id])
+  organization      Organization   @relation(fields: [organizationId], references: [id])
   ownerId           String?
-  owner             Owner?   @relation(fields: [ownerId], references: [id])
+  owner             Owner?         @relation(fields: [ownerId], references: [id])
   name              String
-  locality           String  // localidad en Fuerteventura (Corralejo, Costa Calma...)
+  locality          String // localidad en Fuerteventura (Corralejo, Costa Calma...)
   address           String?
-  capacity          Int      @default(2)
-  bedrooms          Int      @default(1)
-  bathrooms         Int      @default(1)
-  active            Boolean  @default(true)
-  cleaningPrice     Decimal  @default(0)
+  capacity          Int            @default(2)
+  bedrooms          Int            @default(1)
+  bathrooms         Int            @default(1)
+  active            Boolean        @default(true)
+  cleaningPrice     Decimal        @default(0)
   /// Solo para una vivienda suelta, que no pertenezca a ningún grupo. Lo
   /// normal es que la comisión venga del grupo: ver `PropertyGroup`.
   managementPct     Decimal?
   groupId           String?
   group             PropertyGroup? @relation(fields: [groupId], references: [id]) // precio que Aires Majoreros factura por limpieza estándar de esta vivienda
-  manualStatus      String?  // override manual opcional: OCCUPIED | AVAILABLE | CLEANING_NEEDED | MAINTENANCE
-  lodgifyPropertyId String?  @unique // para emparejar con la integración Lodgify
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  manualStatus      String? // override manual opcional: OCCUPIED | AVAILABLE | CLEANING_NEEDED | MAINTENANCE
+  lodgifyPropertyId String?        @unique // para emparejar con la integración Lodgify
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  bookings      Booking[]
-  cleaningTasks CleaningTask[]
+  bookings           Booking[]
+  cleaningTasks      CleaningTask[]
   channelCommissions ChannelCommission[]
-  expenses      Expense[]
+  expenses           Expense[]
 
   @@index([organizationId])
 }
 
 model Employee {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   name           String
-  role           String   @default("CLEANING") // CLEANING | MAINTENANCE | BOTH
+  role           String       @default("CLEANING") // CLEANING | MAINTENANCE | BOTH
   phone          String?
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
 
   cleaningTasks CleaningTask[]
 
@@ -164,19 +165,19 @@ model Employee {
 /// Reserva. Puede venir de Lodgify (lodgifyBookingId presente) o creada a
 /// mano. manuallyAdjusted protege la reserva de ser sobrescrita por el sync.
 model Booking {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   propertyId     String
-  property       Property @relation(fields: [propertyId], references: [id])
+  property       Property     @relation(fields: [propertyId], references: [id])
 
   lodgifyBookingId String? @unique // clave única para upsert idempotente desde Lodgify
 
   guestName  String
   guestEmail String?
   guestPhone String?
-  adults     Int    @default(1)
-  children   Int    @default(0)
+  adults     Int     @default(1)
+  children   Int     @default(0)
 
   checkIn  DateTime
   checkOut DateTime
@@ -184,15 +185,15 @@ model Booking {
   channel String @default("DIRECTO") // Airbnb | Booking.com | Lodgify | Directo | ... (lista configurable)
   status  String @default("CONFIRMED") // CONFIRMED | CANCELLED
 
-  totalPrice             Decimal
-  platformCommissionPct  Decimal @default(0)
-  platformCommissionAmt  Decimal @default(0)
-  bankCommissionPct      Decimal @default(0)
-  bankCommissionAmt      Decimal @default(0)
-  netAmount              Decimal @default(0)
+  totalPrice            Decimal
+  platformCommissionPct Decimal @default(0)
+  platformCommissionAmt Decimal @default(0)
+  bankCommissionPct     Decimal @default(0)
+  bankCommissionAmt     Decimal @default(0)
+  netAmount             Decimal @default(0)
 
   manuallyAdjusted Boolean @default(false) // true = el sync de Lodgify nunca debe tocar esta reserva
-  notes            String?  @db.Text
+  notes            String? @db.Text
 
   source    String   @default("MANUAL") // MANUAL | LODGIFY
   createdAt DateTime @default(now())
@@ -210,24 +211,24 @@ model Booking {
 /// (Emma: calendario/asignación) y línea facturable (Aires Majoreros:
 /// facturación), sin duplicarse en dos tablas distintas.
 model CleaningTask {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   propertyId     String
-  property       Property @relation(fields: [propertyId], references: [id])
+  property       Property     @relation(fields: [propertyId], references: [id])
 
-  bookingId String?  // limpieza asociada a la salida de esta reserva (opcional)
+  bookingId String? // limpieza asociada a la salida de esta reserva (opcional)
   booking   Booking? @relation(fields: [bookingId], references: [id])
 
-  type   String @default("CLEANING") // CLEANING | MAINTENANCE
+  type   String   @default("CLEANING") // CLEANING | MAINTENANCE
   date   DateTime
-  status String @default("PENDING") // PENDING | IN_PROGRESS | DONE | CANCELLED
+  status String   @default("PENDING") // PENDING | IN_PROGRESS | DONE | CANCELLED
 
   employeeId String?
   employee   Employee? @relation(fields: [employeeId], references: [id])
 
   billable Boolean @default(true) // solo las de type=CLEANING generan factura a Aires Majoreros
-  price    Decimal @default(0)    // importe que se factura por esta limpieza
+  price    Decimal @default(0) // importe que se factura por esta limpieza
 
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id])
@@ -248,12 +249,12 @@ model CleaningTask {
 // ---------------------------------------------------------------------------
 
 model Partner {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   name           String
   email          String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   @@index([organizationId])
 }
@@ -262,42 +263,42 @@ model Partner {
 /// 50/50, pero editable y con vigencia temporal (effectiveFrom) para permitir
 /// cambios futuros sin perder el histórico.
 model PartnerSplitConfig {
-  id             String   @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  partnerAId     String
-  partnerBId     String
-  partnerAPercent Decimal @default(50)
-  partnerBPercent Decimal @default(50)
-  effectiveFrom  DateTime @default(now())
-  createdAt      DateTime @default(now())
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  partnerAId      String
+  partnerBId      String
+  partnerAPercent Decimal      @default(50)
+  partnerBPercent Decimal      @default(50)
+  effectiveFrom   DateTime     @default(now())
+  createdAt       DateTime     @default(now())
 
   @@index([organizationId])
 }
 
 model Invoice {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
-  invoiceNumber String   @unique
-  billedToName  String   // cliente facturado (p.ej. la razón social del negocio de alquiler)
-  billedToTaxId String?
+  invoiceNumber   String   @unique
+  billedToName    String // cliente facturado (p.ej. la razón social del negocio de alquiler)
+  billedToTaxId   String?
   /// Domicilio del destinatario, también obligatorio en la factura.
-  billedToAddress String? @db.Text
-  periodStart   DateTime
-  periodEnd     DateTime
-  issueDate     DateTime @default(now())
-  status        String   @default("DRAFT") // DRAFT | ISSUED | PAID
+  billedToAddress String?  @db.Text
+  periodStart     DateTime
+  periodEnd       DateTime
+  issueDate       DateTime @default(now())
+  status          String   @default("DRAFT") // DRAFT | ISSUED | PAID
 
   /// Base imponible: la suma de las líneas, antes de impuestos.
-  subtotal Decimal @default(0)
+  subtotal  Decimal @default(0)
   /// Tipo y cuota del impuesto, tal como estaban el día de emitirla. Se
   /// guardan en la factura y no se recalculan: una factura emitida no cambia.
   taxRate   Decimal @default(7)
   taxAmount Decimal @default(0)
   /// Base imponible + cuota.
-  total    Decimal @default(0)
+  total     Decimal @default(0)
 
   partnerAId      String?
   partnerBId      String?
@@ -310,8 +311,8 @@ model Invoice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lines         CleaningTask[]
-  invoiceLines  InvoiceLine[]
+  lines        CleaningTask[]
+  invoiceLines InvoiceLine[]
 
   @@index([organizationId])
 }
@@ -319,14 +320,14 @@ model Invoice {
 /// Copia inmutable de cada línea en el momento de facturar (snapshot), para
 /// que la factura no cambie si luego se edita la vivienda o el precio.
 model InvoiceLine {
-  id            String   @id @default(cuid())
-  invoiceId     String
-  invoice       Invoice  @relation(fields: [invoiceId], references: [id])
+  id             String   @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id])
   cleaningTaskId String?
-  description   String
-  propertyName  String
-  date          DateTime
-  amount        Decimal
+  description    String
+  propertyName   String
+  date           DateTime
+  amount         Decimal
 
   @@index([invoiceId])
 }
@@ -344,7 +345,7 @@ model InvoiceLine {
 /// El canal se guarda tal cual lo manda Lodgify, pero se compara en minúsculas
 /// y sin espacios: «Booking.com», «booking.com» y «BOOKING.COM» son el mismo.
 model ChannelCommission {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   /// Nombre del canal tal como lo manda Lodgify.
@@ -353,12 +354,12 @@ model ChannelCommission {
   /// para todas las de ese canal. Booking no cobra lo mismo a todos los pisos:
   /// en los datos reales son 17 % en dos de ellos y 15 % en el resto.
   propertyId     String?
-  property       Property? @relation(fields: [propertyId], references: [id])
-  platformPct    Decimal  @default(0)
+  property       Property?    @relation(fields: [propertyId], references: [id])
+  platformPct    Decimal      @default(0)
   /// Comisión bancaria de este canal. Nula = la general. Airbnb no cobra
   /// ninguna; Booking, un 1,3 %.
   bankPct        Decimal?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   @@unique([organizationId, channel, propertyId])
   @@index([organizationId])
@@ -374,16 +375,16 @@ model ChannelCommission {
 /// La cuota fija (Academia Cañada, 600 € al mes) no va aquí: esa es del
 /// propietario entero, no de un grupo.
 model PropertyGroup {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   ownerId        String
-  owner          Owner    @relation(fields: [ownerId], references: [id])
+  owner          Owner        @relation(fields: [ownerId], references: [id])
   name           String
   /// Lo que se lleva Aires por gestionar las viviendas de este grupo, sobre
   /// lo que queda después de las comisiones de venta y de los gastos.
   managementPct  Decimal?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime     @default(now())
 
   properties Property[]
 
@@ -397,24 +398,24 @@ model PropertyGroup {
 /// calcula sobre lo que queda **después de gastos**, así que sin ellos el
 /// número sale siempre alto. Los sube Emma.
 model Expense {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   /// La vivienda a la que se imputa. Si es nula, es un gasto del propietario
   /// que no va contra una casa concreta.
   propertyId     String?
-  property       Property? @relation(fields: [propertyId], references: [id])
+  property       Property?    @relation(fields: [propertyId], references: [id])
   ownerId        String?
-  owner          Owner?    @relation(fields: [ownerId], references: [id])
+  owner          Owner?       @relation(fields: [ownerId], references: [id])
 
-  date           DateTime
-  concept        String
-  supplier       String?
-  amount         Decimal  @default(0)
-  notes          String?  @db.Text
+  date     DateTime
+  concept  String
+  supplier String?
+  amount   Decimal  @default(0)
+  notes    String?  @db.Text
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([organizationId])
   @@index([propertyId])
@@ -422,21 +423,21 @@ model Expense {
 }
 
 model IntegrationSettings {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
-  provider       String   @default("LODGIFY")
+  provider       String       @default("LODGIFY")
 
-  apiKeyMasked        String? // versión enmascarada, para enseñarla sin enseñarla
+  apiKeyMasked       String? // versión enmascarada, para enseñarla sin enseñarla
   /// Clave de API cifrada con AES-256-GCM (ver `lib/secretos.ts`). Antes no
   /// se guardaba: la que se escribía en Ajustes se tiraba y la sincronización
   /// seguía en modo demostración sin decir nada.
-  apiKeyCifrada       String? @db.Text
-  defaultPlatformPct  Decimal @default(15)
-  defaultBankPct      Decimal @default(2.5)
-  syncEnabled         Boolean @default(true)
-  lastSyncAt          DateTime?
-  lastSyncSummary     String?  @db.Text
+  apiKeyCifrada      String?   @db.Text
+  defaultPlatformPct Decimal   @default(15)
+  defaultBankPct     Decimal   @default(2.5)
+  syncEnabled        Boolean   @default(true)
+  lastSyncAt         DateTime?
+  lastSyncSummary    String?   @db.Text
 
   @@unique([organizationId, provider])
 }
@@ -446,15 +447,82 @@ model IntegrationSettings {
 // ---------------------------------------------------------------------------
 
 model User {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   name           String
-  email          String   @unique
+  email          String       @unique
   passwordHash   String
-  role           String   @default("STAFF") // ADMIN | RENTAL_MANAGER | PARTNER | STAFF
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  role           String       @default("STAFF") // ADMIN | RENTAL_MANAGER | PARTNER | STAFF
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+
+  documentosSubidos DocumentoOcr[] @relation("DocumentosSubidos")
 
   @@index([organizationId])
+}
+
+/// Una factura de gasto subida para que la lea la máquina.
+///
+/// Nada de lo que devuelve el modelo entra directo en `Expense`. Cae aquí,
+/// una persona lo revisa, y el alta real se hace al confirmar. Sin eso, el
+/// resto de comprobaciones serían decorativas: bastaría un descuido para que
+/// un total mal leído acabara descontado en la liquidación de un propietario.
+model DocumentoOcr {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  subidoPorId    String?
+  subidoPor      User?        @relation("DocumentosSubidos", fields: [subidoPorId], references: [id])
+
+  /// pendiente | registrado | descartado
+  estado String @default("pendiente")
+
+  // ── El original ────────────────────────────────────────────────────
+  // Se guarda siempre, aunque la lectura falle después: el justificante es
+  // lo que hace falta el día que haya una comprobación.
+  //
+  // Va en la base y no en disco porque Hostinger borra todo lo que se
+  // escriba dentro del directorio de la aplicación en cada despliegue.
+  archivoNombre String
+  archivoMime   String
+  archivoBytes  Int
+  /// SHA-256, para no pagar dos veces por el mismo documento.
+  archivoHash   String
+  contenido     Bytes
+
+  // ── Lo que dijo el modelo ──────────────────────────────────────────
+  /// Respuesta literal. No se modifica nunca: es la única referencia que
+  /// hay para medir si el modelo acierta.
+  datosIa     String?  @db.Text
+  confianzaIa String?
+  /// La que calcula el código, de 0 a 1. Es la que ordena la bandeja.
+  fiabilidad  Decimal?
+  motivos     String?  @db.Text
+  avisos      String?  @db.Text
+
+  // ── Lo que quedó tras la revisión ──────────────────────────────────
+  /// Se guarda aunque no cambie nada: «una persona miró esto y lo dio por
+  /// bueno» es justo el dato que dice si el modelo acierta.
+  datosRevisados String?   @db.Text
+  revisadoPorId  String?
+  revisadoEn     DateTime?
+
+  // ── Coste y versión ────────────────────────────────────────────────
+  modelo        String?
+  promptVersion String?
+  tokensEntrada Int?
+  tokensSalida  Int?
+  /// Servidos desde caché. Cero constante con prefijo estable = hay algo
+  /// que lo invalida.
+  tokensCache   Int?
+  errorLectura  String? @db.Text
+
+  /// Se rellena al registrar el gasto.
+  expenseId String?
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([estado])
+  @@index([archivoHash])
 }

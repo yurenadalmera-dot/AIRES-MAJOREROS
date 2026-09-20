@@ -14,6 +14,7 @@
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts -- --force"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
     "@prisma/client": "^5.20.0",
     "bcryptjs": "^2.4.3",
     "date-fns": "^3.6.0",
