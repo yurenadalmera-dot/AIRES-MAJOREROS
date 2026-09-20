@@ -40,7 +40,11 @@ export default async function RentalSettingsPage() {
 
   async function businessAction(formData: FormData) {
     "use server";
-    if (business) await updateBusinessInfo(business.id, formData);
+    if (!business) return { error: "No hay ningún negocio de alquiler configurado." };
+    // Devolver lo que responda: antes se tiraba, así que un guardado
+    // rechazado se veía igual que uno correcto —nada— y los campos volvían a
+    // los valores anteriores sin explicar por qué.
+    return updateBusinessInfo(business.id, formData);
   }
 
   return (

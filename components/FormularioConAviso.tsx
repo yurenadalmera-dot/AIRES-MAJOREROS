@@ -30,9 +30,11 @@ export default function FormularioConAviso({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [guardado, setGuardado] = useState(false);
 
   function enviar(formData: FormData) {
     setError(null);
+    setGuardado(false);
     startTransition(async () => {
       try {
         const resultado = await action(formData);
@@ -40,6 +42,7 @@ export default function FormularioConAviso({
           setError(String((resultado as { error: string }).error));
           return;
         }
+        setGuardado(true);
         if (onSuccess) router.push(onSuccess);
         router.refresh();
       } catch {
@@ -55,6 +58,13 @@ export default function FormularioConAviso({
       {error && (
         <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
           {error}
+        </p>
+      )}
+      {/* Decir que se ha guardado. Sin esto, guardar y que fallara se veían
+          exactamente igual: la página se refresca y no pasa nada visible. */}
+      {guardado && !pending && (
+        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3">
+          Guardado.
         </p>
       )}
       <fieldset disabled={pending} className="contents">

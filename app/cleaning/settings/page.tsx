@@ -20,7 +20,10 @@ export default async function CleaningSettingsPage() {
 
   async function businessAction(formData: FormData) {
     "use server";
-    if (business) await updateBusinessInfo(business.id, formData);
+    if (!business) return { error: "No hay ningún negocio de limpiezas configurado." };
+    // Devolver lo que responda, no tirarlo: si no, un guardado rechazado se ve
+    // igual que uno correcto.
+    return updateBusinessInfo(business.id, formData);
   }
 
   return (
@@ -60,7 +63,7 @@ export default async function CleaningSettingsPage() {
           {partners.map((p) => {
             async function renameAction(formData: FormData) {
               "use server";
-              await updatePartnerName(p.id, formData);
+              return updatePartnerName(p.id, formData);
             }
             return (
               <FormularioConAviso key={p.id} action={renameAction} className="space-y-2 border border-slate-100 rounded-lg p-3">
