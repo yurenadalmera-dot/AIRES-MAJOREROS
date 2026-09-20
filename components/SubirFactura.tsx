@@ -3,12 +3,24 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motivoDelFallo } from "@/lib/version-cliente";
-import { subirFactura, confirmarFactura, descartarFactura } from "@/lib/actions/ocr";
+import { subirFactura, confirmarFactura, descartarFactura, abrirFactura } from "@/lib/actions/ocr";
 import type { LecturaDevuelta } from "@/lib/actions/ocr";
+import { formatCurrency, formatDate } from "@/lib/money";
 
 interface Vivienda {
   id: string;
   name: string;
+}
+
+export interface Pendiente {
+  id: string;
+  archivoNombre: string;
+  subida: string;
+  proveedor: string | null;
+  total: number | null;
+  fiabilidad: number | null;
+  motivos: string[];
+  avisos: number;
 }
 
 /**
@@ -22,7 +34,13 @@ interface Vivienda {
  * En cuanto se teclea en un campo deja de estar marcado: ya lo ha mirado
  * alguien, y seguir señalándolo enseña a ignorar las marcas.
  */
-export default function SubirFactura({ viviendas }: { viviendas: Vivienda[] }) {
+export default function SubirFactura({
+  viviendas,
+  pendientes,
+}: {
+  viviendas: Vivienda[];
+  pendientes: Pendiente[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +133,90 @@ export default function SubirFactura({ viviendas }: { viviendas: Vivienda[] }) {
             {pending ? "Leyendo..." : "Leer factura"}
           </button>
         </form>
+      )}
+
+      {!lectura && pendientes.length > 0 && (
+        <div className="mt-5 pt-4 border-t border-slate-100">
+          <div className="flex items-baseline justify-between mb-2">
+            <h3 className="text-sm font-medium text-slate-700">Facturas sin registrar</h3>
+            <p className="text-xs text-slate-500">
+              {pendientes.length} {pendientes.length === 1 ? "pendiente" : "pendientes"}
+            </p>
+          </div>
+          {/* Ordenadas por fiabilidad de menor a mayor: lo dudoso primero. En
+              una bandeja ordenada al revés, lo que hay que mirar queda abajo. */}
+          <table className="table-base">
+            <thead>
+              <tr>
+                <th>Subida</th>
+                <th>Proveedor</th>
+                <th>Total</th>
+                <th>Fiabilidad</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {pendientes.map((f) => (
+                <tr key={f.id}>
+                  <td className="text-slate-500">{formatDate(f.subida)}</td>
+                  <td>{f.proveedor ?? <span className="text-slate-400">sin leer</span>}</td>
+                  <td>
+                    {f.total === null ? (
+                      <span className="text-amber-700">falta</span>
+                    ) : (
+                      formatCurrency(f.total)
+                    )}
+                  </td>
+                  <td>
+                    {f.fiabilidad === null ? (
+                      "—"
+                    ) : (
+                      <span
+                        className={
+                          f.fiabilidad < 0.6 ? "text-amber-700 font-medium" : "text-slate-600"
+                        }
+                      >
+                        {Math.round(f.fiabilidad * 100)} %
+                        {f.motivos.length > 0 && (
+                          <span className="block text-[11px] text-slate-400">
+                            {f.motivos.join(", ")}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-right whitespace-nowrap">
+                    <a
+                      href={`/rental/gastos/documento/${f.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-sky-700 hover:underline mr-3"
+                    >
+                      Ver
+                    </a>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() =>
+                        ejecutar(
+                          () => abrirFactura(f.id),
+                          (r) => {
+                            setLectura(r as LecturaDevuelta);
+                            setTocados(new Set());
+                            setHecho(false);
+                          }
+                        )
+                      }
+                      className="text-xs text-slate-600 hover:underline"
+                    >
+                      Revisar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {lectura && d && (

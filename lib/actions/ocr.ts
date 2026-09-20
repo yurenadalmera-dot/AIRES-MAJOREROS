@@ -314,3 +314,50 @@ export async function descartarFactura(id: string) {
     revalidatePath("/rental/gastos");
   });
 }
+
+/**
+ * Vuelve a abrir una factura que quedó pendiente.
+ *
+ * Sin esto, quien sube una factura y cierra la pantalla la pierde de vista:
+ * el archivo está guardado pero no hay forma de llegar a él. La verificación
+ * se rehace sobre lo que dijo el modelo —es una función pura, no cuesta
+ * nada— en vez de guardar el resultado, para que abrir una factura vieja dé
+ * siempre lo mismo que daría hoy.
+ */
+export async function abrirFactura(id: string) {
+  return conErroresLegibles<LecturaDevuelta>(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+
+    const documento = await prisma.documentoOcr.findFirst({
+      where: { id, organizationId },
+      select: { id: true, datosIa: true, errorLectura: true, estado: true },
+    });
+    if (!documento) throw new ErrorDeNegocio("Esa factura no existe.");
+    if (documento.estado === "registrado") {
+      throw new ErrorDeNegocio("Esta factura ya se registró como gasto.");
+    }
+
+    let datos: unknown = null;
+    if (documento.datosIa) {
+      try {
+        datos = JSON.parse(documento.datosIa);
+      } catch {
+        // Lo guardado no se toca nunca, así que esto no debería pasar; si
+        // pasa, se revisa a mano como cualquier factura sin leer.
+        datos = null;
+      }
+    }
+
+    const viviendas = await prisma.property.findMany({
+      where: { organizationId },
+      select: { id: true },
+    });
+
+    return {
+      id: documento.id,
+      revision: revisarFactura(datos, { viviendas: viviendas.map((v) => v.id) }),
+      ...(documento.errorLectura ? { errorLectura: documento.errorLectura } : {}),
+      restantes: Math.max(0, CUPO_MENSUAL - (await lecturasDelMes(organizationId))),
+    };
+  });
+}
