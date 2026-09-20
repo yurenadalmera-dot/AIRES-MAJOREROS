@@ -8,7 +8,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-import { revisarVolcado, resumirImportacion, seParecen } from "../lib/importacion";
+import { revisarVolcado, resumirImportacion, seParecen, claveDeVivienda, ALIAS_DE_VIVIENDA } from "../lib/importacion";
 import { generarToken, huellaDelToken, tokenCoincide, tokenDeLaCabecera } from "../lib/token-importacion";
 
 /** Un volcado pequeño con la forma del de Mirador. */
@@ -467,3 +467,44 @@ describe("¿son la misma vivienda escrita de otra forma?", () => {
     assert.equal(seParecen("", "Villa Mónica"), false);
   });
 });
+
+// ── Los alias confirmados ─────────────────────────────────────────────
+//
+// «Beachs & Ocean» y «Beach & Ocean» son el mismo apartamento: lo confirmó
+// Yurena el 20/09. Un alias confirmado ya no es un parecido que se avisa, es
+// una vivienda que se empareja — si no, el histórico de ese piso sale partido
+// en dos y el informe del propietario a la mitad.
+
+describe("los alias de vivienda confirmados", () => {
+  test("Beachs & Ocean es Beach & Ocean", () => {
+    assert.equal(claveDeVivienda("Beachs & Ocean"), claveDeVivienda("Beach & Ocean"));
+  });
+
+  test("la clave no depende de tildes ni mayúsculas", () => {
+    assert.equal(claveDeVivienda("BEACHS & OCEAN"), claveDeVivienda("Beach & Ocean"));
+  });
+
+  test("lo que no es alias no se toca", () => {
+    assert.notEqual(claveDeVivienda("Apto 8226"), claveDeVivienda("Apto 8241"));
+    assert.equal(claveDeVivienda("Villa Mónica"), "villamonica");
+  });
+
+  // Un alias sin saber quién lo dijo es un alias que nadie se atreve a borrar
+  // dentro de un año.
+  test("cada alias dice quién lo confirmó", () => {
+    assert.ok(ALIAS_DE_VIVIENDA.length > 0);
+    for (const a of ALIAS_DE_VIVIENDA) {
+      assert.ok(a.quien.trim().length > 0, `${a.nombre} no dice quién lo confirmó`);
+      assert.notEqual(claveDeVivienda(a.nombre), normalizarClave(a.nombre));
+    }
+  });
+});
+
+/** El nombre normalizado sin pasar por los alias, para la prueba de arriba. */
+function normalizarClave(nombre: string): string {
+  return nombre
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}

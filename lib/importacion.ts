@@ -212,6 +212,33 @@ export function normalizarNombre(nombre: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
+/**
+ * Nombres que son el mismo apartamento escrito de dos formas.
+ *
+ * Esta lista es corta a propósito y **solo entra aquí lo que ha confirmado una
+ * persona**. Adivinarlo sería peligroso: unir dos apartamentos distintos
+ * mezcla el histórico de dos propietarios y eso no lo arregla nadie después.
+ * Para lo que se sospecha pero no se sabe está `seParecen()`, que avisa y no
+ * toca nada.
+ *
+ * Cada línea dice quién lo confirmó y cuándo, porque dentro de un año nadie se
+ * acordará de por qué estas dos son la misma.
+ */
+export const ALIAS_DE_VIVIENDA: { nombre: string; esLaMisma: string; quien: string }[] = [
+  // El informe semanal de Brito lo escribe con una «s» de más.
+  { nombre: "Beachs & Ocean", esLaMisma: "Beach & Ocean", quien: "Yurena, 20/09/2026" },
+];
+
+/**
+ * La clave con la que se busca una vivienda: su nombre normalizado, y el del
+ * apartamento bueno cuando es un alias confirmado.
+ */
+export function claveDeVivienda(nombre: string): string {
+  const n = normalizarNombre(nombre);
+  const alias = ALIAS_DE_VIVIENDA.find((a) => normalizarNombre(a.nombre) === n);
+  return alias ? normalizarNombre(alias.esLaMisma) : n;
+}
+
 /** Cuántas letras hay que cambiar para pasar de una palabra a la otra. */
 function distancia(a: string, b: string): number {
   const fila = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -246,8 +273,9 @@ function distancia(a: string, b: string): number {
  * coinciden (o no hay ninguno) se mira el texto, y con poco margen.
  */
 export function seParecen(a: string, b: string): boolean {
-  const x = normalizarNombre(a);
-  const y = normalizarNombre(b);
+  // Un alias confirmado ya no es un parecido: es la misma.
+  const x = claveDeVivienda(a);
+  const y = claveDeVivienda(b);
   if (!x || !y) return false;
 
   const numeros = (s: string) => s.replace(/\D/g, "");

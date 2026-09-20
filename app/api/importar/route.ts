@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { revisarVolcado, resumirImportacion, normalizarNombre, seParecen } from "@/lib/importacion";
+import { revisarVolcado, resumirImportacion, claveDeVivienda, seParecen } from "@/lib/importacion";
 import { tokenCoincide, tokenDeLaCabecera } from "@/lib/token-importacion";
 
 /**
@@ -137,9 +137,9 @@ export async function POST(request: Request) {
     deLaCasa.filter((p) => p.lodgifyPropertyId).map((p) => [p.lodgifyPropertyId as string, p])
   );
   const sinLodgifyPorNombre = new Map(
-    deLaCasa.filter((p) => !p.lodgifyPropertyId).map((p) => [normalizarNombre(p.name), p])
+    deLaCasa.filter((p) => !p.lodgifyPropertyId).map((p) => [claveDeVivienda(p.name), p])
   );
-  const porNombre = new Map(deLaCasa.map((p) => [normalizarNombre(p.name), p]));
+  const porNombre = new Map(deLaCasa.map((p) => [claveDeVivienda(p.name), p]));
 
   const idPorVivienda = new Map<string, string>();
   let adoptadas = 0;
@@ -148,17 +148,17 @@ export async function POST(request: Request) {
     if (x.lodgifyId) {
       existente = porLodgify.get(x.lodgifyId) ?? null;
       if (!existente) {
-        const aMano = sinLodgifyPorNombre.get(normalizarNombre(x.nombre));
+        const aMano = sinLodgifyPorNombre.get(claveDeVivienda(x.nombre));
         if (aMano) {
           existente = aMano;
           adoptadas++;
           // Se saca de las adoptables para que dos viviendas del volcado con
           // el mismo nombre no acaben las dos sobre la misma ficha.
-          sinLodgifyPorNombre.delete(normalizarNombre(x.nombre));
+          sinLodgifyPorNombre.delete(claveDeVivienda(x.nombre));
         }
       }
     } else {
-      existente = porNombre.get(normalizarNombre(x.nombre)) ?? null;
+      existente = porNombre.get(claveDeVivienda(x.nombre)) ?? null;
     }
 
     const datos = {
@@ -191,7 +191,7 @@ export async function POST(request: Request) {
     idPorVivienda.set(x.ref, id);
     // Para que la siguiente del volcado la encuentre sin volver a la base.
     if (x.lodgifyId) porLodgify.set(x.lodgifyId, { id, name: x.nombre, lodgifyPropertyId: x.lodgifyId });
-    porNombre.set(normalizarNombre(x.nombre), { id, name: x.nombre, lodgifyPropertyId: x.lodgifyId ?? null });
+    porNombre.set(claveDeVivienda(x.nombre), { id, name: x.nombre, lodgifyPropertyId: x.lodgifyId ?? null });
   }
 
   // ── Precios cerrados ────────────────────────────────────────────────

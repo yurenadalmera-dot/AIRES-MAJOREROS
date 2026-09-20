@@ -135,8 +135,9 @@ El **Apto 103** aparece tachado: «este alojamiento se elimina, no existe ya».
   Emma lo llamó «Grupo Villa Mónica»; el informe del sistema anterior lo titula «Villa Mónica y
   apartamentos». Son los mismos seis, pero conviene fijar un nombre: es el que va a salir en el
   informe al propietario.
-- «Beach & Ocean» aparece también como «**Beachs & Ocean**» en el informe semanal. Es el mismo
-  apartamento escrito de dos formas; si entra así desde Lodgify saldrán dos viviendas.
+- ~~«Beach & Ocean» aparece también como «**Beachs & Ocean**» en el informe semanal.~~
+  **Resuelto (Yurena, 20/09):** son el mismo apartamento. Está en `ALIAS_DE_VIVIENDA` y la
+  importación las une sola.
 
 ## El informe del sistema anterior
 
@@ -465,14 +466,23 @@ Por eso la importación empareja en tres pasos:
 Probado: con «Villa Mónica» puesta a mano antes de importar, se adopta y **no** aparece una
 segunda; conserva sus 120 €.
 
-**Lo que no hace es unir por su cuenta dos nombres parecidos.** «Beach & Ocean» y «Beachs &
-Ocean» son el mismo apartamento, pero «Apto 8226» y «Apto 8241» no lo son, y mezclarlos
-revolvería el histórico de dos propietarios sin arreglo posible. Así que avisa y lo decide una
-persona:
+**Lo que no hace es unir por su cuenta dos nombres parecidos.** «Apto 8226» y «Apto 8241» no son
+el mismo piso, y mezclarlos revolvería el histórico de dos propietarios sin arreglo posible. Así
+que avisa y lo decide una persona:
 
-> vivienda **Beach & Ocean** → entra como nueva, pero ya había «Beachs & Ocean» sin identificador
-> de Lodgify. Si son la misma, únelas antes de sincronizar o saldrán dos y las reservas se
-> repartirán entre las dos.
+> vivienda **X** → entra como nueva, pero ya había «Y» sin identificador de Lodgify. Si son la
+> misma, únelas antes de sincronizar o saldrán dos y las reservas se repartirán entre las dos.
+
+Cuando alguien lo confirma, deja de ser una sospecha y pasa a `ALIAS_DE_VIVIENDA`, con quién lo
+dijo y cuándo. De momento hay uno:
+
+| Escrito así | Es en realidad | Quién lo confirmó |
+|---|---|---|
+| Beachs & Ocean | **Beach & Ocean** | Yurena, 20/09/2026 |
+
+Ahí la importación **une de verdad**: probado con «Beachs & Ocean» dada de alta a mano y con una
+reserva suya dentro, quedan **17 viviendas y no 18** — la ficha conserva su precio de limpieza y
+su reserva, se queda con el nombre bueno y gana el listing 745286.
 
 La regla: **si los números no coinciden, no son la misma vivienda**, y punto. Media cartera se
 llama por su número y ahí dos letras de diferencia no son una errata.
