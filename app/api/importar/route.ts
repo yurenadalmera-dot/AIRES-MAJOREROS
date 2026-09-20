@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { revisarVolcado, resumirImportacion } from "@/lib/importacion";
+import { revisarVolcado, resumirImportacion, normalizarNombre, seParecen } from "@/lib/importacion";
 import { tokenCoincide, tokenDeLaCabecera } from "@/lib/token-importacion";
 
 /**
@@ -115,13 +115,51 @@ export async function POST(request: Request) {
   }
 
   // ── Viviendas ───────────────────────────────────────────────────────
-  // Primero por su identificador de Lodgify, que es el que no cambia; si no
-  // lo tiene, por el nombre.
+  // Emparejar bien aquí es lo que evita el problema gordo: una vivienda
+  // duplicada parte en dos el histórico de reservas de un apartamento, y no se
+  // nota hasta que un informe sale a la mitad.
+  //
+  // Tres intentos, de lo más fiable a lo menos:
+  //   1. El identificador de Lodgify, que es el único que no cambia.
+  //   2. El nombre, **normalizado**, entre las que todavía no tienen
+  //      identificador: son las dadas de alta a mano, y lo que toca es
+  //      adoptarlas —ponerles el identificador— y no crear otra al lado.
+  //   3. El nombre a secas, cuando el volcado no trae identificador.
+  //
+  // Lo que no se hace nunca es robarle el identificador a una vivienda que ya
+  // tiene otro: dos apartamentos pueden llamarse igual, y ahí el duplicado es
+  // real.
+  const deLaCasa = await prisma.property.findMany({
+    where: { organizationId },
+    select: { id: true, name: true, lodgifyPropertyId: true },
+  });
+  const porLodgify = new Map(
+    deLaCasa.filter((p) => p.lodgifyPropertyId).map((p) => [p.lodgifyPropertyId as string, p])
+  );
+  const sinLodgifyPorNombre = new Map(
+    deLaCasa.filter((p) => !p.lodgifyPropertyId).map((p) => [normalizarNombre(p.name), p])
+  );
+  const porNombre = new Map(deLaCasa.map((p) => [normalizarNombre(p.name), p]));
+
   const idPorVivienda = new Map<string, string>();
+  let adoptadas = 0;
   for (const x of volcado.viviendas) {
-    const existente = x.lodgifyId
-      ? await prisma.property.findFirst({ where: { organizationId, lodgifyPropertyId: x.lodgifyId }, select: { id: true } })
-      : await prisma.property.findFirst({ where: { organizationId, name: x.nombre }, select: { id: true } });
+    let existente: { id: string } | null = null;
+    if (x.lodgifyId) {
+      existente = porLodgify.get(x.lodgifyId) ?? null;
+      if (!existente) {
+        const aMano = sinLodgifyPorNombre.get(normalizarNombre(x.nombre));
+        if (aMano) {
+          existente = aMano;
+          adoptadas++;
+          // Se saca de las adoptables para que dos viviendas del volcado con
+          // el mismo nombre no acaben las dos sobre la misma ficha.
+          sinLodgifyPorNombre.delete(normalizarNombre(x.nombre));
+        }
+      }
+    } else {
+      existente = porNombre.get(normalizarNombre(x.nombre)) ?? null;
+    }
 
     const datos = {
       name: x.nombre,
@@ -131,10 +169,29 @@ export async function POST(request: Request) {
       ...(x.plazas ? { capacity: x.plazas } : {}),
       ...(x.lodgifyId ? { lodgifyPropertyId: x.lodgifyId } : {}),
     };
+    // Antes de crear una nueva: ¿no será la de al lado escrita de otra forma?
+    // «Beach & Ocean» y «Beachs & Ocean» son el mismo apartamento en dos
+    // papeles distintos. Unirlas solo sería peligroso —dos pisos pueden
+    // llamarse casi igual y se mezclarían dos históricos—, así que se avisa.
+    if (!existente) {
+      for (const [, candidata] of sinLodgifyPorNombre) {
+        if (seParecen(candidata.name, x.nombre)) {
+          volcado.avisos.push({
+            que: `vivienda ${x.nombre}`,
+            porque: `entra como nueva, pero ya había «${candidata.name}» sin identificador de Lodgify. Si son la misma, únelas antes de sincronizar o saldrán dos y las reservas se repartirán entre las dos.`,
+          });
+          break;
+        }
+      }
+    }
+
     const id = existente
       ? (await prisma.property.update({ where: { id: existente.id }, data: datos, select: { id: true } })).id
       : (await prisma.property.create({ data: { organizationId, locality: "Fuerteventura", ...datos }, select: { id: true } })).id;
     idPorVivienda.set(x.ref, id);
+    // Para que la siguiente del volcado la encuentre sin volver a la base.
+    if (x.lodgifyId) porLodgify.set(x.lodgifyId, { id, name: x.nombre, lodgifyPropertyId: x.lodgifyId });
+    porNombre.set(normalizarNombre(x.nombre), { id, name: x.nombre, lodgifyPropertyId: x.lodgifyId ?? null });
   }
 
   // ── Precios cerrados ────────────────────────────────────────────────
@@ -229,6 +286,9 @@ export async function POST(request: Request) {
     propietarios: volcado.propietarios.length,
     grupos: volcado.grupos.length,
     viviendas: volcado.viviendas.length,
+    // Cuántas fichas que estaban a mano se han emparejado con su listing de
+    // Lodgify en vez de crear una segunda vivienda al lado.
+    viviendasAdoptadas: adoptadas,
     tarifas: volcado.tarifas.length,
     preciosCerrados: volcado.preciosCerrados.length,
     comisiones: volcado.comisiones.length,

@@ -8,7 +8,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-import { revisarVolcado, resumirImportacion } from "../lib/importacion";
+import { revisarVolcado, resumirImportacion, seParecen } from "../lib/importacion";
 import { generarToken, huellaDelToken, tokenCoincide, tokenDeLaCabecera } from "../lib/token-importacion";
 
 /** Un volcado pequeño con la forma del de Mirador. */
@@ -422,5 +422,48 @@ describe("las comisiones de canal", () => {
     const r = revisarVolcado(volcado());
     assert.ok(r.comisiones.length >= 2);
     assert.ok(r.comisiones.every((c) => c.confirmado));
+  });
+});
+
+// ── Viviendas que son la misma escrita de dos formas ──────────────────
+//
+// El peligro no es cosmético: si «Beach & Ocean» y «Beachs & Ocean» acaban
+// siendo dos viviendas, las reservas de ese apartamento se reparten entre las
+// dos y el informe del propietario sale a la mitad sin que nada falle.
+
+describe("¿son la misma vivienda escrita de otra forma?", () => {
+  test("la misma con una letra de más", () => {
+    assert.ok(seParecen("Beach & Ocean", "Beachs & Ocean"));
+  });
+
+  test("el mismo piso con y sin «Apto»", () => {
+    assert.ok(seParecen("8226", "Apto 8226"));
+  });
+
+  test("da igual la tilde, la coma y las mayúsculas", () => {
+    assert.ok(seParecen("Villa Mónica", "VILLA MONICA"));
+    assert.ok(seParecen("24, Montaña Tirba", "24 Montaña Tirba"));
+  });
+
+  // Este es el que importa de verdad: unir dos apartamentos distintos
+  // mezclaría el histórico de dos propietarios, y eso no lo arregla nadie
+  // después.
+  test("dos apartamentos consecutivos NO son el mismo", () => {
+    assert.equal(seParecen("Apto 8226", "Apto 8241"), false);
+    assert.equal(seParecen("24, Montaña Tirba", "25, Montaña Tindaya"), false);
+    assert.equal(seParecen("Villa Caliche", "Villa Gregorio"), false);
+    assert.equal(seParecen("Sand & Beach", "White Sand"), false);
+  });
+
+  // Media cartera se llama por su número. Dos letras de diferencia entre
+  // «Apto 8226» y «Apto 8241» no son una errata: son dos pisos distintos.
+  test("si los números no coinciden, no son la misma", () => {
+    assert.equal(seParecen("24", "25"), false);
+    assert.equal(seParecen("Apto 8206", "Apto 8209"), false);
+    assert.equal(seParecen("Villa Mónica", "Villa Mónica 2"), false);
+  });
+
+  test("un nombre vacío no se parece a nada", () => {
+    assert.equal(seParecen("", "Villa Mónica"), false);
   });
 });

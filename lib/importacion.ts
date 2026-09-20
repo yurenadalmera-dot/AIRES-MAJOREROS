@@ -196,13 +196,69 @@ function leerPorcentaje(v: unknown): number | null {
   return n;
 }
 
-/** La forma canónica del nombre de una vivienda, para emparejarlas. */
-function normalizarNombre(nombre: string): string {
+/**
+ * La forma canónica del nombre de una vivienda, para emparejarlas.
+ *
+ * Hace falta porque el mismo apartamento está escrito de varias formas según
+ * de dónde venga: «Beach & Ocean» y «Beachs & Ocean», «8226» y «Apto 8226».
+ * Si no se emparejan, salen dos viviendas y las reservas se reparten entre
+ * las dos.
+ */
+export function normalizarNombre(nombre: string): string {
   return nombre
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]/g, "");
+}
+
+/** Cuántas letras hay que cambiar para pasar de una palabra a la otra. */
+function distancia(a: string, b: string): number {
+  const fila = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let anterior = fila[0];
+    fila[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const guardado = fila[j];
+      fila[j] = Math.min(
+        fila[j] + 1,
+        fila[j - 1] + 1,
+        anterior + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+      anterior = guardado;
+    }
+  }
+  return fila[b.length];
+}
+
+/**
+ * ¿Son dos formas de escribir el mismo apartamento?
+ *
+ * En los papeles reales el mismo sitio aparece como «Beach & Ocean» y
+ * «Beachs & Ocean», o como «8226» y «Apto 8226». Emparejarlos solos sería
+ * peligroso —dos apartamentos pueden llamarse casi igual y unirlos mezclaría
+ * el histórico de dos propietarios—, así que esto **no une nada**: sirve para
+ * avisar y que lo decida una persona.
+ *
+ * **El número manda.** Media cartera se llama por su número —8206, 8226,
+ * 8241— y ahí dos letras de diferencia no son una errata: son dos pisos
+ * distintos. Si los dígitos no coinciden, no hay más que hablar. Solo cuando
+ * coinciden (o no hay ninguno) se mira el texto, y con poco margen.
+ */
+export function seParecen(a: string, b: string): boolean {
+  const x = normalizarNombre(a);
+  const y = normalizarNombre(b);
+  if (!x || !y) return false;
+
+  const numeros = (s: string) => s.replace(/\D/g, "");
+  if (numeros(x) !== numeros(y)) return false;
+
+  if (x === y) return true;
+  // «8226» y «Apto 8226»: uno es el otro con algo delante.
+  if (x.includes(y) || y.includes(x)) return true;
+  // «Beach & Ocean» y «Beachs & Ocean»: una letra de diferencia.
+  if (Math.min(x.length, y.length) < 5) return false;
+  return distancia(x, y) <= 2;
 }
 
 /**

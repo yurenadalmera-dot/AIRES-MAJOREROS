@@ -444,6 +444,44 @@ Se puede repetir las veces que haga falta: cada apunte va con su huella y no se 
 | Comisiones de canal | 4 de Mirador → **5** aquí (ver arriba) |
 | Movimientos | 267 — 184 gastos, **41 sueldos**, **40 traspasos**, 2 ingresos |
 
+### Ojo con los duplicados: dónde está el riesgo de verdad
+
+**Las reservas no se pueden duplicar.** `lodgifyBookingId` es único en la tabla y la
+sincronización busca por él antes de crear nada: sincronizar dos veces actualiza, no repite.
+
+El riesgo está una capa más abajo, en las **viviendas**. Si el SaaS ya tiene «Villa Mónica» dada
+de alta a mano —sin identificador de Lodgify— y la importación trae la suya con el listing
+641828, crear una segunda partiría en dos el histórico de ese apartamento. Y no fallaría nada:
+simplemente el informe del propietario saldría a la mitad.
+
+Por eso la importación empareja en tres pasos:
+
+1. Por el **identificador de Lodgify**, que es el único que no cambia.
+2. Si no, por el **nombre normalizado** entre las que todavía no tienen identificador: esa ficha
+   se **adopta** —conserva lo que se escribió a mano, como el precio de limpieza, y gana el
+   identificador—. El parte dice cuántas han sido.
+3. Si el volcado no trae identificador, por el nombre a secas.
+
+Probado: con «Villa Mónica» puesta a mano antes de importar, se adopta y **no** aparece una
+segunda; conserva sus 120 €.
+
+**Lo que no hace es unir por su cuenta dos nombres parecidos.** «Beach & Ocean» y «Beachs &
+Ocean» son el mismo apartamento, pero «Apto 8226» y «Apto 8241» no lo son, y mezclarlos
+revolvería el histórico de dos propietarios sin arreglo posible. Así que avisa y lo decide una
+persona:
+
+> vivienda **Beach & Ocean** → entra como nueva, pero ya había «Beachs & Ocean» sin identificador
+> de Lodgify. Si son la misma, únelas antes de sincronizar o saldrán dos y las reservas se
+> repartirán entre las dos.
+
+La regla: **si los números no coinciden, no son la misma vivienda**, y punto. Media cartera se
+llama por su número y ahí dos letras de diferencia no son una errata.
+
+Y una última: cuando el SaaS empiece a traerse las reservas de Lodgify, conviene **apagar el
+workflow `Mirador · cargar reservas Lodgify`**, que sigue activo cada 3 horas. No duplica nada
+—son dos bases distintas— pero tener dos copias vivas de lo mismo acaba en que alguien mira la
+que no toca.
+
 ### Probado de punta a punta
 
 No es una suposición: el 20/09 se levantó la aplicación entera contra una MariaDB limpia y se
