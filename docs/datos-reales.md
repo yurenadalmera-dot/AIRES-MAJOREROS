@@ -290,27 +290,33 @@ Y responde otra pregunta que estaba abierta: los cinco de Villa Monikka **sí es
 (listings 7452xx). Las de Academia y las de Domingo Javier **no** — hay que darlas de alta a
 mano, como ya se suponía.
 
-### ⚠️ Una diferencia de criterio que hay que resolver
+### Resuelto: el 10 % de Villa Monikka va sobre el beneficio
 
-Las reglas de liquidación de Mirador:
+Las reglas de liquidación, ya con el criterio bueno:
 
 | Grupo | Regla | Desde |
 |---|---|---|
-| Academia | `fijo_mensual` 600 € | 01/08/2026 |
-| Grupo Chano | `pct_beneficio` 30 % | 01/01/2026 |
-| **Villa Monikka** | **`pct_ventas` 10 %** | 01/01/2026 |
+| Academia | 600 € fijos al mes | 01/08/2026 |
+| Grupo Chano | 30 % sobre beneficio | 01/01/2026 |
+| **Villa Monikka** | **10 % sobre beneficio** | 01/01/2026 |
 
-Las dos primeras coinciden con lo implementado aquí. **La tercera no.** Aquí el 10 % de Villa
-Monikka se calcula sobre lo que queda después de comisiones y gastos; en Mirador se calcula
-**sobre las ventas**, en bruto.
+Estaba puesta en Mirador como `pct_ventas`, y **eso le cobraba de más a
+Inversiones Brito**. Sobre el borrador de enero a julio de 2026:
 
-No es un matiz. Sobre la semana del 13 al 19 de julio:
+| | |
+|---|---|
+| Ventas de Villa Monikka | 95.376 € |
+| Beneficio (tras costes y comisiones) | ~63.400 € |
+| 10 % sobre ventas — lo que decía el borrador | **9.537,58 €** |
+| 10 % sobre beneficio — lo que toca | **~6.340 €** |
+| **De más** | **~3.200 €** |
 
-- Sobre la base después de gastos: **155,87 €**
-- Sobre las ventas: **183,29 €**
+Yurena lo confirmó el 20/09 («sobre el beneficio pon el 10%») y la regla ya
+está corregida en Mirador. Los dos sistemas dicen ahora lo mismo, y la
+importación se trae el 10 % sola.
 
-27 € de diferencia en una semana, y siempre en la misma dirección. **Hay que preguntar a Emma
-cuál de los dos es el bueno** antes de liquidar nada con esto.
+**Queda pendiente regenerar el borrador de liquidación**: sigue calculado con
+la regla vieja, así que esos 9.537,58 € que enseña no son los buenos.
 
 ### Las comisiones de canal: aquí están contrastadas y allí no
 
@@ -376,15 +382,10 @@ restado en la liquidación de alguien. Un traspaso entre cuentas no es un gasto 
 **Las reservas.** Lodgify es su origen y la aplicación ya sabe traerlas sola; de Mirador solo
 hacía falta el emparejamiento de cada vivienda con su listing, que viaja en el volcado.
 
-### La regla que se deja en blanco a propósito
+### Las tres reglas entran ya correctas
 
-Grupo Chano entra con su 30 % y Academia con sus 600 € fijos, porque en los dos sitios
-significan lo mismo. **Villa Monikka entra sin porcentaje.** Su regla en Mirador es `pct_ventas`
-(10 % sobre ventas) y aquí se aplicaría sobre el beneficio: serían dos números distintos
-presentados como el mismo.
-
-Se ve vacío en Ajustes —que se nota— en vez de salir un número que parece bueno y no lo es. En
-cuanto Emma diga el criterio, se pone.
+Grupo Chano con su 30 %, Villa Monikka con su 10 % —los dos sobre beneficio— y Academia con sus
+600 € fijos al mes. Ya no hay ninguna diferencia de criterio entre los dos sistemas.
 
 ### Lo que hay que portar antes de apagar Mirador
 
