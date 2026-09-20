@@ -8,6 +8,7 @@ import {
   restablecerContrasena,
   setUsuarioActivo,
   cambiarRolUsuario,
+  cambiarNombreUsuario,
 } from "@/lib/actions/usuarios";
 
 interface UsuarioVisible {
@@ -94,7 +95,19 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
           >
             <div className="min-w-0">
               <p className="text-sm font-medium text-slate-700">
-                {u.name}
+                {/* El nombre se corrige escribiendo encima: las primeras cuentas
+                    se crearon desde el arranque y podían traerlo mal. */}
+                <input
+                  defaultValue={u.name}
+                  disabled={pending}
+                  aria-label={`Nombre de ${u.email}`}
+                  onBlur={(e) => {
+                    const nuevo = e.target.value.trim();
+                    if (nuevo && nuevo !== u.name) ejecutar(() => cambiarNombreUsuario(u.id, nuevo));
+                    else e.target.value = u.name;
+                  }}
+                  className="bg-transparent border border-transparent hover:border-slate-200 focus:border-slate-300 rounded px-1 -mx-1 w-full max-w-[16rem] focus:outline-none"
+                />
                 {u.esYo && <span className="text-xs text-slate-400 font-normal"> · tú</span>}
               </p>
               <p className="text-xs text-slate-400 truncate">{u.email}</p>

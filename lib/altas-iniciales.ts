@@ -28,7 +28,7 @@ export const ALTAS_INICIALES: {
   passwordHash: string;
 }[] = [
   {
-    name: "Emma Ferrer",
+    name: "Emma",
     email: "emma@airesmajoreros.pro",
     role: "RENTAL_MANAGER",
     passwordHash: "$2a$10$l1dck/t7fNZKe7q5LIJ0H.FjDBd5QC8XiQP..IX0Qa/3M6iRUahxO",

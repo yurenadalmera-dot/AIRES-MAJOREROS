@@ -119,6 +119,24 @@ export async function setUsuarioActivo(userId: string, activo: boolean) {
   });
 }
 
+/**
+ * Corrige el nombre con el que aparece alguien.
+ *
+ * Existe porque las primeras cuentas se crearon desde el arranque, con el
+ * nombre que había escrito en el código: si estaba mal, no había forma de
+ * arreglarlo sin tocar la base de datos.
+ */
+export async function cambiarNombreUsuario(userId: string, name: string) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("administracion");
+    const limpio = name.trim();
+    if (!limpio) throw new ErrorDeNegocio("El nombre no puede quedar vacío.");
+
+    await prisma.user.updateMany({ where: { id: userId, organizationId }, data: { name: limpio } });
+    revalidatePath("/rental/settings");
+  });
+}
+
 export async function cambiarRolUsuario(userId: string, role: string) {
   return conErroresLegibles(async () => {
     const organizationId = await exigir("administracion");
