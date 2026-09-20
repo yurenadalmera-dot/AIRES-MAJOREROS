@@ -12,7 +12,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { addDays, addMonths, subDays } from "date-fns";
 
-import { calculateCommissions, splitAmount, round2 } from "../lib/money";
+import { calculateCommissions, splitAmount, round2, calcularImpuesto } from "../lib/money";
 import { puede } from "../lib/permisos";
 import { puedeCambiarEstadoFactura } from "../lib/constants";
 import { numeroSiguiente } from "../lib/numeracion";
@@ -293,4 +293,31 @@ describe("guardar una credencial ajena", () => {
   });
 
   process.env.AUTH_SECRET = original;
+});
+
+describe("IGIC en las facturas", () => {
+  // En Canarias no es IVA: es IGIC, y el tipo general es el 7 %.
+  test("el 7 % sobre una base redonda", () => {
+    assert.deepEqual(calcularImpuesto(100, 7), { base: 100, cuota: 7, total: 107 });
+  });
+
+  test("se redondea a céntimos, no a lo que salga", () => {
+    // 342,55 × 7 % = 23,9785 → 23,98
+    assert.deepEqual(calcularImpuesto(342.55, 7), { base: 342.55, cuota: 23.98, total: 366.53 });
+  });
+
+  test("el total es siempre base + cuota, sin arrastrar decimales", () => {
+    for (const base of [0.01, 9.99, 55, 1234.56, 7777.77]) {
+      const r = calcularImpuesto(base, 7);
+      assert.equal(r.total, round2(r.base + r.cuota), `base ${base}`);
+    }
+  });
+
+  test("un tipo distinto al general también vale", () => {
+    assert.deepEqual(calcularImpuesto(200, 3), { base: 200, cuota: 6, total: 206 });
+  });
+
+  test("sin impuesto, el total es la base", () => {
+    assert.deepEqual(calcularImpuesto(80, 0), { base: 80, cuota: 0, total: 80 });
+  });
 });

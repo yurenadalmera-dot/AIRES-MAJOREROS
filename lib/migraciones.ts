@@ -71,6 +71,26 @@ const MIGRACIONES: Migracion[] = [
     },
   })),
 
+  // Datos que faltaban para que una factura sea válida: el domicilio fiscal
+  // de quien la emite y de quien la recibe, y el impuesto repercutido. Hasta
+  // ahora la factura no llevaba ninguno de los tres, así que no servía para
+  // mandársela a nadie.
+  ...([
+    ["Business", "address", "TEXT NULL"],
+    ["Business", "taxRate", "DECIMAL(65,30) NOT NULL DEFAULT 7"],
+    ["Invoice", "billedToAddress", "TEXT NULL"],
+    ["Invoice", "taxRate", "DECIMAL(65,30) NOT NULL DEFAULT 7"],
+    ["Invoice", "taxAmount", "DECIMAL(65,30) NOT NULL DEFAULT 0"],
+  ] as [string, string, string][]).map(([tabla, columna, tipo]) => ({
+    nombre: `${tabla}.${columna}`,
+    haceFalta: () => faltaColumna(tabla, columna),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE \`${tabla}\` ADD COLUMN \`${columna}\` ${tipo}`
+      );
+    },
+  })),
+
   // Donde se guarda la clave de API de Lodgify, cifrada. Antes no se guardaba
   // en ningún sitio: la que se escribía en Ajustes se tiraba, y la
   // sincronización seguía inventándose las reservas sin decir nada.

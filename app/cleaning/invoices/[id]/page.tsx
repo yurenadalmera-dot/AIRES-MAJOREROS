@@ -60,7 +60,17 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-6">
           <div>
             <h1 className="text-lg font-semibold text-slate-900">Factura {invoice.invoiceNumber}</h1>
-            <p className="text-sm text-slate-500 mt-1">{cleaningBusiness?.legalName ?? cleaningBusiness?.name}</p>
+            {/* Quien emite: razón social, NIF y domicilio. Los tres son
+                obligatorios en una factura. */}
+            <p className="text-sm font-medium text-slate-700 mt-1">
+              {cleaningBusiness?.legalName ?? cleaningBusiness?.name}
+            </p>
+            {cleaningBusiness?.taxId && (
+              <p className="text-sm text-slate-500">NIF/CIF: {cleaningBusiness.taxId}</p>
+            )}
+            {cleaningBusiness?.address && (
+              <p className="text-sm text-slate-500 whitespace-pre-line">{cleaningBusiness.address}</p>
+            )}
           </div>
           <div className="text-right">
             <Badge className="mb-2">{INVOICE_STATUS_LABEL[invoice.status]}</Badge>
@@ -75,6 +85,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <p className="text-xs uppercase tracking-wide text-slate-400">Facturado a</p>
           <p className="text-base font-medium text-slate-800">{invoice.billedToName}</p>
           {invoice.billedToTaxId && <p className="text-sm text-slate-500">NIF/CIF: {invoice.billedToTaxId}</p>}
+          {invoice.billedToAddress && (
+            <p className="text-sm text-slate-500 whitespace-pre-line">{invoice.billedToAddress}</p>
+          )}
         </div>
 
         <table className="table-base">
@@ -97,6 +110,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             ))}
           </tbody>
           <tfoot>
+            <tr>
+              <td colSpan={3}>Base imponible</td>
+              <td>{formatCurrency(invoice.subtotal)}</td>
+            </tr>
+            <tr>
+              <td colSpan={3}>IGIC ({Number(invoice.taxRate)} %)</td>
+              <td>{formatCurrency(invoice.taxAmount)}</td>
+            </tr>
             <tr className="font-semibold">
               <td colSpan={3}>Total factura</td>
               <td>{formatCurrency(invoice.total)}</td>
@@ -110,8 +131,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </p>
         )}
 
-        <div className="mt-8 border-t border-slate-200 pt-4">
-          <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">Reparto entre socias</p>
+        {/* Uso interno: NO se imprime. Cómo se reparte el dinero entre las
+            socias no es asunto de quien recibe la factura. */}
+        <div className="mt-8 border-t border-slate-200 pt-4 no-print">
+          <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">
+            Reparto entre socias · solo aquí, no sale en la factura
+          </p>
           <div className="grid grid-cols-2 gap-4 max-w-md">
             <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
               <p className="text-xs text-slate-500">
@@ -128,10 +153,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        <p className="text-[10px] text-slate-400 mt-8">
-          Documento de demostración. No incluye IVA ni datos bancarios reales — configúralo con tu asesoría antes de
-          un uso real.
-        </p>
+        {(!cleaningBusiness?.taxId || !cleaningBusiness?.address) && (
+          <p className="text-[11px] text-rose-600 mt-8 no-print">
+            Faltan datos obligatorios de quien emite la factura
+            {!cleaningBusiness?.taxId && " (NIF/CIF)"}
+            {!cleaningBusiness?.taxId && !cleaningBusiness?.address && " y"}
+            {!cleaningBusiness?.address && " (domicilio fiscal)"}. Complétalos en Ajustes antes de
+            entregarla.
+          </p>
+        )}
       </div>
     </div>
   );

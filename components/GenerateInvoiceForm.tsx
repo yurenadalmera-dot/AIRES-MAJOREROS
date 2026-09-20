@@ -47,8 +47,20 @@ export default function GenerateInvoiceForm({
         <input name="billedToName" defaultValue={defaultBilledToName} required className="input" />
       </div>
       <div>
-        <label className="label">NIF/CIF del cliente (opcional)</label>
+        <label className="label">NIF/CIF del cliente</label>
         <input name="billedToTaxId" defaultValue={defaultBilledToTaxId} className="input" />
+      </div>
+      <div>
+        <label className="label">Domicilio del cliente</label>
+        <textarea
+          name="billedToAddress"
+          rows={2}
+          className="input"
+          placeholder="Calle, número, código postal y municipio"
+        />
+        <p className="text-xs text-slate-400 mt-1">
+          El NIF y el domicilio del cliente salen impresos en la factura y son obligatorios.
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

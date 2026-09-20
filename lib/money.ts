@@ -87,3 +87,16 @@ export function splitAmount(total: number, partnerAPercent: number, partnerBPerc
 
   return { partnerAAmount, partnerBAmount };
 }
+
+
+/**
+ * Base imponible, cuota e importe total de una factura.
+ *
+ * Aquí el impuesto es **IGIC**, no IVA: las dos empresas están en Fuerteventura
+ * y en Canarias el tipo general es el 7 %. El tipo se guarda en cada factura al
+ * emitirla, así que esto se calcula una vez y no se vuelve a tocar.
+ */
+export function calcularImpuesto(base: number, tipoPorcentaje: number) {
+  const cuota = round2((base * tipoPorcentaje) / 100);
+  return { base: round2(base), cuota, total: round2(round2(base) + cuota) };
+}

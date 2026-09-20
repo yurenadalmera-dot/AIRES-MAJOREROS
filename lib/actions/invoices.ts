@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
-import { splitAmount, round2 } from "@/lib/money";
+import { splitAmount, round2, calcularImpuesto } from "@/lib/money";
 import { format } from "date-fns";
-import { INVOICE_STATUS_LABEL, puedeCambiarEstadoFactura } from "@/lib/constants";
+import { INVOICE_STATUS_LABEL, puedeCambiarEstadoFactura, BUSINESS_TYPES } from "@/lib/constants";
 import { numeroSiguiente, prefijoFacturas } from "@/lib/numeracion";
 
 const generateSchema = z.object({
@@ -15,6 +15,7 @@ const generateSchema = z.object({
   periodEnd: z.string().min(1),
   billedToName: z.string().min(1),
   billedToTaxId: z.string().optional(),
+  billedToAddress: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -74,6 +75,17 @@ export async function generateInvoice(formData: FormData) {
 
     const subtotal = round2(pendingTasks.reduce((sum, t) => sum + Number(t.price), 0));
 
+    // El impuesto se copia del negocio a la factura en el momento de emitirla.
+    // Aquí es IGIC, no IVA: en Canarias el tipo general es el 7 %. Copiarlo (en
+    // lugar de leerlo al mostrar la factura) es lo que hace que cambiar el tipo
+    // el año que viene no altere ni un céntimo de las ya emitidas.
+    const negocio = await prisma.business.findFirst({
+      where: { organizationId, type: BUSINESS_TYPES.CLEANING_BILLING },
+      select: { taxRate: true },
+    });
+    const taxRate = negocio ? Number(negocio.taxRate) : 7;
+    const { cuota: taxAmount, total } = calcularImpuesto(subtotal, taxRate);
+
     const splitConfig = await prisma.partnerSplitConfig.findFirst({
       where: { organizationId },
       orderBy: { effectiveFrom: "desc" },
@@ -90,11 +102,14 @@ export async function generateInvoice(formData: FormData) {
         invoiceNumber,
         billedToName: data.billedToName,
         billedToTaxId: data.billedToTaxId || null,
+        billedToAddress: data.billedToAddress || null,
         periodStart,
         periodEnd,
         status: "ISSUED",
         subtotal,
-        total: subtotal,
+        taxRate,
+        taxAmount,
+        total,
         partnerAId: splitConfig?.partnerAId,
         partnerBId: splitConfig?.partnerBId,
         partnerAPercent,

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { conErroresLegibles } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 import { cifrar, enmascarar } from "@/lib/secretos";
@@ -62,6 +63,9 @@ const businessSchema = z.object({
   taxId: z.string().optional(),
   contactEmail: z.string().optional(),
   contactPhone: z.string().optional(),
+  address: z.string().optional(),
+  // Solo lo trae el formulario de limpiezas; en el de alquiler no existe.
+  taxRate: z.coerce.number().min(0).max(100).optional(),
 });
 
 export async function updateBusinessInfo(businessId: string, formData: FormData) {
@@ -69,16 +73,20 @@ export async function updateBusinessInfo(businessId: string, formData: FormData)
     const organizationId = await exigir("administracion");
     const raw = Object.fromEntries(formData.entries());
     const data = businessSchema.parse(raw);
-    await prisma.business.updateMany({
-      where: { id: businessId, organizationId },
-      data: {
-        name: data.name,
-        legalName: data.legalName || null,
-        taxId: data.taxId || null,
-        contactEmail: data.contactEmail || null,
-        contactPhone: data.contactPhone || null,
-      },
-    });
+    // Los dos formularios de ajustes (alquiler y limpiezas) editan el mismo
+    // tipo de ficha pero no enseñan los mismos campos. Un campo que no viene
+    // en el formulario significa «no lo toques», nunca «bórralo»: hasta ahora
+    // guardar los datos del negocio de alquiler vaciaba en silencio el correo
+    // y el teléfono de contacto, que solo se editan desde el otro.
+    const cambios: Prisma.BusinessUpdateManyMutationInput = { name: data.name };
+    if (data.legalName !== undefined) cambios.legalName = data.legalName || null;
+    if (data.taxId !== undefined) cambios.taxId = data.taxId || null;
+    if (data.contactEmail !== undefined) cambios.contactEmail = data.contactEmail || null;
+    if (data.contactPhone !== undefined) cambios.contactPhone = data.contactPhone || null;
+    if (data.address !== undefined) cambios.address = data.address || null;
+    if (data.taxRate !== undefined) cambios.taxRate = data.taxRate;
+
+    await prisma.business.updateMany({ where: { id: businessId, organizationId }, data: cambios });
     revalidatePath("/rental/settings");
     revalidatePath("/cleaning/settings");
     revalidatePath("/rental");

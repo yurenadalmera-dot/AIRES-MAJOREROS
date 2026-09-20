@@ -69,9 +69,16 @@ model Business {
   type           String   // RENTAL_MANAGEMENT | CLEANING_BILLING
   name           String
   legalName      String?  // razón social / nombre fiscal a mostrar en informes y facturas
-  taxId          String?  // NIF/CIF de ejemplo, nunca datos reales
+  taxId          String?  // NIF/CIF
   contactEmail   String?
   contactPhone   String?
+  /// Domicilio fiscal. Una factura sin el domicilio de quien la emite no es
+  /// válida (art. 6 del Reglamento de facturación).
+  address        String?  @db.Text
+  /// Tipo impositivo que se repercute, en porcentaje. Aquí es IGIC, no IVA:
+  /// en Canarias el tipo general es el 7 %. Se copia a cada factura al
+  /// emitirla, para que cambiarlo no altere las ya emitidas.
+  taxRate        Decimal  @default(7)
   createdAt      DateTime @default(now())
 
   @@unique([organizationId, type])
@@ -258,13 +265,21 @@ model Invoice {
   invoiceNumber String   @unique
   billedToName  String   // cliente facturado (p.ej. la razón social del negocio de alquiler)
   billedToTaxId String?
+  /// Domicilio del destinatario, también obligatorio en la factura.
+  billedToAddress String? @db.Text
   periodStart   DateTime
   periodEnd     DateTime
   issueDate     DateTime @default(now())
   status        String   @default("DRAFT") // DRAFT | ISSUED | PAID
 
+  /// Base imponible: la suma de las líneas, antes de impuestos.
   subtotal Decimal @default(0)
-  total    Decimal @default(0) // sin IVA en esta demo (autónomo/sociedad: configurar impuestos según asesoría)
+  /// Tipo y cuota del impuesto, tal como estaban el día de emitirla. Se
+  /// guardan en la factura y no se recalculan: una factura emitida no cambia.
+  taxRate   Decimal @default(7)
+  taxAmount Decimal @default(0)
+  /// Base imponible + cuota.
+  total    Decimal @default(0)
 
   partnerAId      String?
   partnerBId      String?

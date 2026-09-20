@@ -98,7 +98,36 @@ export default async function CleaningSettingsPage() {
             </div>
             <div>
               <label className="label">NIF/CIF</label>
-              <input name="taxId" defaultValue={business.taxId ?? ""} className="input" placeholder="Configura el real antes de emitir facturas de verdad" />
+              <input name="taxId" defaultValue={business.taxId ?? ""} className="input" required />
+            </div>
+            <div>
+              <label className="label">Domicilio fiscal</label>
+              <textarea
+                name="address"
+                defaultValue={business.address ?? ""}
+                rows={3}
+                className="input"
+                placeholder="Calle, número, código postal y municipio"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Sale impreso en cada factura. Sin él la factura no es válida.
+              </p>
+            </div>
+            <div>
+              <label className="label">IGIC (%)</label>
+              <input
+                name="taxRate"
+                type="number"
+                step="0.01"
+                min={0}
+                max={100}
+                defaultValue={Number(business.taxRate)}
+                className="input"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                El tipo general en Canarias es el 7 %. Cambiarlo no altera las facturas ya
+                emitidas: cada una guarda el tipo que tenía ese día.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
