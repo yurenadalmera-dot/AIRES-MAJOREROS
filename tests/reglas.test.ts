@@ -21,6 +21,7 @@ import { casillaDelDia } from "../lib/calendario";
 import { decidirCuentaAdmin } from "../lib/cuenta-admin";
 import { cifrar, descifrar, enmascarar } from "../lib/secretos";
 import { comisionAplicable } from "../lib/comisiones-canal";
+import { leerFechas } from "../lib/fechas";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -388,5 +389,49 @@ describe("comisión según canal y vivienda", () => {
     assert.equal(r.platformCommissionAmt, 168.98);
     assert.equal(r.bankCommissionAmt, 14.64);
     assert.equal(r.netAmount, 942.89);
+  });
+});
+
+describe("leer fechas pegadas de un Excel", () => {
+  test("acepta como se escribe aquí una fecha", () => {
+    const { fechas, invalidas } = leerFechas("04/09/2026\n4-9-2026\n04.09.2026\n2026-09-04");
+    assert.equal(invalidas.length, 0);
+    // Las cuatro son el mismo día: no se repite.
+    assert.equal(fechas.length, 1);
+    assert.equal(fechas[0].toISOString().slice(0, 10), "2026-09-04");
+  });
+
+  test("una columna entera del Excel, en orden y sin repetir", () => {
+    const { fechas } = leerFechas("21/09/2026\n04/09/2026\n08/09/2026\n04/09/2026\n");
+    assert.deepEqual(
+      fechas.map((f) => f.toISOString().slice(0, 10)),
+      ["2026-09-04", "2026-09-08", "2026-09-21"]
+    );
+  });
+
+  test("día primero, no mes primero", () => {
+    // 04/09 es 4 de septiembre, no 9 de abril.
+    const { fechas } = leerFechas("04/09/2026");
+    assert.equal(fechas[0].getUTCMonth(), 8);
+    assert.equal(fechas[0].getUTCDate(), 4);
+  });
+
+  test("lo que no se entiende se devuelve, no se inventa", () => {
+    const { fechas, invalidas } = leerFechas("04/09/2026\nseptiembre\n31/02/2026\n99/99/2026");
+    assert.equal(fechas.length, 1);
+    assert.deepEqual(invalidas, ["septiembre", "31/02/2026", "99/99/2026"]);
+  });
+
+  test("las líneas en blanco no estorban", () => {
+    const { fechas, invalidas } = leerFechas("\n\n04/09/2026\n\n  \n08/09/2026\n");
+    assert.equal(fechas.length, 2);
+    assert.equal(invalidas.length, 0);
+  });
+
+  // La fecha se guarda a mediodía para que ningún huso la mueva al día antes.
+  test("una fecha no se corre de día", () => {
+    const { fechas } = leerFechas("01/01/2026");
+    assert.equal(fechas[0].toISOString().slice(0, 10), "2026-01-01");
+    assert.equal(fechas[0].getUTCHours(), 12);
   });
 });

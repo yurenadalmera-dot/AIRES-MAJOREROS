@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
+import { leerFechas } from "@/lib/fechas";
 
 /**
  * Una tarea es un registro compartido: se consulta desde los paneles de los
@@ -43,7 +44,8 @@ export async function updateTaskStatus(taskId: string, status: string) {
 
 const limpiezaManualSchema = z.object({
   propertyId: z.string().min(1),
-  date: z.string().min(1),
+  /** Una fecha, o varias pegadas del Excel (una por línea). */
+  date: z.string().min(1, "Falta la fecha"),
   employeeId: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -76,21 +78,52 @@ export async function crearLimpiezaManual(formData: FormData) {
       );
     }
 
-    await prisma.cleaningTask.create({
-      data: {
+    const { fechas, invalidas } = leerFechas(data.date);
+    if (fechas.length === 0) {
+      throw new ErrorDeNegocio(
+        invalidas.length > 0
+          ? `No entiendo estas fechas: ${invalidas.slice(0, 5).join(", ")}`
+          : "Falta la fecha."
+      );
+    }
+
+    // Las que ya existan no se duplican: pegar dos veces la misma columna no
+    // debe dejar la limpieza apuntada dos veces, ni cobrarla dos veces.
+    const yaHay = await prisma.cleaningTask.findMany({
+      where: {
         organizationId,
         propertyId: data.propertyId,
         type: "CLEANING",
-        date: new Date(data.date),
-        status: "PENDING",
-        employeeId: data.employeeId || null,
-        billable: true,
-        price: vivienda.cleaningPrice,
-        notes: data.notes || null,
+        date: { in: fechas },
       },
+      select: { date: true },
     });
+    const ocupadas = new Set(yaHay.map((t) => t.date.getTime()));
+    const nuevas = fechas.filter((f) => !ocupadas.has(f.getTime()));
+
+    if (nuevas.length > 0) {
+      await prisma.cleaningTask.createMany({
+        data: nuevas.map((fecha) => ({
+          organizationId,
+          propertyId: data.propertyId,
+          type: "CLEANING",
+          date: fecha,
+          status: "PENDING",
+          employeeId: data.employeeId || null,
+          billable: true,
+          price: vivienda.cleaningPrice,
+          notes: data.notes || null,
+        })),
+      });
+    }
 
     revalidateTaskViews();
+    return {
+      creadas: nuevas.length,
+      repetidas: fechas.length - nuevas.length,
+      invalidas,
+      vivienda: vivienda.name,
+    };
   });
 }
 

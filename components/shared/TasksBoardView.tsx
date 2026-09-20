@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader, EmptyState } from "@/components/ui";
 import TaskRow from "@/components/TaskRow";
-import { createMaintenanceTask, crearLimpiezaManual } from "@/lib/actions/tasks";
+import { createMaintenanceTask } from "@/lib/actions/tasks";
+import NuevaLimpieza from "@/components/NuevaLimpieza";
 import FormularioConAviso from "@/components/FormularioConAviso";
 
 /**
@@ -40,54 +41,7 @@ export default async function TasksBoardView({
     <div>
       <PageHeader title="Limpieza y mantenimiento" subtitle={subtitle} />
 
-      {/* Una limpieza que no sale de ninguna reserva: las viviendas que no
-          están en Lodgify —las de Domingo Javier, por ejemplo— tienen sus
-          limpiezas encargadas aparte, y antes no había forma de apuntarlas. */}
-      <details className="card p-4 mb-4 no-print">
-        <summary className="cursor-pointer text-sm font-medium text-slate-700">
-          + Nueva limpieza
-        </summary>
-        <FormularioConAviso action={crearLimpiezaManual} className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-          <div>
-            <label className="label">Vivienda</label>
-            <select name="propertyId" required className="input">
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Fecha</label>
-            <input type="date" name="date" required className="input" />
-          </div>
-          <div>
-            <label className="label">Quién la hace (opcional)</label>
-            <select name="employeeId" className="input">
-              <option value="">Sin asignar</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Nota (opcional)</label>
-            <input name="notes" placeholder="p.ej. la encarga Domingo Javier" className="input" />
-          </div>
-          <div className="md:col-span-4">
-            <button type="submit" className="btn-primary">
-              Añadir limpieza
-            </button>
-            <p className="text-xs text-slate-400 mt-2">
-              Se cobra al precio de limpieza de esa vivienda. Si no lo tiene puesto, la
-              aplicación lo dirá en lugar de crearla a 0 €.
-            </p>
-          </div>
-        </FormularioConAviso>
-      </details>
+      <NuevaLimpieza viviendas={properties} empleadas={employees} />
 
       <details className="card p-4 mb-4 no-print">
         <summary className="cursor-pointer text-sm font-medium text-slate-700">
