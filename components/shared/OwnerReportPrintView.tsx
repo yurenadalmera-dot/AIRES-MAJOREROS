@@ -3,12 +3,28 @@ import { prisma } from "@/lib/prisma";
 import { PrintButton, BackButton } from "@/components/ui";
 import { formatCurrency, formatDate, round2 } from "@/lib/money";
 import { BUSINESS_TYPES } from "@/lib/constants";
+import {
+  liquidarPropietario,
+  comisionDeGestionDe,
+  mesesDelPeriodo,
+  type TramoDeGestion,
+} from "@/lib/liquidacion";
+
+/** Los `Decimal` de Prisma, a número; y `null` se queda en `null`. */
+const num = (v: { toString(): string } | null | undefined): number | null =>
+  v === null || v === undefined ? null : Number(v);
 
 /**
  * Informe imprimible de propietario. Compartido por ambos negocios: siempre
  * lee las mismas reservas y las mismas `CleaningTask`, así que el documento es
  * idéntico se pida desde donde se pida. `backHref` solo cambia a qué panel
  * vuelve el botón de "Volver".
+ *
+ * Lo que liquida, en orden: ingresos de las reservas, menos las comisiones de
+ * venta (Booking, Airbnb, banco), menos las limpiezas y los demás gastos de la
+ * vivienda. Sobre lo que queda va la comisión de gestión de Aires, que **no es
+ * la misma para todas las viviendas**: sale del grupo al que pertenecen, así
+ * que un propietario con dos grupos lleva dos porcentajes en el mismo informe.
  */
 export default async function OwnerReportPrintView({
   organizationId,
@@ -30,7 +46,7 @@ export default async function OwnerReportPrintView({
   const [owner, rentalBusiness] = await Promise.all([
     prisma.owner.findFirst({
       where: { id: ownerId, organizationId },
-      include: { properties: true },
+      include: { properties: { include: { group: true } } },
     }),
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
   ]);
@@ -65,6 +81,16 @@ export default async function OwnerReportPrintView({
     orderBy: { date: "asc" },
   });
 
+  const expenses = await prisma.expense.findMany({
+    where: {
+      organizationId,
+      propertyId: { in: propertyIds },
+      date: { gte: periodStart, lte: periodEnd },
+    },
+    include: { property: true },
+    orderBy: { date: "asc" },
+  });
+
   const totals = bookings.reduce(
     (acc, b) => ({
       total: acc.total + Number(b.totalPrice),
@@ -75,7 +101,51 @@ export default async function OwnerReportPrintView({
     { total: 0, platform: 0, bank: 0, net: 0 }
   );
   const cleaningTotal = round2(cleaningTasks.reduce((sum, t) => sum + Number(t.price), 0));
-  const finalNet = round2(totals.net - cleaningTotal);
+  const expensesTotal = round2(expenses.reduce((sum, g) => sum + Number(g.amount), 0));
+
+  // Cada vivienda va al tramo de su grupo; una vivienda suelta hace tramo
+  // propio. Es lo que permite que Inversiones Brito lleve el 30 % del Grupo
+  // Villa Mónica y el 10 % de Villa Monikka en el mismo informe.
+  const tramos = new Map<string, TramoDeGestion>();
+  const tramoDe = new Map<string, string>();
+  for (const p of owner.properties) {
+    const clave = p.groupId ? `g:${p.groupId}` : `p:${p.id}`;
+    tramoDe.set(p.id, clave);
+    if (!tramos.has(clave)) {
+      tramos.set(clave, {
+        nombre: p.group?.name ?? p.name,
+        managementPct: comisionDeGestionDe({
+          managementPct: num(p.managementPct),
+          group: p.group ? { managementPct: num(p.group.managementPct) } : null,
+        }),
+        reservas: [],
+        gastos: [],
+      });
+    }
+  }
+  const alTramo = (propertyId: string) => tramos.get(tramoDe.get(propertyId) ?? "");
+
+  for (const b of bookings) {
+    alTramo(b.propertyId)?.reservas.push({
+      totalPrice: Number(b.totalPrice),
+      platformCommissionAmt: Number(b.platformCommissionAmt),
+      bankCommissionAmt: Number(b.bankCommissionAmt),
+    });
+  }
+  // Las limpiezas son un gasto más de la vivienda: bajan lo que se liquida y,
+  // con ello, la base sobre la que se calcula la gestión.
+  for (const t of cleaningTasks) alTramo(t.propertyId)?.gastos.push(Number(t.price));
+  for (const g of expenses) {
+    if (g.propertyId) alTramo(g.propertyId)?.gastos.push(Number(g.amount));
+  }
+
+  const cuotaFijaMensual = num(owner.monthlyFee);
+  const liquidacion = liquidarPropietario({
+    tramos: [...tramos.values()],
+    cuotaFijaMensual,
+    meses: mesesDelPeriodo(periodStart, new Date(end)),
+  });
+  const desglosePorGrupo = liquidacion.tramos.filter((t) => t.comisionDeGestion > 0);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -184,26 +254,128 @@ export default async function OwnerReportPrintView({
           </table>
         )}
 
+        <h2 className="text-sm font-semibold text-slate-700 mt-6 mb-2">
+          Otros gastos del periodo ({expenses.length})
+        </h2>
+        {expenses.length === 0 ? (
+          <p className="text-sm text-slate-400 mb-6">No hay gastos apuntados en este periodo.</p>
+        ) : (
+          <table className="table-base">
+            <thead>
+              <tr>
+                <th>Vivienda</th>
+                <th>Fecha</th>
+                <th>Concepto</th>
+                <th>Proveedor</th>
+                <th>Importe</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.map((g) => (
+                <tr key={g.id}>
+                  <td>{g.property?.name ?? "—"}</td>
+                  <td>{formatDate(g.date)}</td>
+                  <td>{g.concept}</td>
+                  <td className="text-slate-500">{g.supplier ?? "—"}</td>
+                  <td>{formatCurrency(g.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="font-semibold">
+                <td colSpan={4}>Total gastos</td>
+                <td>-{formatCurrency(expensesTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        )}
+
+        {desglosePorGrupo.length > 1 && (
+          <>
+            <h2 className="text-sm font-semibold text-slate-700 mt-6 mb-2">
+              Comisión de gestión por grupo
+            </h2>
+            <table className="table-base">
+              <thead>
+                <tr>
+                  <th>Grupo</th>
+                  <th>Ingresos</th>
+                  <th>Com. de venta</th>
+                  <th>Gastos</th>
+                  <th>Base</th>
+                  <th>%</th>
+                  <th>Comisión</th>
+                </tr>
+              </thead>
+              <tbody>
+                {desglosePorGrupo.map((t) => (
+                  <tr key={t.nombre}>
+                    <td>{t.nombre}</td>
+                    <td>{formatCurrency(t.ingresos)}</td>
+                    <td>-{formatCurrency(t.comisionesDeVenta)}</td>
+                    <td>-{formatCurrency(t.gastos)}</td>
+                    <td>{formatCurrency(t.baseDeGestion)}</td>
+                    <td>{t.managementPct} %</td>
+                    <td className="font-medium">{formatCurrency(t.comisionDeGestion)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="font-semibold">
+                  <td colSpan={6}>Total comisión de gestión</td>
+                  <td>{formatCurrency(liquidacion.comisionDeGestion)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </>
+        )}
+
         <div className="mt-8 border-t border-slate-200 pt-4 flex justify-end">
-          <div className="w-72 space-y-1.5 text-sm">
+          <div className="w-80 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500">Neto de reservas</span>
-              <span>{formatCurrency(totals.net)}</span>
+              <span className="text-slate-500">Ingresos de las reservas</span>
+              <span>{formatCurrency(liquidacion.ingresos)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Comisiones de venta</span>
+              <span>-{formatCurrency(liquidacion.comisionesDeVenta)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Limpiezas</span>
               <span>-{formatCurrency(cleaningTotal)}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Otros gastos</span>
+              <span>-{formatCurrency(expensesTotal)}</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-200 pt-1.5">
+              <span className="text-slate-500">Base de gestión</span>
+              <span>{formatCurrency(liquidacion.baseDeGestion)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500">Comisión de gestión</span>
+              <span>-{formatCurrency(liquidacion.comisionDeGestion)}</span>
+            </div>
+            {/* Con varios grupos ya está la tabla de arriba: repetirlo aquí
+                solo mete tres líneas de letra pequeña. */}
+            {desglosePorGrupo.length <= 1 && (
+              <p className="text-[11px] text-slate-400 text-right">
+                {liquidacion.detalleDeLaComision}
+              </p>
+            )}
             <div className="flex justify-between text-base font-semibold border-t border-slate-200 pt-1.5">
               <span>Total a liquidar al propietario</span>
-              <span>{formatCurrency(finalNet)}</span>
+              <span>{formatCurrency(liquidacion.alPropietario)}</span>
             </div>
           </div>
         </div>
 
-        <p className="text-[10px] text-slate-400 mt-8">
-          Informe generado automáticamente. Cifras de ejemplo con fines de demostración.
-        </p>
+        {liquidacion.comisionDeGestion > 0 && (
+          <p className="text-[10px] text-slate-400 mt-8">
+            La comisión de gestión se calcula sobre lo que queda después de las comisiones de
+            venta, las limpiezas y los gastos del periodo.
+          </p>
+        )}
       </div>
     </div>
   );

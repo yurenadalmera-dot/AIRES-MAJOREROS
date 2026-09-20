@@ -22,7 +22,12 @@ import { decidirCuentaAdmin } from "../lib/cuenta-admin";
 import { cifrar, descifrar, enmascarar } from "../lib/secretos";
 import { comisionAplicable } from "../lib/comisiones-canal";
 import { leerFechas } from "../lib/fechas";
-import { calcularLiquidacion, comisionDeGestionDe } from "../lib/liquidacion";
+import {
+  calcularLiquidacion,
+  comisionDeGestionDe,
+  liquidarPropietario,
+  mesesDelPeriodo,
+} from "../lib/liquidacion";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -550,5 +555,124 @@ describe("de dónde sale la comisión de gestión", () => {
       comisionDeGestionDe({ managementPct: 12, group: { managementPct: null } }),
       12
     );
+  });
+});
+
+describe("liquidación de un propietario con varios grupos", () => {
+  // El caso real de Inversiones Brito: dos grupos suyos, con comisiones
+  // distintas, dentro del mismo informe.
+  const villaMonica = {
+    nombre: "Grupo Villa Mónica",
+    managementPct: 30,
+    reservas: [{ totalPrice: 1126.51, platformCommissionAmt: 168.98, bankCommissionAmt: 14.64 }],
+    gastos: [],
+  };
+  const villaMonikka = {
+    nombre: "Villa Monikka",
+    managementPct: 10,
+    reservas: [{ totalPrice: 500, platformCommissionAmt: 50, bankCommissionAmt: 5 }],
+    gastos: [],
+  };
+
+  test("cada grupo lleva su porcentaje y luego se suman", () => {
+    const r = liquidarPropietario({
+      tramos: [villaMonica, villaMonikka],
+      cuotaFijaMensual: null,
+    });
+    assert.equal(r.ingresos, 1626.51);
+    assert.equal(r.comisionesDeVenta, 238.62);
+    assert.equal(r.baseDeGestion, 1387.89);
+    assert.equal(r.comisionDeGestion, 327.37); // 282,87 del 30 % + 44,50 del 10 %
+    assert.equal(r.alPropietario, 1060.52);
+  });
+
+  // Lo que se evita: un solo porcentaje sobre el total le cobraría 416,37 €,
+  // casi 90 € de más, porque Villa Monikka va al 10 %.
+  test("no es lo mismo que aplicar el 30 % a todo", () => {
+    const deGolpe = calcularLiquidacion({
+      reservas: [...villaMonica.reservas, ...villaMonikka.reservas],
+      gastos: [], managementPct: 30, cuotaFijaMensual: null,
+    });
+    const porGrupos = liquidarPropietario({
+      tramos: [villaMonica, villaMonikka], cuotaFijaMensual: null,
+    });
+    assert.equal(deGolpe.comisionDeGestion, 416.37);
+    assert.ok(porGrupos.comisionDeGestion < deGolpe.comisionDeGestion);
+  });
+
+  test("el desglose explica de dónde sale cada parte", () => {
+    const r = liquidarPropietario({
+      tramos: [villaMonica, villaMonikka], cuotaFijaMensual: null,
+    });
+    assert.equal(r.tramos.length, 2);
+    assert.equal(r.tramos[0].comisionDeGestion, 282.87);
+    assert.equal(r.tramos[1].comisionDeGestion, 44.5);
+    assert.match(r.detalleDeLaComision, /Grupo Villa Mónica/);
+    assert.match(r.detalleDeLaComision, /Villa Monikka/);
+  });
+
+  // Los gastos son de su grupo: solo bajan la comisión de ese grupo.
+  test("los gastos bajan la comisión del grupo al que pertenecen", () => {
+    const r = liquidarPropietario({
+      tramos: [villaMonica, { ...villaMonikka, gastos: [100] }],
+      cuotaFijaMensual: null,
+    });
+    assert.equal(r.gastos, 100);
+    assert.equal(r.tramos[0].comisionDeGestion, 282.87); // el 30 % no se entera
+    assert.equal(r.tramos[1].comisionDeGestion, 34.5); // 10 % sobre 345
+  });
+
+  // Academia Cañada: paga cuota, así que no hay nada que repartir por grupos.
+  test("con cuota fija no se reparte por grupos", () => {
+    const r = liquidarPropietario({
+      tramos: [{ ...villaMonica, nombre: "Academia Cañada", managementPct: null }],
+      cuotaFijaMensual: 600,
+    });
+    assert.equal(r.comisionDeGestion, 600);
+    assert.deepEqual(r.tramos, []);
+  });
+
+  test("la cuota fija manda aunque el grupo tenga porcentaje", () => {
+    const r = liquidarPropietario({ tramos: [villaMonica], cuotaFijaMensual: 600 });
+    assert.equal(r.comisionDeGestion, 600);
+  });
+
+  // Domingo Javier: solo se le gestiona la limpieza.
+  test("sin porcentaje ni cuota, se liquida todo lo que queda", () => {
+    const r = liquidarPropietario({
+      tramos: [{ nombre: "Villa Caliche", managementPct: null, reservas: villaMonica.reservas, gastos: [80] }],
+      cuotaFijaMensual: null,
+    });
+    assert.equal(r.comisionDeGestion, 0);
+    assert.equal(r.alPropietario, 862.89);
+    assert.match(r.detalleDeLaComision, /Sin comisión/);
+  });
+
+  test("un propietario sin viviendas no revienta", () => {
+    const r = liquidarPropietario({ tramos: [], cuotaFijaMensual: null });
+    assert.deepEqual([r.ingresos, r.comisionDeGestion, r.alPropietario], [0, 0, 0]);
+  });
+});
+
+describe("meses que cubre un periodo", () => {
+  test("un mes natural es un mes", () => {
+    assert.equal(mesesDelPeriodo(d("2026-01-01"), d("2026-01-31")), 1);
+  });
+
+  // Los 600 € de Academia son mensuales: un trimestre son 1.800 €.
+  test("un trimestre son tres", () => {
+    assert.equal(mesesDelPeriodo(d("2026-01-01"), d("2026-03-31")), 3);
+  });
+
+  test("cuenta meses tocados, no días", () => {
+    assert.equal(mesesDelPeriodo(d("2026-01-28"), d("2026-02-03")), 2);
+  });
+
+  test("un solo día sigue siendo un mes", () => {
+    assert.equal(mesesDelPeriodo(d("2026-01-15"), d("2026-01-15")), 1);
+  });
+
+  test("cruza el año", () => {
+    assert.equal(mesesDelPeriodo(d("2025-11-01"), d("2026-02-28")), 4);
   });
 });
