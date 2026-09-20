@@ -155,6 +155,39 @@ Innova IA Systems). Es la referencia de lo que espera ver el propietario:
 La reserva de Villa Mónica del 17 al 19 de julio (1.126,51 € / 168,98 € / 14,64 € / 942,89 €)
 cuadra al céntimo con el Excel. Los dos orígenes dicen lo mismo.
 
+### Contrastado: salen los mismos números
+
+`tests/numeros-reales.test.ts` reproduce ese informe entero a partir de las comisiones
+configuradas aquí. **Las nueve reservas cuadran al céntimo**, y con ellas los dos subtotales y
+las cuatro cifras de cabecera:
+
+| | Informe de Brito | Lo que calcula esto |
+|---|---|---|
+| Precio total de reservas | 4.938,51 € | 4.938,51 € |
+| Comisiones (Booking + banco) | 788,86 € | 788,86 € |
+| A percibir en cuenta | 4.149,65 € | 4.149,65 € |
+| Gastos de la semana | 1.858,90 € | 1.858,90 € |
+
+Importa porque es una **fuente independiente**: ese informe no sale de este código ni del Excel
+del que se dedujeron las comisiones. Confirma por separado lo que decía el Excel, incluido lo
+que más raro parecía — que el **Apto 8206 va al 17 %** en Booking y los demás al 15 %. Con un
+único porcentaje para todos, esa reserva falla.
+
+Si algún día dejan de cuadrar, esa prueba lo dice antes de que llegue a un informe.
+
+### La reserva que no encaja
+
+Una de las nueve no se puede reproducir con ninguna regla configurable:
+
+> 15 jul → 16 jul · Beach & Ocean · 180,00 € · **0,00 € de Booking** · 4,75 € de banco
+
+Sin comisión de plataforma (parece una reserva directa) pero con **4,75 € de banco, que es un
+2,64 %**, no el 1,3 % de todas las demás. Es la única así en la semana.
+
+**Para preguntar a Emma:** ¿qué es esa reserva y de dónde sale ese 2,64 %? Si es lo normal en
+las directas, hay que configurar el canal «Directo» con su propia comisión bancaria; si es un
+caso suelto, se mete a mano y ya.
+
 ## Comisiones reales (de las 152 reservas de 2026)
 
 | Canal | Plataforma | Bancaria |
