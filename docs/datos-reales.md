@@ -85,12 +85,75 @@ calendario y de las limpiezas, pero su historial se queda.
 El propietario es lo que **agrupa la factura de limpiezas**: a Inversiones Brito le sale una sola
 factura con las limpiezas de todas sus viviendas.
 
+### Datos fiscales
+
+De los PDF que pasó Yurena el 20/09 (la factura de muestra y el resumen de limpiezas).
+
+| Quién | NIF/CIF | Domicilio |
+|---|---|---|
+| **Aires Majoreros SL** (emisora) | B88933890 | Calle El Tabloncillo, 3 — Bloque 3B, Puerta 1. La Lajita · 35627 Pájara (Las Palmas) |
+| **Academia Cañada del Río S.L.** | B76038611 | Avda. Jhan Reisen, 12 · 35627 Costa Calma (Las Palmas) |
+
+Los dos pasan la comprobación del dígito de control (`lib/ocr/nif.ts`), así que están bien
+copiados. Hay que meterlos en **Ajustes**: sin el NIF y el domicilio de la emisora, la factura
+no cumple el RD 1619/2012.
+
+El nombre fiscal lleva **SL**, y el que hay sembrado en la aplicación dice «nombre de
+demostración»: mientras no se cambie, sale impreso en las facturas y en los informes.
+
+### Cómo está equipado cada apartamento
+
+Del PDF de configuración. Hace falta para las limpiezas (ropa de cama, toallas, amenities).
+
+| Apartamento | Dobles | Individuales | Baños | Capacidad | Notas |
+|---|---|---|---|---|---|
+| Sand & Beach | 1 | 0 | 1 | 2 | |
+| Beach & Ocean | 1 | 0 | 1 | 2 | |
+| White Sand | 2 | 0 | 2 | 6 | 1 sofá cama doble |
+| Waves & Dreams | 1 | 0 | 1 | 4 | 1 sofá cama doble |
+| Gold View | 1 | 0 | 1 | 4 | 1 sofá cama doble |
+| Villa Mónica | 7 | 1 | 2 baños + 1 aseo | 15 | |
+| Apto 8241 | 1 | 1 | 1 | 5 | 1 sofá cama doble |
+| Apto 8206 | 1 | 1 | 1 | 3 | |
+| Apto 27 | 1 | 1 | 1 | 3 | 1 sofá cama doble |
+| Apto 8209 | 1 | 0 | 1 | 4 | 1 sofá cama doble |
+| Apto 8226 | 1 | 1 | 1 | 5 | 1 sofá cama doble |
+| 24 Montaña Tirba | 1 | 0 | 1 | 4 | 1 sofá cama doble |
+| 25 Montaña Tindaya | 1 | 0 | 1 | 4 | 1 sofá cama doble |
+| Villa Caliche | 1 | 4 | 1 baño + 1 aseo | 6 | |
+| Villa Gregorio | 4 | 0 | 4 | 8 | |
+
+El **Apto 103** aparece tachado: «este alojamiento se elimina, no existe ya».
+
 ### Pendiente
 
-- **CIF y domicilio de Inversiones Brito**. Sin ellos su factura no es válida, y es el cliente
-  más grande.
+- **CIF y domicilio de Inversiones Brito Pérez, S.L.** Sin ellos su factura no es válida, y es
+  el cliente más grande. Es lo único fiscal que falta.
 - Si los cinco de **Villa Monikka** están en Lodgify o hay que darlos de alta a mano.
 - De quién era el **Apto 103**, para su histórico.
+- **Cómo se llama de verdad el grupo grande.** En el PDF de configuración pone «GRUPO CHANO»;
+  Emma lo llamó «Grupo Villa Mónica»; el informe del sistema anterior lo titula «Villa Mónica y
+  apartamentos». Son los mismos seis, pero conviene fijar un nombre: es el que va a salir en el
+  informe al propietario.
+- «Beach & Ocean» aparece también como «**Beachs & Ocean**» en el informe semanal. Es el mismo
+  apartamento escrito de dos formas; si entra así desde Lodgify saldrán dos viviendas.
+
+## El informe del sistema anterior
+
+Yurena pasó el informe semanal que Inversiones Brito viene recibiendo (Mirador de Sotavento ·
+Innova IA Systems). Es la referencia de lo que espera ver el propietario:
+
+- Cuatro cifras arriba: precio total de reservas, a percibir en cuenta, comisiones
+  (Booking + banco) y gastos de la semana.
+- Las reservas **separadas por complejo**, con subtotal de cada uno — que es justo lo que aquí
+  hace el desglose por grupo.
+- Una tabla de gastos con fecha, proveedor, uso e importe.
+- Y al pie: «el cálculo de tu comisión de gestión y la liquidación final se consolidan en el
+  cierre mensual». Es decir, **el semanal no lleva comisión de gestión**; la lleva el mensual.
+  Coincide con cómo está montado aquí.
+
+La reserva de Villa Mónica del 17 al 19 de julio (1.126,51 € / 168,98 € / 14,64 € / 942,89 €)
+cuadra al céntimo con el Excel. Los dos orígenes dicen lo mismo.
 
 ## Comisiones reales (de las 152 reservas de 2026)
 
