@@ -43,6 +43,8 @@ export default async function RentalSettingsPage() {
     bankPct: c.bankPct === null ? null : Number(c.bankPct),
     propertyId: c.propertyId,
     propertyName: c.property?.name ?? null,
+    confirmado: c.confirmado,
+    nota: c.nota,
   }));
 
   const propietariosConGrupos = (

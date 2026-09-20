@@ -13,6 +13,10 @@ interface Comision {
   bankPct: number | null;
   propertyId: string | null;
   propertyName: string | null;
+  /** `false` = es un supuesto, no un dato comprobado. */
+  confirmado?: boolean;
+  /** De dónde sale el porcentaje. */
+  nota?: string | null;
 }
 
 interface ViviendaVisible {
@@ -80,7 +84,9 @@ export default function ComisionesPorCanal({
           {comisiones.map((c) => (
             <div
               key={c.id}
-              className="flex items-center justify-between gap-2 border border-slate-100 rounded-lg px-3 py-2"
+              className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 ${
+                c.confirmado === false ? "border-amber-300 bg-amber-50" : "border-slate-100"
+              }`}
             >
               <span className="text-sm text-slate-700">
                 {c.channel}
@@ -88,6 +94,14 @@ export default function ComisionesPorCanal({
                   {" · "}
                   {c.propertyName ?? "todas las viviendas"}
                 </span>
+                {/* Un supuesto que no se distingue de un dato comprobado acaba
+                    liquidado como si lo fuera. */}
+                {c.confirmado === false && (
+                  <span className="ml-2 text-xs text-amber-900 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5">
+                    sin contrastar
+                  </span>
+                )}
+                {c.nota && <span className="block text-xs text-slate-400 mt-0.5">{c.nota}</span>}
               </span>
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-slate-800">

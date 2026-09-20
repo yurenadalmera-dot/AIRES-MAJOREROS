@@ -298,3 +298,129 @@ describe("las tarifas de limpieza que vienen de Mirador", () => {
     assert.deepEqual(r.preciosCerrados, []);
   });
 });
+
+// ── Las comisiones de canal ───────────────────────────────────────────
+//
+// Es la parte más delicada del volcado, porque Mirador trae ahí dos números
+// que él mismo marca como supuestos y que aquí están comprobados contra
+// papeles reales. Si el supuesto pisa al dato, la diferencia no se ve: sale
+// directamente en la liquidación de alguien.
+
+/** Los cuatro canales tal como están en `tarifas_canal` de Mirador. */
+const conComisiones = () => ({
+  ...volcado(),
+  viviendas: [
+    ...volcado().viviendas,
+    { ref: "v3", propietarioRef: "p1", grupoRef: "g1", nombre: "Apto 8206", plazas: 3, lodgifyId: "639390" },
+  ],
+  comisiones: [
+    { canal: "BookingCom", platformPct: 15 as number | string, confirmado: false, nota: "SUPUESTO." },
+    { canal: "AirbnbIntegration", platformPct: 15 as number | string, confirmado: false, nota: "SUPUESTO." },
+    { canal: "OH", platformPct: 0 as number | string, confirmado: true, nota: "Reserva directa: sin comision de canal." },
+    { canal: "Manual", platformPct: 0 as number | string, confirmado: true, nota: "Reserva metida a mano." },
+  ],
+});
+
+const del = (r: ReturnType<typeof revisarVolcado>, canal: string, viviendaRef: string | null = null) =>
+  r.comisiones.find((c) => c.canal === canal && c.viviendaRef === viviendaRef);
+
+describe("las comisiones de canal", () => {
+  test("los canales que Mirador da por buenos entran tal cual", () => {
+    const r = revisarVolcado(conComisiones());
+    assert.equal(del(r, "OH")?.platformPct, 0);
+    assert.equal(del(r, "Manual")?.platformPct, 0);
+    assert.equal(del(r, "OH")?.confirmado, true);
+  });
+
+  // A nulo caería en la comisión bancaria general, que es un 2,5 % que no es
+  // el suyo: sería inventarle un cargo a una reserva directa y pagarle de
+  // menos al propietario.
+  test("un canal de Mirador sin comisión bancaria entra a cero, no a nulo", () => {
+    const r = revisarVolcado(conComisiones());
+    assert.equal(del(r, "OH")?.bankPct, 0);
+    assert.match(del(r, "OH")?.nota ?? "", /no recoge comisión bancaria/);
+    assert.match(del(r, "OH")?.nota ?? "", /Reserva directa/, "y no se pierde lo que decía Mirador");
+  });
+
+  // El caso que importa: el supuesto no puede pisar al dato comprobado.
+  test("el 15 % supuesto de Airbnb no pisa al 15,5 % comprobado", () => {
+    const r = revisarVolcado(conComisiones());
+    const airbnb = del(r, "AirbnbIntegration");
+    assert.equal(airbnb?.platformPct, 15.5);
+    assert.equal(airbnb?.confirmado, true);
+    assert.equal(airbnb?.bankPct, 0, "Airbnb no lleva comisión bancaria");
+    assert.ok(
+      r.rechazados.some((x) => /AirbnbIntegration/.test(x.que) && /supuesto/.test(x.porque)),
+      "y se dice por qué se ha descartado"
+    );
+  });
+
+  // Booking coincide en el porcentaje, pero lo de aquí además lleva el 1,3 %
+  // del banco, que Mirador no contempla. Quedarse con el suyo perdería eso.
+  test("de Booking se queda lo comprobado, que sí trae la comisión bancaria", () => {
+    const r = revisarVolcado(conComisiones());
+    const booking = del(r, "BookingCom");
+    assert.equal(booking?.platformPct, 15);
+    assert.equal(booking?.bankPct, 1.3);
+  });
+
+  test("el Apto 8206 entra con su 17 %, no con el 15 % general", () => {
+    const r = revisarVolcado(conComisiones());
+    assert.equal(del(r, "BookingCom", "v3")?.platformPct, 17);
+    assert.equal(del(r, "BookingCom")?.platformPct, 15, "y la general no se contagia");
+  });
+
+  // El Apto 27 iba al 17 % según el Excel, pero en Mirador no existe con ese
+  // nombre. Callárselo dejaría un porcentaje comprobado sin aplicar y nadie
+  // se enteraría.
+  test("una vivienda contrastada que no viene en el volcado se dice", () => {
+    const r = revisarVolcado(conComisiones());
+    assert.equal(del(r, "BookingCom", "v-apto-27"), undefined);
+    assert.ok(
+      r.avisos.some((x) => /Apto 27/.test(x.que) && /no viene en el volcado/.test(x.porque)),
+      "y sale como aviso, no como rechazo: nadie nos lo mandó"
+    );
+  });
+
+  test("un porcentaje que no es un número se rechaza con su motivo", () => {
+    const v = conComisiones();
+    v.comisiones.push({ canal: "Expedia", platformPct: "ni idea", confirmado: true, nota: null as never });
+    const r = revisarVolcado(v);
+    assert.equal(del(r, "Expedia"), undefined);
+    assert.ok(r.rechazados.some((x) => /Expedia/.test(x.que) && /porcentaje/.test(x.porque)));
+  });
+
+  test("un 120 % no es un porcentaje", () => {
+    const v = conComisiones();
+    v.comisiones.push({ canal: "Expedia", platformPct: 120, confirmado: true, nota: null as never });
+    assert.equal(del(revisarVolcado(v), "Expedia"), undefined);
+  });
+
+  // Guardarla como general la aplicaría a todas las viviendas, que es lo
+  // contrario de lo que dice.
+  test("una comisión de una vivienda que no viene no se guarda como general", () => {
+    const v = conComisiones();
+    (v.comisiones as unknown[]).push({ canal: "BookingCom", viviendaRef: "v-fantasma", platformPct: 25 });
+    const r = revisarVolcado(v);
+    assert.equal(del(r, "BookingCom")?.platformPct, 15);
+    assert.ok(r.rechazados.some((x) => /su vivienda no viene/.test(x.porque)));
+  });
+
+  // Sin esto, un canal nuevo de Mirador entraría con el porcentaje por
+  // defecto y sin que nadie lo mirara.
+  test("un canal que aquí no está contrastado entra de Mirador", () => {
+    const v = conComisiones();
+    (v.comisiones as unknown[]).push({ canal: "Expedia", platformPct: 18, confirmado: false, nota: "SUPUESTO." });
+    const r = revisarVolcado(v);
+    assert.equal(del(r, "Expedia")?.platformPct, 18);
+    assert.equal(del(r, "Expedia")?.confirmado, false, "y entra marcado como lo que es");
+  });
+
+  // Un volcado viejo, sin comisiones, no puede dejar la aplicación sin
+  // ninguna: las contrastadas entran igual.
+  test("sin comisiones en el volcado, entran las contrastadas", () => {
+    const r = revisarVolcado(volcado());
+    assert.ok(r.comisiones.length >= 2);
+    assert.ok(r.comisiones.every((c) => c.confirmado));
+  });
+});

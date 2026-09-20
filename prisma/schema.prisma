@@ -365,6 +365,12 @@ model ChannelCommission {
   /// Comisión bancaria de este canal. Nula = la general. Airbnb no cobra
   /// ninguna; Booking, un 1,3 %.
   bankPct        Decimal?
+  /// Si el porcentaje está comprobado contra papeles reales o es un supuesto.
+  /// Mirador traía los suyos marcados «SUPUESTO, pendiente de contrastar»; un
+  /// supuesto que no se distingue de un dato comprobado acaba en una factura.
+  confirmado     Boolean      @default(true)
+  /// De dónde sale el porcentaje, para poder discutirlo.
+  nota           String?      @db.Text
   createdAt      DateTime     @default(now())
 
   @@unique([organizationId, channel, propertyId])

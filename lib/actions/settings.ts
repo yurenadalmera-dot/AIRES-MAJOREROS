@@ -140,14 +140,19 @@ export async function guardarComisionCanal(formData: FormData) {
       (c) => normalizarCanal(c.channel) === normalizarCanal(channel) && c.propertyId === propertyId
     );
 
+    // Un porcentaje escrito a mano es una decisión de alguien, no un supuesto
+    // heredado: deja de estar marcado como «sin contrastar», y la nota de
+    // dónde venía el anterior se va con él.
+    const aMano = { confirmado: true, nota: null };
+
     if (yaEsta) {
       await prisma.channelCommission.update({
         where: { id: yaEsta.id },
-        data: { platformPct: data.platformPct, channel, bankPct },
+        data: { platformPct: data.platformPct, channel, bankPct, ...aMano },
       });
     } else {
       await prisma.channelCommission.create({
-        data: { organizationId, channel, propertyId, platformPct: data.platformPct, bankPct },
+        data: { organizationId, channel, propertyId, platformPct: data.platformPct, bankPct, ...aMano },
       });
     }
 

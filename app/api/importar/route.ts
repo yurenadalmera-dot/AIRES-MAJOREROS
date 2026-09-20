@@ -148,6 +148,34 @@ export async function POST(request: Request) {
     });
   }
 
+  // ── Comisiones de canal ─────────────────────────────────────────────
+  // Después de las viviendas, porque las de un solo apartamento cuelgan de
+  // una. Van antes que nada de reservas: si se sincroniza Lodgify con las
+  // comisiones a medio poner, cada reserva entra con el porcentaje que no es
+  // y hay que rehacerlas.
+  for (const c of volcado.comisiones) {
+    const propertyId = c.viviendaRef ? (idPorVivienda.get(c.viviendaRef) ?? null) : null;
+    if (c.viviendaRef && !propertyId) continue;
+
+    const datos = {
+      platformPct: c.platformPct,
+      bankPct: c.bankPct,
+      confirmado: c.confirmado,
+      nota: c.nota,
+    };
+    const existente = await prisma.channelCommission.findFirst({
+      where: { organizationId, channel: c.canal, propertyId },
+      select: { id: true },
+    });
+    if (existente) {
+      await prisma.channelCommission.update({ where: { id: existente.id }, data: datos });
+    } else {
+      await prisma.channelCommission.create({
+        data: { organizationId, channel: c.canal, propertyId, ...datos },
+      });
+    }
+  }
+
   // ── Movimientos ─────────────────────────────────────────────────────
   const huellas = volcado.movimientos.map((m) => `mirador:${m.origenHash}`);
   const yaEstaban = new Set(
@@ -194,6 +222,7 @@ export async function POST(request: Request) {
   revalidatePath("/rental/gastos");
   revalidatePath("/rental/properties");
   revalidatePath("/rental/reports");
+  revalidatePath("/rental/settings");
 
   return Response.json({
     ok: true,
@@ -202,7 +231,9 @@ export async function POST(request: Request) {
     viviendas: volcado.viviendas.length,
     tarifas: volcado.tarifas.length,
     preciosCerrados: volcado.preciosCerrados.length,
+    comisiones: volcado.comisiones.length,
     movimientos: resumen,
     rechazados: volcado.rechazados,
+    avisos: volcado.avisos,
   });
 }

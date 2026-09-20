@@ -299,6 +299,22 @@ const MIGRACIONES: Migracion[] = [
       }
     },
   },
+  // Un supuesto y un dato comprobado no valen lo mismo. Mirador traía sus
+  // comisiones de canal marcadas «SUPUESTO, pendiente de contrastar con una
+  // factura real», y al traerlas aquí esa advertencia no se puede perder: un
+  // porcentaje supuesto que nadie distingue del comprobado acaba liquidado.
+  {
+    nombre: "De dónde sale cada comisión de canal",
+    haceFalta: () => faltaColumna("ChannelCommission", "confirmado"),
+    aplicar: async () => {
+      for (const sql of [
+        "ALTER TABLE `ChannelCommission` ADD COLUMN `confirmado` BOOLEAN NOT NULL DEFAULT true",
+        "ALTER TABLE `ChannelCommission` ADD COLUMN `nota` TEXT NULL",
+      ]) {
+        await prisma.$executeRawUnsafe(sql);
+      }
+    },
+  },
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */

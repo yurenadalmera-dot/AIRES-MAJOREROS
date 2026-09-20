@@ -318,6 +318,48 @@ importación se trae el 10 % sola.
 **Queda pendiente regenerar el borrador de liquidación**: sigue calculado con
 la regla vieja, así que esos 9.537,58 € que enseña no son los buenos.
 
+### Revisión completa de la base de Mirador (20/09, de noche)
+
+Las 17 tablas con sus filas, para saber exactamente qué se pierde al apagarla:
+
+| Tabla | Filas | ¿Se trae? |
+|---|---|---|
+| `reservas` | **815** | **No**: vienen de Lodgify |
+| `movimientos` | 267 | Sí |
+| `viviendas` | 17 | Sí |
+| `propietarios` · `grupos_liquidacion` · `reglas_liquidacion` | 3 · 3 · 3 | Sí |
+| `tarifas` · `tarifa_lineas` · `tarifa_vivienda` | 2 · 4 · 3 | Sí |
+| `tarifas_canal` | 4 | Sí (ver abajo) |
+| `liquidaciones` + `liquidaciones_detalle` | 1 + 2 | No: es el borrador con la regla vieja |
+| `app_ui` | 1 (9,2 KB) | No: es el HTML del panel de Emma |
+| `limpiezas` · `perfiles` · `documentos_ocr` · `app_ui_versiones` | **0** | Nada que traer |
+
+Cinco vistas (`v_comision_reserva`, `v_coste_grupo_mes`, `v_limpieza_teorica`,
+`v_liquidacion_grupo_mes`, `v_ventas_grupo_mes`) y cinco funciones
+(`fn_generar_liquidacion`, `fn_versionar_app_ui`, `fn_propietario_actual`, `fn_rol_actual`,
+`confirmar_documento_ocr`). No se traen: son cálculo, y el cálculo ya vive aquí en código
+probado.
+
+**Lo único que se pierde de verdad al apagar Mirador es el panel de Emma** (`app_ui`), y el
+borrador de liquidación, que de todas formas está calculado con la regla equivocada.
+
+### Las reservas: sólo de Lodgify
+
+Confirmado en los datos: las 815 reservas llevan el canal en `origen` con los nombres que manda
+Lodgify, y **ninguna** trae comisión guardada.
+
+| Canal (`origen`) | Reservas | Ventas |
+|---|---|---|
+| BookingCom | 421 confirmadas (+235 rechazadas) | 367.104 € |
+| AirbnbIntegration | 76 confirmadas, 55 abiertas | 65.931 € / 65.214 € |
+| OH (directa) | 12 | 11.457 € |
+| Manual | 2 confirmadas, 5 abiertas | 701 € / 2.867 € |
+
+`reservas.comision` está **vacía en las 815**. O sea: Mirador no tiene ni una comisión real
+guardada; las calcula al vuelo con los porcentajes de `tarifas_canal`, dos de los cuales él mismo
+marca como supuestos. No hay nada que contrastar ahí, y por eso las reservas entran de Lodgify y
+las comisiones se aplican con lo que sí está comprobado.
+
 ### Las comisiones de canal: aquí están contrastadas y allí no
 
 `tarifas_canal` de Mirador tiene Booking al 15 % y Airbnb al 15 %, las dos con
@@ -332,11 +374,41 @@ Lo de aquí sí está contrastado, dos veces (los Excel y el informe semanal rea
 | Booking · Apto 8206 y Apto 27 | **17 %** | 1,3 % |
 | Booking · el resto | 15 % | 1,3 % |
 
-**Merece la pena llevar esto a Mirador**: ahora mismo su liquidación calcula con un supuesto
-que sabemos que no es exacto.
-
 Los nombres de canal que devuelve Lodgify son `BookingCom`, `AirbnbIntegration`, `Manual` y
-`OH` (directa). Conviene que `normalizarCanal` los reconozca.
+`OH` (directa). Comprobado en las 815 reservas.
+
+#### Resuelto: las comisiones también se traen, y lo comprobado manda
+
+La importación se trae `tarifas_canal` entera, pero **no deja que un supuesto pise un dato
+comprobado**. Así queda después de importar, y así se ha comprobado de punta a punta contra el
+volcado real:
+
+| Canal | Plataforma | Banco | De dónde sale |
+|---|---|---|---|
+| AirbnbIntegration | **15,5 %** | 0 % | contrastado aquí (el 15 % de Mirador era supuesto) |
+| BookingCom · todas | 15 % | **1,3 %** | contrastado dos veces; Mirador no contempla el banco |
+| BookingCom · Apto 8206 | **17 %** | 1,3 % | contrastado: 20 de 20 reservas |
+| OH (directa) | 0 % | 0 % | **de Mirador**, que lo da por bueno |
+| Manual | 0 % | 0 % | **de Mirador**, que lo da por bueno |
+
+Los dos canales al 0 % hacían falta y no se tenían: sin ellos, una reserva directa entraba con
+el 15 % por defecto de plataforma.
+
+La comisión bancaria de esos dos entra **a cero, no a nulo**, a propósito: a nulo caería en la
+general del 2,5 %, que no es la vuestra, y eso sería inventarle un cargo a una reserva directa
+—unos 375 € sobre las 19 que hay— y pagarle de menos al propietario. Entre inventar de más e
+inventar de menos, se inventa de menos y se deja dicho en la nota.
+
+En Ajustes, **una comisión sin contrastar sale marcada en ámbar** con su nota. En cuanto alguien
+escribe el porcentaje a mano deja de estarlo: escribirlo es una decisión, no una herencia.
+
+#### Lo que no se puede aplicar, y se dice
+
+El Excel decía que el **Apto 27** también iba al 17 %, pero **en Mirador no existe ninguna
+vivienda con ese nombre**: el Grupo Chano tiene Villa Mónica, 8206, 8209, 8226, 8241, **Montaña
+Guerime** y el 103 (inactivo). El porcentaje se queda escrito y la importación lo avisa en vez de
+callárselo. Si «Apto 27» era **Montaña Guerime** —lo más probable por fechas— hay que decirlo y
+se aplica solo.
 
 ### La pregunta que sigue abierta
 
@@ -368,7 +440,19 @@ Se puede repetir las veces que haga falta: cada apunte va con su huella y no se 
 | Propietarios | 3 |
 | Grupos | 3 |
 | Viviendas | 17 (12 con listing de Lodgify) |
+| Tarifas de limpieza | 2, con 4 líneas y 3 precios cerrados |
+| Comisiones de canal | 4 de Mirador → **5** aquí (ver arriba) |
 | Movimientos | 267 — 184 gastos, **41 sueldos**, **40 traspasos**, 2 ingresos |
+
+### Probado de punta a punta
+
+No es una suposición: el 20/09 se levantó la aplicación entera contra una MariaDB limpia y se
+le metió el volcado **real** de Mirador por `/api/importar`. Entraron los 3 propietarios, los 3
+grupos, las 17 viviendas, las 2 tarifas, los 3 precios cerrados y las 5 comisiones. Al repetir la
+importación: **0 nuevos, 4 repetidos** — no duplica.
+
+Y la migración de esquema se probó quitando las columnas a mano: se aplica una vez y a la segunda
+dice «ninguna pendiente».
 
 Ni un apunte sin huella, ni una huella repetida, y **uno sin fecha** que entra marcado en vez
 de perderse.
