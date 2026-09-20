@@ -57,6 +57,7 @@ model Organization {
   users       User[]
   integrationSettings IntegrationSettings[]
   partnerSplitConfigs PartnerSplitConfig[]
+  channelCommissions  ChannelCommission[]
 }
 
 /// Una "unidad de negocio" dentro de la organización. type identifica su
@@ -316,6 +317,27 @@ model InvoiceLine {
 // ---------------------------------------------------------------------------
 // Integraciones y configuración
 // ---------------------------------------------------------------------------
+
+/// Comisión que se lleva cada canal de venta.
+///
+/// Antes había un único porcentaje para todo, y no es así: Airbnb se lleva el
+/// 15 % y Booking.com el 18 %. Aplicar el mismo a las dos descuadra el neto de
+/// cada reserva, y con él los informes del año.
+///
+/// El canal se guarda tal cual lo manda Lodgify, pero se compara en minúsculas
+/// y sin espacios: «Booking.com», «booking.com» y «BOOKING.COM» son el mismo.
+model ChannelCommission {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  /// Nombre del canal, normalizado a minúsculas.
+  channel        String
+  platformPct    Decimal  @default(0)
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, channel])
+  @@index([organizationId])
+}
 
 model IntegrationSettings {
   id             String   @id @default(cuid())

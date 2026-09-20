@@ -20,6 +20,7 @@ import { computePropertyStatus } from "../lib/status";
 import { casillaDelDia } from "../lib/calendario";
 import { decidirCuentaAdmin } from "../lib/cuenta-admin";
 import { cifrar, descifrar, enmascarar } from "../lib/secretos";
+import { comisionParaCanal } from "../lib/comisiones-canal";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -319,5 +320,56 @@ describe("IGIC en las facturas", () => {
 
   test("sin impuesto, el total es la base", () => {
     assert.deepEqual(calcularImpuesto(80, 0), { base: 80, cuota: 0, total: 80 });
+  });
+});
+
+describe("comisión según el canal de venta", () => {
+  const configuradas = [
+    { canal: "Airbnb", platformPct: 15 },
+    { canal: "Booking.com", platformPct: 18 },
+  ];
+
+  test("cada canal se lleva lo suyo", () => {
+    assert.equal(comisionParaCanal("Airbnb", configuradas, 0), 15);
+    assert.equal(comisionParaCanal("Booking.com", configuradas, 0), 18);
+  });
+
+  // Lodgify no escribe siempre igual el nombre del canal.
+  test("da igual cómo venga escrito", () => {
+    for (const forma of ["booking.com", "BOOKING.COM", "Booking .com", " booking com "]) {
+      assert.equal(comisionParaCanal(forma, configuradas, 0), 18, forma);
+    }
+  });
+
+  test("un canal sin configurar usa el porcentaje general", () => {
+    assert.equal(comisionParaCanal("VRBO", configuradas, 12), 12);
+    assert.equal(comisionParaCanal("Directo", configuradas, 0), 0);
+  });
+
+  test("sin canal, el general", () => {
+    assert.equal(comisionParaCanal(null, configuradas, 15), 15);
+    assert.equal(comisionParaCanal("", configuradas, 15), 15);
+  });
+
+  test("sin nada configurado, todo va al general — como antes", () => {
+    assert.equal(comisionParaCanal("Airbnb", [], 15), 15);
+  });
+
+  // El caso que nos ocupa: 15 % en Airbnb y 18 % en Booking, sobre el mismo
+  // importe, tienen que dar netos distintos.
+  test("el neto cambia según el canal", () => {
+    const airbnb = calculateCommissions({
+      totalPrice: 1000,
+      platformCommissionPct: comisionParaCanal("Airbnb", configuradas, 15),
+      bankCommissionPct: 0,
+    });
+    const booking = calculateCommissions({
+      totalPrice: 1000,
+      platformCommissionPct: comisionParaCanal("Booking.com", configuradas, 15),
+      bankCommissionPct: 0,
+    });
+    assert.equal(airbnb.platformCommissionAmt, 150);
+    assert.equal(booking.platformCommissionAmt, 180);
+    assert.equal(airbnb.netAmount - booking.netAmount, 30);
   });
 });

@@ -91,6 +91,33 @@ const MIGRACIONES: Migracion[] = [
     },
   })),
 
+  // La tabla de comisiones por canal. Antes había un único porcentaje para
+  // todo, y no es así: Airbnb se lleva el 15 % y Booking.com el 18 %.
+  {
+    nombre: "ChannelCommission",
+    haceFalta: async () => {
+      const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = 'ChannelCommission'
+      `;
+      return Number(filas[0]?.n ?? 0) === 0;
+    },
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "CREATE TABLE `ChannelCommission` (" +
+          "`id` VARCHAR(191) NOT NULL," +
+          "`organizationId` VARCHAR(191) NOT NULL," +
+          "`channel` VARCHAR(191) NOT NULL," +
+          "`platformPct` DECIMAL(65, 30) NOT NULL DEFAULT 0," +
+          "`createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)," +
+          "UNIQUE INDEX `ChannelCommission_organizationId_channel_key`(`organizationId`, `channel`)," +
+          "INDEX `ChannelCommission_organizationId_idx`(`organizationId`)," +
+          "PRIMARY KEY (`id`)" +
+          ") DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+      );
+    },
+  },
+
   // Donde se guarda la clave de API de Lodgify, cifrada. Antes no se guardaba
   // en ningún sitio: la que se escribía en Ajustes se tiraba, y la
   // sincronización seguía inventándose las reservas sin decir nada.

@@ -9,6 +9,7 @@ import SyncLodgifyButton from "@/components/SyncLodgifyButton";
 import FormularioConAviso from "@/components/FormularioConAviso";
 import GestionUsuarios from "@/components/GestionUsuarios";
 import EmpezarDeCero from "@/components/EmpezarDeCero";
+import ComisionesPorCanal from "@/components/ComisionesPorCanal";
 import { hayDatosDeDemostracion, resumenDeDatos } from "@/lib/datos-demo";
 
 export default async function RentalSettingsPage() {
@@ -26,6 +27,10 @@ export default async function RentalSettingsPage() {
     resumenDeDatos(organizationId),
     hayDatosDeDemostracion(organizationId),
   ]);
+
+  const comisionesCanal = (
+    await prisma.channelCommission.findMany({ where: { organizationId }, orderBy: { channel: "asc" } })
+  ).map((c) => ({ id: c.id, channel: c.channel, platformPct: Number(c.platformPct) }));
 
   const [business, integration, employees, owners] = await Promise.all([
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
@@ -221,6 +226,11 @@ export default async function RentalSettingsPage() {
           </FormularioConAviso>
         </details>
       </div>
+
+      <ComisionesPorCanal
+        comisiones={comisionesCanal}
+        porDefecto={integration ? Number(integration.defaultPlatformPct) : 15}
+      />
 
       <GestionUsuarios usuarios={usuarios} />
 

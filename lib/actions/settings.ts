@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { conErroresLegibles } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 import { cifrar, enmascarar } from "@/lib/secretos";
+import { normalizarCanal } from "@/lib/comisiones-canal";
 
 const integrationSchema = z.object({
   defaultPlatformPct: z.coerce.number().min(0).max(100),
@@ -91,5 +92,51 @@ export async function updateBusinessInfo(businessId: string, formData: FormData)
     revalidatePath("/cleaning/settings");
     revalidatePath("/rental");
     revalidatePath("/cleaning");
+  });
+}
+
+const comisionCanalSchema = z.object({
+  channel: z.string().min(1, "Falta el nombre del canal"),
+  platformPct: z.coerce.number().min(0).max(100),
+});
+
+/**
+ * Fija la comisión de un canal de venta.
+ *
+ * Se guarda una fila por canal. El nombre se normaliza para compararlo, de
+ * forma que «Booking.com» y «booking .com» no acaben siendo dos canales.
+ */
+export async function guardarComisionCanal(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    const data = comisionCanalSchema.parse(Object.fromEntries(formData.entries()));
+    const channel = data.channel.trim();
+
+    const existentes = await prisma.channelCommission.findMany({ where: { organizationId } });
+    const yaEsta = existentes.find(
+      (c) => normalizarCanal(c.channel) === normalizarCanal(channel)
+    );
+
+    if (yaEsta) {
+      await prisma.channelCommission.update({
+        where: { id: yaEsta.id },
+        data: { platformPct: data.platformPct, channel },
+      });
+    } else {
+      await prisma.channelCommission.create({
+        data: { organizationId, channel, platformPct: data.platformPct },
+      });
+    }
+
+    revalidatePath("/rental/settings");
+  });
+}
+
+/** Quita la comisión de un canal: vuelve a usarse el porcentaje general. */
+export async function borrarComisionCanal(id: string) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    await prisma.channelCommission.deleteMany({ where: { id, organizationId } });
+    revalidatePath("/rental/settings");
   });
 }

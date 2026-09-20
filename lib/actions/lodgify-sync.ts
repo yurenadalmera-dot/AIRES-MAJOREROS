@@ -11,6 +11,7 @@ import {
   claveLodgify,
 } from "@/lib/lodgify";
 import { calculateCommissions } from "@/lib/money";
+import { comisionParaCanal } from "@/lib/comisiones-canal";
 
 export interface SyncSummary {
   liveMode: boolean;
@@ -116,6 +117,12 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     const platformPct = settings ? Number(settings.defaultPlatformPct) : 15;
     const bankPct = settings ? Number(settings.defaultBankPct) : 2.5;
 
+    // Cada canal se lleva lo suyo. Lo que no esté configurado usa el
+    // porcentaje general.
+    const comisiones = (
+      await prisma.channelCommission.findMany({ where: { organizationId } })
+    ).map((c) => ({ canal: c.channel, platformPct: Number(c.platformPct) }));
+
     const apiKey = await claveLodgify(organizationId);
 
     // Primero las viviendas, después las reservas. El orden no es un detalle:
@@ -219,9 +226,10 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
           skippedManuallyAdjusted++;
           continue;
         }
+        const pctDelCanal = comisionParaCanal(res.channel, comisiones, platformPct);
         const { platformCommissionAmt, bankCommissionAmt, netAmount } = calculateCommissions({
           totalPrice: res.totalPrice,
-          platformCommissionPct: platformPct,
+          platformCommissionPct: pctDelCanal,
           bankCommissionPct: bankPct,
         });
         await prisma.booking.updateMany({
@@ -235,7 +243,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
             checkOut: res.checkOut,
             channel: res.channel,
             totalPrice: res.totalPrice,
-            platformCommissionPct: platformPct,
+            platformCommissionPct: pctDelCanal,
             platformCommissionAmt,
             bankCommissionPct: bankPct,
             bankCommissionAmt,
@@ -250,9 +258,10 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
         });
         updated++;
       } else {
+        const pctDelCanal = comisionParaCanal(res.channel, comisiones, platformPct);
         const { platformCommissionAmt, bankCommissionAmt, netAmount } = calculateCommissions({
           totalPrice: res.totalPrice,
-          platformCommissionPct: platformPct,
+          platformCommissionPct: pctDelCanal,
           bankCommissionPct: bankPct,
         });
         const booking = await prisma.booking.create({
@@ -268,7 +277,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
             channel: res.channel,
             status: "CONFIRMED",
             totalPrice: res.totalPrice,
-            platformCommissionPct: platformPct,
+            platformCommissionPct: pctDelCanal,
             platformCommissionAmt,
             bankCommissionPct: bankPct,
             bankCommissionAmt,
