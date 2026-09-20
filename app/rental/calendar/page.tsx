@@ -24,7 +24,7 @@ export default async function CalendarPage({
 }: {
   searchParams: Promise<{ week?: string }>;
 }) {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
   const params = await searchParams;
   // Acotado: `?week=999999999` desbordaba la fecha y la página reventaba con
   // «Invalid time value». Diez años arriba y abajo sobran de largo.

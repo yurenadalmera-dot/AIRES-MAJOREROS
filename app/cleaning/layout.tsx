@@ -12,6 +12,7 @@ export default async function CleaningLayout({ children }: { children: React.Rea
       otherBusinessName={rentalBusiness?.name ?? "Alquileres vacacionales"}
       userName={session!.name}
       userRole={USER_ROLE_LABEL[session!.role] ?? session!.role}
+      rol={session!.role}
     >
       {children}
     </Shell>

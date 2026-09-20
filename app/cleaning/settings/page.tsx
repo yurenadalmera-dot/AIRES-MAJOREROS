@@ -7,7 +7,7 @@ import { BUSINESS_TYPES } from "@/lib/constants";
 import FormularioConAviso from "@/components/FormularioConAviso";
 
 export default async function CleaningSettingsPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("administracion");
 
   const [partners, splitConfig, business] = await Promise.all([
     prisma.partner.findMany({ where: { organizationId }, orderBy: { createdAt: "asc" } }),

@@ -6,7 +6,7 @@ export default async function RentalTasksPage({
 }: {
   searchParams: Promise<{ type?: string; status?: string }>;
 }) {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("operativa.estado_tarea");
   const params = await searchParams;
 
   return (

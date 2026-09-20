@@ -77,6 +77,11 @@ Un conmutador en la barra lateral permite cambiar entre los dos negocios sin sal
   > ⚠️ Este reparto es **una propuesta**, deducida de lo que significa cada rol, no una regla de
   > negocio confirmada. Conviene validarlo con quien vaya a usar la aplicación.
 
+  El permiso decide tres cosas, no una: qué **acciones** se pueden ejecutar, qué **pantallas** se
+  pueden abrir (escribir la dirección a mano lleva de vuelta a donde sí se puede estar) y qué
+  **secciones del menú** se ven. Y dónde aterriza cada quien al entrar: administración y la gestora
+  del alquiler en el panel del día, las socias en facturación.
+
 ## Producción
 
 La aplicación está publicada en **https://airesmajoreros.pro**.

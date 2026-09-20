@@ -12,7 +12,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default async function InvoicesPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("facturacion");
   const invoices = await prisma.invoice.findMany({
     where: { organizationId },
     orderBy: { issueDate: "desc" },

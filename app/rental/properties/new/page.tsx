@@ -5,7 +5,7 @@ import PropertyForm from "@/components/PropertyForm";
 import { createProperty } from "@/lib/actions/properties";
 
 export default async function NewPropertyPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
   const owners = await prisma.owner.findMany({ where: { organizationId }, orderBy: { name: "asc" } });
 
   return (

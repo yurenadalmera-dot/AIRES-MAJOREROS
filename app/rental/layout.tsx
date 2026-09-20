@@ -12,6 +12,7 @@ export default async function RentalLayout({ children }: { children: React.React
       otherBusinessName={cleaningBusiness?.name ?? "Facturación de limpiezas"}
       userName={session!.name}
       userRole={USER_ROLE_LABEL[session!.role] ?? session!.role}
+      rol={session!.role}
     >
       {children}
     </Shell>

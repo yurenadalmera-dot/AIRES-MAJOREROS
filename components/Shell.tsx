@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { puede, type Permiso } from "@/lib/permisos";
 
 interface NavItem {
+  /** Sin este permiso, la sección no se enseña. */
+  permiso: Permiso;
   href: string;
   label: string;
   icon: string;
@@ -16,25 +19,27 @@ interface ShellProps {
   activeBusiness: "rental" | "cleaning";
   userName: string;
   userRole: string;
+  /** El rol en crudo, para decidir qué secciones se ven. */
+  rol: string;
   children: React.ReactNode;
 }
 
 const RENTAL_NAV: NavItem[] = [
-  { href: "/rental", label: "Panel del día", icon: "📋" },
-  { href: "/rental/calendar", label: "Calendario semanal", icon: "🗓️" },
-  { href: "/rental/bookings", label: "Reservas", icon: "🛎️" },
-  { href: "/rental/properties", label: "Viviendas", icon: "🏠" },
-  { href: "/rental/tasks", label: "Limpieza y mantenimiento", icon: "🧹" },
-  { href: "/rental/reports", label: "Informes propietarios", icon: "🧾" },
-  { href: "/rental/settings", label: "Ajustes", icon: "⚙️" },
+  { href: "/rental", label: "Panel del día", icon: "📋", permiso: "operativa.alquiler" },
+  { href: "/rental/calendar", label: "Calendario semanal", icon: "🗓️", permiso: "operativa.alquiler" },
+  { href: "/rental/bookings", label: "Reservas", icon: "🛎️", permiso: "operativa.alquiler" },
+  { href: "/rental/properties", label: "Viviendas", icon: "🏠", permiso: "operativa.alquiler" },
+  { href: "/rental/tasks", label: "Limpieza y mantenimiento", icon: "🧹", permiso: "operativa.estado_tarea" },
+  { href: "/rental/reports", label: "Informes propietarios", icon: "🧾", permiso: "operativa.alquiler" },
+  { href: "/rental/settings", label: "Ajustes", icon: "⚙️", permiso: "administracion" },
 ];
 
 const CLEANING_NAV: NavItem[] = [
-  { href: "/cleaning", label: "Facturación", icon: "💶" },
-  { href: "/cleaning/invoices", label: "Historial de facturas", icon: "📄" },
-  { href: "/cleaning/tasks", label: "Limpieza y mantenimiento", icon: "🧹" },
-  { href: "/cleaning/reports", label: "Informes propietarios", icon: "🧾" },
-  { href: "/cleaning/settings", label: "Reparto y ajustes", icon: "⚙️" },
+  { href: "/cleaning", label: "Facturación", icon: "💶", permiso: "facturacion" },
+  { href: "/cleaning/invoices", label: "Historial de facturas", icon: "📄", permiso: "facturacion" },
+  { href: "/cleaning/tasks", label: "Limpieza y mantenimiento", icon: "🧹", permiso: "operativa.estado_tarea" },
+  { href: "/cleaning/reports", label: "Informes propietarios", icon: "🧾", permiso: "facturacion" },
+  { href: "/cleaning/settings", label: "Reparto y ajustes", icon: "⚙️", permiso: "administracion" },
 ];
 
 export default function Shell({
@@ -43,13 +48,18 @@ export default function Shell({
   activeBusiness,
   userName,
   userRole,
+  rol,
   children,
 }: ShellProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const nav = activeBusiness === "rental" ? RENTAL_NAV : CLEANING_NAV;
+  // Solo las secciones a las que esta persona puede entrar: enseñar un enlace
+  // que acaba en un redirección es peor que no enseñarlo.
+  const nav = (activeBusiness === "rental" ? RENTAL_NAV : CLEANING_NAV).filter((i) =>
+    puede(rol, i.permiso)
+  );
   const otherHref = activeBusiness === "rental" ? "/cleaning" : "/rental";
   const theme = activeBusiness === "rental" ? "brand" : "aires";
 

@@ -9,7 +9,7 @@ import SyncLodgifyButton from "@/components/SyncLodgifyButton";
 import FormularioConAviso from "@/components/FormularioConAviso";
 
 export default async function RentalSettingsPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("administracion");
 
   const [business, integration, employees, owners] = await Promise.all([
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),

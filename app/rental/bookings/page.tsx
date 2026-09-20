@@ -9,7 +9,7 @@ export default async function BookingsPage({
 }: {
   searchParams: Promise<{ propertyId?: string; channel?: string }>;
 }) {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
   const params = await searchParams;
 
   const properties = await prisma.property.findMany({

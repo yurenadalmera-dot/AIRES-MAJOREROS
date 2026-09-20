@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/rental";
+  const next = params.get("next");
   const [email, setEmail] = useState("emma@example.com");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,13 +22,14 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setError(data.error || "No se pudo iniciar sesión");
         setLoading(false);
         return;
       }
-      router.push(next);
+      // Cada rol empieza donde le sirve: el servidor dice cuál es su sitio.
+      router.push(next || data.inicio || "/rental");
       router.refresh();
     } catch {
       setError("Error de conexión");
@@ -89,11 +90,6 @@ function LoginForm() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-        <div className="mt-4 card p-4 text-xs text-slate-500 space-y-1">
-          <p className="font-medium text-slate-600">Usuarios de demostración:</p>
-          <p>emma@example.com · demo1234 (Alquileres)</p>
-          <p>socia1@example.com · demo1234 (Aires Majoreros)</p>
-        </div>
       </div>
     </div>
   );

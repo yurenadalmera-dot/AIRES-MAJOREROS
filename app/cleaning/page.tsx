@@ -8,7 +8,7 @@ import GenerateInvoiceForm from "@/components/GenerateInvoiceForm";
 import { format } from "date-fns";
 
 export default async function CleaningBillingPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("facturacion");
 
   const [pendingTasks, rentalBusiness] = await Promise.all([
     prisma.cleaningTask.findMany({

@@ -7,7 +7,7 @@ export default async function CleaningOwnerReportPrintPage({
 }: {
   searchParams: Promise<{ ownerId?: string; start?: string; end?: string }>;
 }) {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("facturacion");
   const params = await searchParams;
   if (!params.ownerId || !params.start || !params.end) notFound();
 

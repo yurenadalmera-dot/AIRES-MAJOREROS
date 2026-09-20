@@ -2,7 +2,7 @@ import { requireBusinessContext } from "@/lib/business-context";
 import OwnerReportsView from "@/components/shared/OwnerReportsView";
 
 export default async function CleaningReportsPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("facturacion");
 
   return (
     <OwnerReportsView

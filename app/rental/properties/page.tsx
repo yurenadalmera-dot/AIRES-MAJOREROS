@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/money";
 import { startOfDay, endOfDay } from "date-fns";
 
 export default async function PropertiesPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
   const today = new Date();
 
   const [properties, todaysBookings, todaysTasks] = await Promise.all([

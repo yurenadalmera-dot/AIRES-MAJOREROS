@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createSessionToken, setSessionCookie } from "@/lib/auth";
+import { primeraRutaPermitida } from "@/lib/business-context";
 import { z } from "zod";
 
 const schema = z.object({
@@ -36,5 +37,7 @@ export async function POST(req: NextRequest) {
   });
   await setSessionCookie(token);
 
-  return NextResponse.json({ ok: true });
+  // Dónde empieza cada quien: mandar a una socia al panel de alquiler,
+  // donde casi nada le compete, es desconcertante.
+  return NextResponse.json({ ok: true, inicio: primeraRutaPermitida(user.role) });
 }

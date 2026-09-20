@@ -5,7 +5,7 @@ import BookingForm from "@/components/BookingForm";
 import { createBooking } from "@/lib/actions/bookings";
 
 export default async function NewBookingPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
 
   const [properties, settings] = await Promise.all([
     prisma.property.findMany({ where: { organizationId, active: true }, orderBy: { name: "asc" } }),

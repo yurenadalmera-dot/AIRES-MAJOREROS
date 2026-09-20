@@ -8,7 +8,7 @@ import { computePropertyStatus } from "@/lib/status";
 import { PROPERTY_STATUS_LABEL, PROPERTY_STATUS_COLOR } from "@/lib/constants";
 
 export default async function RentalDashboardPage() {
-  const { organizationId } = await requireBusinessContext();
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
 
   const today = new Date();
   const todayStart = startOfDay(today);
