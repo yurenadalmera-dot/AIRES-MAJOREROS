@@ -7,6 +7,7 @@ import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 import { splitAmount, round2 } from "@/lib/money";
 import { format } from "date-fns";
+import { INVOICE_STATUS_LABEL, puedeCambiarEstadoFactura } from "@/lib/constants";
 
 const generateSchema = z.object({
   periodStart: z.string().min(1),
@@ -136,8 +137,29 @@ export async function generateInvoice(formData: FormData) {
 export async function updateInvoiceStatus(invoiceId: string, status: string) {
   return conErroresLegibles(async () => {
     const organizationId = await exigir("facturacion");
+
+    const factura = await prisma.invoice.findFirst({
+      where: { id: invoiceId, organizationId },
+      select: { status: true, invoiceNumber: true },
+    });
+    if (!factura) throw new ErrorDeNegocio("Factura no encontrada");
+
+    if (!puedeCambiarEstadoFactura(factura.status, status)) {
+      // El caso que esto impide de verdad: devolver a borrador una factura ya
+      // emitida. Una factura emitida no se deshace; se rectifica.
+      throw new ErrorDeNegocio(
+        `La factura ${factura.invoiceNumber} está ${(
+          INVOICE_STATUS_LABEL[factura.status] ?? factura.status
+        ).toLowerCase()} y no puede pasar a ` +
+          `«${(INVOICE_STATUS_LABEL[status] ?? status).toLowerCase()}». ` +
+          "Una factura emitida no vuelve a borrador: lo que esté mal se corrige " +
+          "emitiendo una factura rectificativa."
+      );
+    }
+
     await prisma.invoice.updateMany({ where: { id: invoiceId, organizationId }, data: { status } });
     revalidatePath("/cleaning/invoices");
+    revalidatePath(`/cleaning/invoices/${invoiceId}`);
   });
 }
 

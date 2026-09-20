@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui";
 import PropertyForm from "@/components/PropertyForm";
 import { updateProperty, setPropertyManualStatus, setPropertyActive } from "@/lib/actions/properties";
 import { PROPERTY_STATUS_LABEL } from "@/lib/constants";
+import FormularioConAviso from "@/components/FormularioConAviso";
 
 export default async function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +19,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
 
   async function updateAction(formData: FormData) {
     "use server";
-    await updateProperty(id, formData);
+    return updateProperty(id, formData);
   }
 
   async function manualStatusAction(formData: FormData) {
@@ -29,7 +30,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
 
   async function toggleActiveAction(formData: FormData) {
     "use server";
-    await setPropertyActive(id, formData.get("active") === "true");
+    return setPropertyActive(id, formData.get("active") === "true");
   }
 
   return (
@@ -37,12 +38,12 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
       <PageHeader
         title={`Editar vivienda · ${property.name}`}
         actions={
-          <form action={toggleActiveAction}>
+          <FormularioConAviso action={toggleActiveAction}>
             <input type="hidden" name="active" value={(!property.active).toString()} />
             <button type="submit" className={property.active ? "btn-danger text-xs" : "btn-secondary text-xs"}>
               {property.active ? "Marcar como inactiva" : "Reactivar"}
             </button>
-          </form>
+          </FormularioConAviso>
         }
       />
 
@@ -52,7 +53,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
           Por defecto el estado se calcula solo a partir de reservas y tareas. Úsalo solo para casos excepcionales
           (p. ej. vivienda cerrada por obras).
         </p>
-        <form action={manualStatusAction} className="flex gap-2">
+        <FormularioConAviso action={manualStatusAction} className="flex gap-2">
           <select name="manualStatus" defaultValue={property.manualStatus ?? ""} className="input">
             <option value="">Automático (recomendado)</option>
             {Object.entries(PROPERTY_STATUS_LABEL).map(([value, label]) => (
@@ -64,7 +65,7 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
           <button type="submit" className="btn-secondary">
             Aplicar
           </button>
-        </form>
+        </FormularioConAviso>
       </div>
 
       <PropertyForm

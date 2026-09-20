@@ -96,6 +96,28 @@ export const INVOICE_STATUS_LABEL: Record<string, string> = {
   PAID: "Cobrada",
 };
 
+/**
+ * Cambios de estado permitidos en una factura.
+ *
+ * Una factura emitida **no vuelve a borrador**. Emitir es un acto con efectos
+ * fiscales: lo que está mal en una factura emitida se corrige con una factura
+ * rectificativa, no deshaciendo la original. La normativa de sistemas
+ * informáticos de facturación (VeriFactu) lo exige de forma explícita, pero la
+ * regla es más vieja que VeriFactu.
+ *
+ * Cobrada ↔ Emitida sí se permite: marcar si se ha cobrado o no es un dato
+ * comercial, no altera la factura.
+ */
+export const INVOICE_STATUS_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ["DRAFT", "ISSUED"],
+  ISSUED: ["ISSUED", "PAID"],
+  PAID: ["PAID", "ISSUED"],
+};
+
+export function puedeCambiarEstadoFactura(desde: string, hasta: string): boolean {
+  return (INVOICE_STATUS_TRANSITIONS[desde] ?? []).includes(hasta);
+}
+
 export const USER_ROLES = {
   ADMIN: "ADMIN",
   RENTAL_MANAGER: "RENTAL_MANAGER",

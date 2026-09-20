@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PrintButton, BackButton, Badge } from "@/components/ui";
 import { formatCurrency, formatDate } from "@/lib/money";
-import { INVOICE_STATUS_LABEL, BUSINESS_TYPES } from "@/lib/constants";
+import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TRANSITIONS, BUSINESS_TYPES } from "@/lib/constants";
 import { updateInvoiceStatus } from "@/lib/actions/invoices";
+import FormularioConAviso from "@/components/FormularioConAviso";
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,7 +27,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   async function statusAction(formData: FormData) {
     "use server";
-    await updateInvoiceStatus(id, formData.get("status") as string);
+    // Se devuelve el resultado, no se descarta: si el cambio se rechaza —una
+    // factura emitida no vuelve a borrador— el motivo tiene que llegar a la
+    // pantalla.
+    return updateInvoiceStatus(id, formData.get("status") as string);
   }
 
   return (
@@ -34,18 +38,20 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       <div className="flex justify-between items-center mb-4 no-print">
         <BackButton href="/cleaning/invoices" />
         <div className="flex items-center gap-2">
-          <form action={statusAction} className="flex items-center gap-2">
+          <FormularioConAviso action={statusAction} className="flex items-center gap-2">
+            {/* Solo los estados a los que esta factura puede ir: una emitida
+                no vuelve a borrador. Ver INVOICE_STATUS_TRANSITIONS. */}
             <select name="status" defaultValue={invoice.status} className="input py-1.5 text-xs">
-              {Object.entries(INVOICE_STATUS_LABEL).map(([value, label]) => (
+              {(INVOICE_STATUS_TRANSITIONS[invoice.status] ?? [invoice.status]).map((value: string) => (
                 <option key={value} value={value}>
-                  {label}
+                  {INVOICE_STATUS_LABEL[value] ?? value}
                 </option>
               ))}
             </select>
             <button type="submit" className="btn-secondary text-xs">
               Actualizar estado
             </button>
-          </form>
+          </FormularioConAviso>
           <PrintButton />
         </div>
       </div>

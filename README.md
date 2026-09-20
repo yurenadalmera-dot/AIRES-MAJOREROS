@@ -220,6 +220,27 @@ Dar de alta un acceso remoto con `%` haría que el build pudiera aplicar el esqu
 cambio de dejar la base accesible desde cualquier host con solo la contraseña. No se ha hecho, y
 no conviene hacerlo.
 
+## Facturación: lo que la aplicación hace cumplir
+
+- **Numeración correlativa.** El número sale del más alto emitido, no de cuántas facturas hay, así
+  que no se reutiliza un número aunque se anule una factura y quede un hueco.
+- **Una factura emitida no vuelve a borrador** (`INVOICE_STATUS_TRANSITIONS` en `lib/constants.ts`).
+  Lo que esté mal en una factura emitida se corrige con una **rectificativa**, no deshaciendo la
+  original. La regla se aplica en el servidor, no solo escondiendo la opción: forzar el cambio
+  desde el navegador se rechaza con el motivo.
+- **Las líneas son una copia inmutable.** `InvoiceLine` guarda descripción, vivienda, fecha e
+  importe en el momento de facturar, así que la factura no cambia si después se edita la vivienda
+  o su precio.
+- **No se puede borrar una limpieza ya facturada.**
+
+> ⚠️ **Esto no convierte la aplicación en un sistema de facturación verificable (VeriFactu).**
+> Falta lo esencial de ese reglamento: encadenamiento con huella (*hash*) de cada registro con el
+> anterior, registro de eventos, código QR en la factura y, según la modalidad, remisión de los
+> registros a la AEAT. Son piezas de calado, no un retoque.
+>
+> Si la facturación de Aires Majoreros tiene que cumplirlo, hay que abordarlo como un trabajo
+> aparte — y conviene que lo confirme la asesoría: qué modalidad aplica y desde cuándo.
+
 ## Puesta en marcha
 
 ```bash

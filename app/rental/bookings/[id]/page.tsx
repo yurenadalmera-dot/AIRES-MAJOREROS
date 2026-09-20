@@ -6,6 +6,7 @@ import { PageHeader, Badge } from "@/components/ui";
 import BookingForm from "@/components/BookingForm";
 import { updateBooking, deleteBooking, setBookingManualLock } from "@/lib/actions/bookings";
 import DeleteBookingButton from "@/components/DeleteBookingButton";
+import FormularioConAviso from "@/components/FormularioConAviso";
 
 export default async function EditBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,17 +24,17 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
 
   async function updateAction(formData: FormData) {
     "use server";
-    await updateBooking(id, formData);
+    return updateBooking(id, formData);
   }
 
   async function deleteAction() {
     "use server";
-    await deleteBooking(id);
+    return deleteBooking(id);
   }
 
   async function toggleLockAction(formData: FormData) {
     "use server";
-    await setBookingManualLock(id, formData.get("locked") === "true");
+    return setBookingManualLock(id, formData.get("locked") === "true");
   }
 
   return (
@@ -52,7 +53,7 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
       />
 
       {booking.source === "LODGIFY" && (
-        <form action={toggleLockAction} className="card p-4 mb-4 flex items-center justify-between">
+        <FormularioConAviso action={toggleLockAction} className="card p-4 mb-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-slate-700">Protección frente a la sincronización con Lodgify</p>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -65,7 +66,7 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
           <button type="submit" className="btn-secondary text-xs">
             {booking.manuallyAdjusted ? "Desbloquear (volver a automático)" : "Bloquear ahora"}
           </button>
-        </form>
+        </FormularioConAviso>
       )}
 
       <BookingForm
