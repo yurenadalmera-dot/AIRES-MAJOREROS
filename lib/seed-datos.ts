@@ -639,14 +639,25 @@ export async function sembrar({ forzar = false }: { forzar?: boolean } = {}) {
 }
 
 /**
- * Da de alta (o actualiza) la cuenta de administración real a partir del
- * entorno. Corre siempre, también cuando la siembra de demostración se salta
- * por haber datos: es lo que permite recuperar el acceso tras un despliegue
- * sin tocar la base de datos a mano.
+ * Da de alta la cuenta de administración real a partir del entorno. Corre
+ * siempre, también cuando la siembra de demostración se salta por haber datos:
+ * es lo que permite tener acceso en una base de datos recién creada sin
+ * tocarla a mano.
  *
  * La contraseña NO vive en el repositorio. Se lee de ADMIN_PASSWORD, que se
  * configura en las variables de entorno del hosting; sin esa variable no se
  * crea nada y el despliegue sigue adelante.
+ *
+ * **Si la cuenta ya existe no se le toca la contraseña.** Antes sí: cada
+ * arranque reescribía el hash con ADMIN_PASSWORD, así que cambiarla desde «Mi
+ * cuenta» duraba hasta el siguiente despliegue y volvía sola a la del entorno
+ * sin avisar. Lo único que se restaura siempre es el rol y que esté activa,
+ * que es lo que evita quedarse fuera.
+ *
+ * Para recuperar el acceso si se pierde la contraseña: poner
+ * `ADMIN_PASSWORD_RESET=1` junto con la nueva `ADMIN_PASSWORD`, reiniciar, y
+ * **quitar la variable después** — mientras esté puesta, cada arranque vuelve
+ * a restablecerla.
  */
 export async function asegurarAdministrador() {
   const email = (process.env.ADMIN_EMAIL ?? "info@airesmajoreros.pro").toLowerCase().trim();
@@ -665,23 +676,38 @@ export async function asegurarAdministrador() {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  await prisma.user.upsert({
+  const existente = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+
+  if (!existente) {
+    await prisma.user.create({
+      data: {
+        organizationId: org.id,
+        name: process.env.ADMIN_NAME ?? "Administración",
+        email,
+        passwordHash: await bcrypt.hash(password, 10),
+        role: "ADMIN",
+        active: true,
+      },
+    });
+    console.log(`🔑 Cuenta de administración creada: ${email}`);
+    return;
+  }
+
+  const restablecer = process.env.ADMIN_PASSWORD_RESET === "1";
+  await prisma.user.update({
     where: { email },
-    // Si ya existe se le restablece la contraseña y se reactiva: el objetivo es
-    // que esta cuenta siempre pueda entrar.
-    update: { passwordHash, role: "ADMIN", active: true },
-    create: {
-      organizationId: org.id,
-      name: process.env.ADMIN_NAME ?? "Administración",
-      email,
-      passwordHash,
+    data: {
       role: "ADMIN",
       active: true,
+      ...(restablecer ? { passwordHash: await bcrypt.hash(password, 10) } : {}),
     },
   });
 
-  console.log(`🔑 Cuenta de administración lista: ${email}`);
+  console.log(
+    restablecer
+      ? `🔑 Contraseña de ${email} restablecida desde el entorno (ADMIN_PASSWORD_RESET=1). Quita esa variable.`
+      : `🔑 Cuenta de administración lista: ${email} (contraseña sin tocar)`
+  );
 }
 
 /** Siembra si hace falta y deja lista la cuenta de administración. */

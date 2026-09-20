@@ -112,9 +112,14 @@ Node.js → Compilaciones, y la conexión en hPanel → el sitio → Avanzado �
 Las variables de entorno se configuran en hPanel → el sitio → Node.js → Variables de entorno, y
 son tres: `DATABASE_URL`, `AUTH_SECRET` y `ADMIN_PASSWORD` (ver `.env.example` para el formato).
 
-`ADMIN_PASSWORD` es la contraseña de `info@airesmajoreros.pro`. El seed da de alta esa cuenta —o
-le restablece la contraseña, si ya existe— en **cada** despliegue, así que cambiarla es cambiar la
-variable y relanzar el build. No está escrita en ningún sitio del repositorio a propósito.
+`ADMIN_PASSWORD` es la contraseña **inicial** de `info@airesmajoreros.pro`. Se usa para crear esa
+cuenta cuando no existe; si ya existe, cada arranque le devuelve el rol de administración y la
+reactiva, pero **no le toca la contraseña**. Así, la que se ponga desde «Mi cuenta» es la que
+manda. No está escrita en ningún sitio del repositorio a propósito.
+
+Para recuperar el acceso si se pierde esa contraseña: poner la nueva en `ADMIN_PASSWORD`, añadir
+`ADMIN_PASSWORD_RESET=1`, reiniciar la aplicación y **quitar esa segunda variable después** —
+mientras esté puesta, cada arranque vuelve a restablecerla.
 
 ### Cómo se prepara la base de datos
 
