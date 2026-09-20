@@ -66,3 +66,42 @@ export async function fetchMockLodgifyPage(page: number): Promise<{
   const items = ALL_RESERVATIONS.slice(start, start + PAGE_SIZE);
   return { items, hasMore: start + PAGE_SIZE < ALL_RESERVATIONS.length };
 }
+
+// --- Viviendas -------------------------------------------------------------
+//
+// El equivalente de GET /v2/properties. Los identificadores coinciden con los
+// property_id de las reservas de arriba, incluido `lodgify-9999`, que no está
+// sembrado: así el modo de demostración también sirve para probar que la
+// sincronización da de alta una vivienda que no existía.
+
+export interface LodgifyPropertyRaw {
+  id: string;
+  name: string;
+  city: string | null;
+  address: string | null;
+  max_people: number;
+  bedrooms: number;
+  bathrooms: number;
+  active: boolean;
+}
+
+const ALL_PROPERTIES: LodgifyPropertyRaw[] = [
+  { id: "lodgify-1001", name: "Villa Duna Corralejo", city: "Corralejo", address: "C/ Las Dunas 12", max_people: 8, bedrooms: 4, bathrooms: 3, active: true },
+  { id: "lodgify-1002", name: "Apartamento Faro El Cotillo", city: "El Cotillo", address: "C/ del Faro 3", max_people: 4, bedrooms: 2, bathrooms: 1, active: true },
+  { id: "lodgify-1003", name: "Bungalow Costa Calma Sur", city: "Costa Calma", address: "Av. del Sur 45", max_people: 6, bedrooms: 3, bathrooms: 2, active: true },
+  { id: "lodgify-1004", name: "Ático Caleta de Fuste Golf", city: "Caleta de Fuste", address: "Urb. Golf 8", max_people: 4, bedrooms: 2, bathrooms: 2, active: true },
+  { id: "lodgify-1005", name: "Casa Rural Villaverde", city: "Villaverde", address: "Camino Real 2", max_people: 6, bedrooms: 3, bathrooms: 2, active: true },
+  { id: "lodgify-1006", name: "Loft Puerto del Rosario Centro", city: "Puerto del Rosario", address: "C/ Primero de Mayo 30", max_people: 2, bedrooms: 1, bathrooms: 1, active: true },
+  { id: "lodgify-1007", name: "Villa Jandía Playa", city: "Morro Jable", address: "Av. Jandía 101", max_people: 10, bedrooms: 5, bathrooms: 4, active: true },
+  { id: "lodgify-9999", name: "Vivienda nueva en Lodgify", city: "Lajares", address: null, max_people: 4, bedrooms: 2, bathrooms: 1, active: true },
+];
+
+/** Simula GET /v2/properties?page=N. */
+export async function fetchMockLodgifyPropertiesPage(page: number): Promise<{
+  items: LodgifyPropertyRaw[];
+  hasMore: boolean;
+}> {
+  const start = (page - 1) * PAGE_SIZE;
+  const items = ALL_PROPERTIES.slice(start, start + PAGE_SIZE);
+  return { items, hasMore: start + PAGE_SIZE < ALL_PROPERTIES.length };
+}

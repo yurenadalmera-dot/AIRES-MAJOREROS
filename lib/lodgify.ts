@@ -1,4 +1,9 @@
-import { fetchMockLodgifyPage, type LodgifyReservationRaw } from "@/lib/lodgify-mock-data";
+import {
+  fetchMockLodgifyPage,
+  fetchMockLodgifyPropertiesPage,
+  type LodgifyReservationRaw,
+  type LodgifyPropertyRaw,
+} from "@/lib/lodgify-mock-data";
 import { prisma } from "@/lib/prisma";
 import { descifrar } from "@/lib/secretos";
 
@@ -106,4 +111,78 @@ export async function fetchAllLodgifyReservations(
 /** Solo las reservas confirmadas: descarta Declined/Cancelled/Tentative/etc. */
 export function onlyConfirmed(reservations: NormalizedReservation[]): NormalizedReservation[] {
   return reservations.filter((r) => r.status === "Booked");
+}
+
+// --- Viviendas -------------------------------------------------------------
+
+export interface NormalizedProperty {
+  externalId: string;
+  name: string;
+  locality: string;
+  address: string | null;
+  capacity: number;
+  bedrooms: number;
+  bathrooms: number;
+  active: boolean;
+}
+
+async function fetchLivePropertiesPage(apiKey: string, page: number) {
+  const res = await fetch(`${LODGIFY_API_BASE}/properties?page=${page}&size=50`, {
+    headers: { "X-ApiKey": apiKey, Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Lodgify respondió ${res.status} al pedir las viviendas (página ${page})`);
+  }
+  const json = await res.json();
+  // Igual que con las reservas: la forma exacta varía según la versión de la
+  // API, así que se lee de forma defensiva y se acepta cualquiera de los
+  // nombres conocidos para cada campo.
+  const items: LodgifyPropertyRaw[] = (json.items ?? json.data ?? json ?? []).map(
+    (p: Record<string, unknown>) => ({
+      id: String(p.id ?? p.property_id ?? p.propertyId),
+      name: String(p.name ?? p.title ?? "Vivienda sin nombre"),
+      city: (p.city ?? p.town ?? null) as string | null,
+      address: (p.address ?? p.address_1 ?? p.street ?? null) as string | null,
+      max_people: Number(p.max_people ?? p.maxPeople ?? p.capacity ?? 0),
+      bedrooms: Number(p.bedrooms ?? p.rooms ?? 0),
+      bathrooms: Number(p.bathrooms ?? 0),
+      active: p.is_active === undefined && p.active === undefined ? true : Boolean(p.is_active ?? p.active),
+    })
+  );
+  const hasMore = Boolean(json.has_more ?? json.hasMore ?? items.length >= 50);
+  return { items, hasMore };
+}
+
+/** Todas las viviendas de la cuenta de Lodgify (reales o de demostración). */
+export async function fetchAllLodgifyProperties(
+  apiKey: string | null
+): Promise<NormalizedProperty[]> {
+  const results: LodgifyPropertyRaw[] = [];
+
+  let page = 1;
+  let hasMore = true;
+  while (hasMore) {
+    const { items, hasMore: more } = apiKey
+      ? await fetchLivePropertiesPage(apiKey, page)
+      : await fetchMockLodgifyPropertiesPage(page);
+    results.push(...items);
+    hasMore = more;
+    page++;
+    if (page > 50) break; // salvaguarda anti-bucle infinito
+  }
+
+  return results.map((p) => ({
+    externalId: p.id,
+    name: p.name,
+    // La localidad es obligatoria en nuestra ficha y en Lodgify puede venir
+    // vacía. Mejor un texto que se ve y se corrige que dejar la vivienda sin
+    // dar de alta.
+    locality: p.city?.trim() || "(sin localidad)",
+    address: p.address?.trim() || null,
+    capacity: p.max_people > 0 ? p.max_people : 2,
+    bedrooms: p.bedrooms > 0 ? p.bedrooms : 1,
+    bathrooms: p.bathrooms > 0 ? p.bathrooms : 1,
+    active: p.active,
+  }));
 }

@@ -36,7 +36,13 @@ export default function SyncLodgifyButton() {
       {summary && (
         <div className="mt-3 text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
           <p className="font-medium text-slate-700">
-            {summary.liveMode ? "Modo real (API de Lodgify)" : "Modo demo (sin LODGIFY_API_KEY configurada)"}
+            {summary.liveMode
+              ? "Datos reales de Lodgify"
+              : "Datos de ejemplo (no hay clave de Lodgify guardada)"}
+          </p>
+          <p>
+            🏠 Viviendas: {summary.propertiesCreated} dadas de alta ·{" "}
+            {summary.propertiesUpdated} actualizadas
           </p>
           <p>Reservas recibidas: {summary.fetched} · Confirmadas (Booked): {summary.confirmed}</p>
           <p>✅ Creadas: {summary.created} · 🔄 Actualizadas: {summary.updated}</p>
@@ -44,7 +50,15 @@ export default function SyncLodgifyButton() {
             <p>🚫 Anuladas en Lodgify: {summary.cancelled} (su limpieza pendiente se ha cancelado)</p>
           )}
           <p>🔒 Omitidas por ajuste manual: {summary.skippedManuallyAdjusted}</p>
-          <p>⚠️ Sin vivienda emparejada: {summary.unmatchedProperty}</p>
+          {summary.unmatchedProperty > 0 && (
+            <p>⚠️ Sin vivienda emparejada: {summary.unmatchedProperty}</p>
+          )}
+          {summary.propertiesCreated > 0 && (
+            <p className="text-amber-800">
+              Las viviendas nuevas entran sin propietario y con precio de limpieza 0: hay que
+              completarlas en Viviendas antes de facturar sus limpiezas.
+            </p>
+          )}
           {summary.unmatchedDetails.length > 0 && (
             <ul className="list-disc list-inside text-slate-500">
               {summary.unmatchedDetails.map((d) => (

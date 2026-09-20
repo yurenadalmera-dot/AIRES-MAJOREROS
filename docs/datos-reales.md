@@ -3,8 +3,18 @@
 La aplicación todavía tiene los datos de demostración que sembró el primer arranque. Esto es lo
 que hay confirmado para cargar los de verdad, para que no se pierda por el camino.
 
-Se vacía lo de demostración desde **Alquileres → Ajustes → Datos de la aplicación**; después se
-dan de alta propietarios y viviendas, o se sincroniza con Lodgify.
+**El camino, por orden:**
+
+1. Pegar la clave de Lodgify en **Alquileres → Ajustes → Integración con Lodgify**.
+2. Vaciar lo de demostración en **Ajustes → Datos de la aplicación → Empezar de cero**.
+3. **Sincronizar ahora con Lodgify**: da de alta las viviendas de la cuenta y trae sus reservas,
+   con sus limpiezas.
+4. Completar cada vivienda en **Viviendas**: propietario y precio de limpieza. Eso no viene de
+   Lodgify, y sin el precio no se puede facturar la limpieza.
+
+El orden importa: sincronizar antes de vaciar mezclaría las casas reales con las inventadas.
+Sincronizar dos veces no duplica nada, y lo que se rellena a mano (propietario, precio, estado)
+no lo pisa una sincronización posterior.
 
 ## Propietarios confirmados (Emma, 20/09/2026)
 

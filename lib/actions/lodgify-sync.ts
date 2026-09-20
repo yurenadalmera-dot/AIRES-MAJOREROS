@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
-import { fetchAllLodgifyReservations, onlyConfirmed, claveLodgify } from "@/lib/lodgify";
+import {
+  fetchAllLodgifyReservations,
+  fetchAllLodgifyProperties,
+  onlyConfirmed,
+  claveLodgify,
+} from "@/lib/lodgify";
 import { calculateCommissions } from "@/lib/money";
 
 export interface SyncSummary {
@@ -18,6 +23,75 @@ export interface SyncSummary {
   skippedManuallyAdjusted: number;
   unmatchedProperty: number;
   unmatchedDetails: string[];
+  /** Viviendas dadas de alta desde Lodgify en esta sincronización. */
+  propertiesCreated: number;
+  /** Viviendas que ya existían y se han refrescado. */
+  propertiesUpdated: number;
+}
+
+/**
+ * Da de alta en el sistema las viviendas que hay en Lodgify.
+ *
+ * Lo que manda es `lodgifyPropertyId`: por ahí se reconoce una vivienda ya
+ * conocida, así que sincronizar dos veces no duplica nada.
+ *
+ * De una vivienda que ya existe solo se refrescan los datos que vienen de
+ * Lodgify (nombre, localidad, dirección, capacidad, habitaciones, baños). El
+ * precio de limpieza, el propietario y el estado manual **no se tocan**: son
+ * cosa de aquí, Lodgify no sabe nada de ellos y sobrescribirlos borraría el
+ * trabajo de quien los puso.
+ */
+async function sincronizarViviendas(organizationId: string, apiKey: string | null) {
+  const viviendas = await fetchAllLodgifyProperties(apiKey);
+
+  let propertiesCreated = 0;
+  let propertiesUpdated = 0;
+
+  for (const v of viviendas) {
+    const existente = await prisma.property.findUnique({
+      where: { lodgifyPropertyId: v.externalId },
+      select: { id: true, organizationId: true },
+    });
+
+    // Una vivienda con ese identificador pero de otra organización no es
+    // nuestra: no se toca.
+    if (existente && existente.organizationId !== organizationId) continue;
+
+    if (existente) {
+      await prisma.property.update({
+        where: { id: existente.id },
+        data: {
+          name: v.name,
+          locality: v.locality,
+          address: v.address,
+          capacity: v.capacity,
+          bedrooms: v.bedrooms,
+          bathrooms: v.bathrooms,
+          active: v.active,
+        },
+      });
+      propertiesUpdated++;
+    } else {
+      await prisma.property.create({
+        data: {
+          organizationId,
+          lodgifyPropertyId: v.externalId,
+          name: v.name,
+          locality: v.locality,
+          address: v.address,
+          capacity: v.capacity,
+          bedrooms: v.bedrooms,
+          bathrooms: v.bathrooms,
+          active: v.active,
+          // Sin propietario y sin precio de limpieza: se ponen aquí, a mano.
+          cleaningPrice: 0,
+        },
+      });
+      propertiesCreated++;
+    }
+  }
+
+  return { propertiesCreated, propertiesUpdated };
 }
 
 /**
@@ -41,6 +115,16 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     const bankPct = settings ? Number(settings.defaultBankPct) : 2.5;
 
     const apiKey = await claveLodgify(organizationId);
+
+    // Primero las viviendas, después las reservas. El orden no es un detalle:
+    // una reserva solo entra si su vivienda existe, así que traerlas al revés
+    // dejaba fuera todas las reservas de casas todavía no dadas de alta —que
+    // es exactamente la situación de una instalación recién vaciada.
+    const { propertiesCreated, propertiesUpdated } = await sincronizarViviendas(
+      organizationId,
+      apiKey
+    );
+
     const all = await fetchAllLodgifyReservations(apiKey);
     const confirmed = onlyConfirmed(all);
 
@@ -203,6 +287,8 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
       skippedManuallyAdjusted,
       unmatchedProperty,
       unmatchedDetails,
+      propertiesCreated,
+      propertiesUpdated,
     };
 
     await prisma.integrationSettings.upsert({
