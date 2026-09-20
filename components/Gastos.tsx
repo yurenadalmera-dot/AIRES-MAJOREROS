@@ -13,7 +13,7 @@ interface Vivienda {
 
 interface GastoVisible {
   id: string;
-  date: string;
+  date: string | null;
   concept: string;
   supplier: string | null;
   amount: number;
@@ -31,10 +31,13 @@ export default function Gastos({
   viviendas,
   gastos,
   total,
+  sinFecha = 0,
 }: {
   viviendas: Vivienda[];
   gastos: GastoVisible[];
   total: number;
+  /** Cuántos gastos no tienen fecha: esos no salen en ningún informe. */
+  sinFecha?: number;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -149,6 +152,14 @@ export default function Gastos({
           </p>
         </div>
 
+        {sinFecha > 0 && (
+          <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 mb-3">
+            Hay {sinFecha} {sinFecha === 1 ? "gasto" : "gastos"} <strong>sin fecha</strong>. Los
+            informes van por periodo, así que mientras no la tengan no salen en ninguno — ni se
+            le descuentan a nadie. Ponles la fecha mirando el justificante.
+          </p>
+        )}
+
         {gastos.length === 0 ? (
           <p className="text-sm text-slate-400">
             Todavía no hay gastos. Mientras no los haya, los informes al propietario dan la
@@ -169,7 +180,7 @@ export default function Gastos({
             <tbody>
               {gastos.map((g) => (
                 <tr key={g.id}>
-                  <td>{formatDate(g.date)}</td>
+                  <td>{g.date ? formatDate(g.date) : <span className="text-amber-700">sin fecha</span>}</td>
                   <td>{g.propertyName}</td>
                   <td>{g.concept}</td>
                   <td className="text-slate-500">{g.supplier ?? "—"}</td>

@@ -350,7 +350,7 @@ export default async function OwnerReportPrintView({
               {expenses.map((g) => (
                 <tr key={g.id}>
                   <td>{g.property?.name ?? "—"}</td>
-                  <td>{formatDate(g.date)}</td>
+                  <td>{g.date ? formatDate(g.date) : "sin fecha"}</td>
                   <td>{g.concept}</td>
                   <td className="text-slate-500">{g.supplier ?? "—"}</td>
                   <td>{formatCurrency(g.amount)}</td>

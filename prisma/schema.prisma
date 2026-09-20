@@ -387,6 +387,7 @@ model PropertyGroup {
   createdAt      DateTime     @default(now())
 
   properties Property[]
+  expenses   Expense[]
 
   @@index([organizationId])
   @@index([ownerId])
@@ -408,18 +409,43 @@ model Expense {
   ownerId        String?
   owner          Owner?       @relation(fields: [ownerId], references: [id])
 
-  date     DateTime
+  /// El grupo al que se imputa, cuando el gasto no es de una vivienda
+  /// concreta sino de todo un grupo (una compra que sirve para los cinco
+  /// apartamentos, el sueldo de quien limpia en todos).
+  groupId String?
+  group   PropertyGroup? @relation(fields: [groupId], references: [id])
+
+  /// gasto | sueldo | traspaso | ingreso. Un traspaso entre cuentas no es un
+  /// gasto y no puede restar en la liquidación; un sueldo sí, pero se mira
+  /// aparte. Mezclarlos los hace desaparecer dentro de «gastos».
+  type       String  @default("gasto")
+  /// `directo` si es de una vivienda; `compartido` si hay que repartirlo
+  /// entre las del grupo en proporción a lo que factura cada una.
+  reparto    String  @default("directo")
+  /// De dónde salió: `banco` (extracto), `factura_ocr` (una factura leída),
+  /// `manual`. Sin esto no se distingue un apunte con justificante de uno
+  /// que solo es una línea del banco.
+  origen     String?
+  /// Huella del apunte en su origen. Impide importar dos veces lo mismo.
+  origenHash String? @unique
+  /// Lo que hay que mirar de este apunte: «sin fecha en el fichero», «el
+  /// texto no identifica el grupo». Viaja con el dato, no en un log.
+  revisar    String? @db.Text
+
+  date     DateTime?
   concept  String
   supplier String?
-  amount   Decimal  @default(0)
-  notes    String?  @db.Text
+  amount   Decimal   @default(0)
+  notes    String?   @db.Text
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId])
   @@index([propertyId])
+  @@index([groupId])
   @@index([date])
+  @@index([type])
 }
 
 model IntegrationSettings {

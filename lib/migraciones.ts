@@ -247,6 +247,34 @@ const MIGRACIONES: Migracion[] = [
       await prisma.$executeRawUnsafe("CREATE TABLE `DocumentoOcr` (\n    `id` VARCHAR(191) NOT NULL,\n    `organizationId` VARCHAR(191) NOT NULL,\n    `subidoPorId` VARCHAR(191) NULL,\n    `estado` VARCHAR(191) NOT NULL DEFAULT 'pendiente',\n    `archivoNombre` VARCHAR(191) NOT NULL,\n    `archivoMime` VARCHAR(191) NOT NULL,\n    `archivoBytes` INTEGER NOT NULL,\n    `archivoHash` VARCHAR(191) NOT NULL,\n    `contenido` LONGBLOB NOT NULL,\n    `datosIa` TEXT NULL,\n    `confianzaIa` VARCHAR(191) NULL,\n    `fiabilidad` DECIMAL(65, 30) NULL,\n    `motivos` TEXT NULL,\n    `avisos` TEXT NULL,\n    `datosRevisados` TEXT NULL,\n    `revisadoPorId` VARCHAR(191) NULL,\n    `revisadoEn` DATETIME(3) NULL,\n    `modelo` VARCHAR(191) NULL,\n    `promptVersion` VARCHAR(191) NULL,\n    `tokensEntrada` INTEGER NULL,\n    `tokensSalida` INTEGER NULL,\n    `tokensCache` INTEGER NULL,\n    `errorLectura` TEXT NULL,\n    `expenseId` VARCHAR(191) NULL,\n    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),\n\n    INDEX `DocumentoOcr_organizationId_idx`(`organizationId`),\n    INDEX `DocumentoOcr_estado_idx`(`estado`),\n    INDEX `DocumentoOcr_archivoHash_idx`(`archivoHash`),\n    PRIMARY KEY (`id`)\n) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
     },
   },
+  // Lo que hacía falta para poder traerse los movimientos de Mirador sin
+  // perder nada: un gasto puede ser de un grupo y no de una vivienda, puede
+  // ser un sueldo o un traspaso —que no es un gasto y no puede restar en la
+  // liquidación—, y puede venir del banco o de una factura leída. `origenHash`
+  // impide importar dos veces el mismo apunte.
+  {
+    nombre: "Expense · movimientos completos",
+    haceFalta: () => faltaColumna("Expense", "origenHash"),
+    aplicar: async () => {
+      for (const sql of [
+        "ALTER TABLE `Expense` ADD COLUMN `groupId` VARCHAR(191) NULL",
+        "ALTER TABLE `Expense` ADD COLUMN `type` VARCHAR(191) NOT NULL DEFAULT 'gasto'",
+        "ALTER TABLE `Expense` ADD COLUMN `reparto` VARCHAR(191) NOT NULL DEFAULT 'directo'",
+        "ALTER TABLE `Expense` ADD COLUMN `origen` VARCHAR(191) NULL",
+        "ALTER TABLE `Expense` ADD COLUMN `origenHash` VARCHAR(191) NULL",
+        "ALTER TABLE `Expense` ADD COLUMN `revisar` TEXT NULL",
+        "CREATE UNIQUE INDEX `Expense_origenHash_key` ON `Expense`(`origenHash`)",
+        "CREATE INDEX `Expense_groupId_idx` ON `Expense`(`groupId`)",
+        "CREATE INDEX `Expense_type_idx` ON `Expense`(`type`)",
+        // La fecha pasa a admitir nulos: hay apuntes del banco que llegan sin
+        // ella («sin fecha en el fichero»), y perderlos es peor que tenerlos
+        // marcados para revisar.
+        "ALTER TABLE `Expense` MODIFY `date` DATETIME(3) NULL",
+      ]) {
+        await prisma.$executeRawUnsafe(sql);
+      }
+    },
+  },
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */

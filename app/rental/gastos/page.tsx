@@ -69,12 +69,16 @@ export default async function GastosPage() {
 
   const visibles = gastos.map((g) => ({
     id: g.id,
-    date: g.date.toISOString(),
+    date: g.date ? g.date.toISOString() : null,
     concept: g.concept,
     supplier: g.supplier,
     amount: Number(g.amount),
     propertyName: g.property?.name ?? "—",
   }));
+
+  // Un gasto sin fecha no entra en ningún informe, porque los informes van
+  // por periodo. Si no se dice, se queda ahí sin que nadie lo sepa.
+  const sinFecha = visibles.filter((g) => g.date === null).length;
 
   return (
     <div className="max-w-4xl">
@@ -86,6 +90,7 @@ export default async function GastosPage() {
         <SubirFactura viviendas={viviendas} pendientes={pendientes} />
       </div>
       <Gastos
+        sinFecha={sinFecha}
         viviendas={viviendas}
         gastos={visibles}
         total={visibles.reduce((s, g) => s + g.amount, 0)}
