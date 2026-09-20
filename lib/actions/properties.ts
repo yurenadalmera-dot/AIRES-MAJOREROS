@@ -66,8 +66,28 @@ export async function updateProperty(propertyId: string, formData: FormData) {
       },
     });
 
+    // El precio viaja también a las limpiezas de esta vivienda que todavía no
+    // se han facturado.
+    //
+    // Cada limpieza guarda su precio en el momento de crearse, para que una
+    // subida de tarifas no reescriba lo ya cobrado. Pero eso, con las
+    // viviendas que llegan de Lodgify, dejaba una trampa: entran con precio 0
+    // —Lodgify no sabe nada de limpiezas— y todas sus limpiezas nacían a cero.
+    // Ponerle después el precio a la vivienda no arreglaba ninguna, así que
+    // las facturas salían a 0 € sin que nada lo advirtiera.
+    //
+    // Lo facturado no se toca: eso ya es historia.
+    const { count: limpiezasActualizadas } = await prisma.cleaningTask.updateMany({
+      where: { propertyId, organizationId, invoiceId: null },
+      data: { price: data.cleaningPrice },
+    });
+
     revalidatePath("/rental/properties");
     revalidatePath("/rental/settings");
+    revalidatePath("/cleaning/tasks");
+    revalidatePath("/cleaning");
+
+    return { limpiezasActualizadas };
   });
 }
 

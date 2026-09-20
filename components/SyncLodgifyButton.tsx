@@ -56,10 +56,17 @@ export default function SyncLodgifyButton() {
           {summary.unmatchedProperty > 0 && (
             <p>⚠️ Sin vivienda emparejada: {summary.unmatchedProperty}</p>
           )}
+          {summary.pastCleaningsDone > 0 && (
+            <p>
+              🧹 {summary.pastCleaningsDone} limpiezas de reservas ya terminadas se han dado por
+              hechas (no estaban pendientes: la casa se limpió en su día).
+            </p>
+          )}
           {summary.propertiesCreated > 0 && (
             <p className="text-amber-800">
-              Las viviendas nuevas entran sin propietario y con precio de limpieza 0: hay que
-              completarlas en Viviendas antes de facturar sus limpiezas.
+              Las viviendas nuevas entran sin propietario y con precio de limpieza 0 —Lodgify no
+              sabe nada de limpiezas—. Ponle a cada una su precio en Viviendas: al guardarlo, se
+              aplica también a sus limpiezas todavía no facturadas.
             </p>
           )}
           {summary.unmatchedDetails.length > 0 && (

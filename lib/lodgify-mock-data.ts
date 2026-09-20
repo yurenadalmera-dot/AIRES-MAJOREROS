@@ -53,6 +53,17 @@ const ALL_RESERVATIONS: LodgifyReservationRaw[] = [
   { id: "lodgify-bk-3006", status: "Tentative", property_id: "lodgify-1003", guest_name: "Nina Petrova", arrival: daysFromNow(20), departure: daysFromNow(24), adults: 2, children: 0, total_amount: 410, source: "Booking.com" },
   { id: "lodgify-bk-3007", status: "Cancelled", property_id: "lodgify-1002", guest_name: "Omar Haddad", arrival: daysFromNow(19), departure: daysFromNow(22), adults: 3, children: 0, total_amount: 340, source: "Directo" },
 
+  // --- Historial: reservas que ya terminaron hace meses ---
+  //
+  // Sin esto, los datos de ejemplo solo cubrían esta semana, y el caso de
+  // «subir todo el año» no se podía probar: las limpiezas de una reserva
+  // terminada en marzo no deben aparecer como pendientes.
+  { id: "lodgify-bk-1901", status: "Booked", property_id: "lodgify-1001", guest_name: "Klaus Berger", arrival: daysFromNow(-300), departure: daysFromNow(-293), adults: 4, children: 0, total_amount: 910, source: "Booking.com" },
+  { id: "lodgify-bk-1902", status: "Booked", property_id: "lodgify-1002", guest_name: "Sophie Dubois", arrival: daysFromNow(-210), departure: daysFromNow(-203), adults: 2, children: 2, total_amount: 640, source: "Airbnb" },
+  { id: "lodgify-bk-1903", status: "Booked", property_id: "lodgify-1003", guest_name: "Marco Rossi", arrival: daysFromNow(-150), departure: daysFromNow(-143), adults: 6, children: 0, total_amount: 1120, source: "Directo" },
+  { id: "lodgify-bk-1904", status: "Booked", property_id: "lodgify-1001", guest_name: "Anne Jansen", arrival: daysFromNow(-90), departure: daysFromNow(-83), adults: 3, children: 1, total_amount: 875, source: "Airbnb" },
+  { id: "lodgify-bk-1905", status: "Booked", property_id: "lodgify-1005", guest_name: "Paul Smith", arrival: daysFromNow(-40), departure: daysFromNow(-33), adults: 2, children: 0, total_amount: 520, source: "Booking.com" },
+
   // --- Vivienda no emparejada en el sistema (property_id desconocido) ---
   { id: "lodgify-bk-3008", status: "Booked", property_id: "lodgify-9999", guest_name: "Unmatched Guest", arrival: daysFromNow(25), departure: daysFromNow(28), adults: 2, children: 0, total_amount: 300, source: "Airbnb" },
 ];

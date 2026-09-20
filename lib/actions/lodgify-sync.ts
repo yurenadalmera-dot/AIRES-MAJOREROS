@@ -27,6 +27,8 @@ export interface SyncSummary {
   propertiesCreated: number;
   /** Viviendas que ya existían y se han refrescado. */
   propertiesUpdated: number;
+  /** Limpiezas de reservas ya terminadas, dadas por hechas al importarlas. */
+  pastCleaningsDone: number;
 }
 
 /**
@@ -131,6 +133,19 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     let created = 0;
     let updated = 0;
     let skippedManuallyAdjusted = 0;
+    let pastCleaningsDone = 0;
+
+    // Una reserva que ya terminó trae una limpieza que ya se hizo.
+    //
+    // Importar un año de historial creaba cientos de limpiezas «pendientes»
+    // con fecha de enero, febrero, marzo… Ninguna estaba pendiente de verdad:
+    // la casa se limpió en su día. Dejarlas así llena la pantalla de trabajo
+    // atrasado que no existe y descuadra cualquier recuento.
+    //
+    // El corte es el final del día de hoy: lo de mañana en adelante sí está
+    // pendiente.
+    const finDeHoy = new Date();
+    finDeHoy.setHours(23, 59, 59, 999);
 
     // Las reservas que ya NO están confirmadas (anuladas o rechazadas en
     // Lodgify) hay que reflejarlas: antes se descartaban sin más, así que una
@@ -261,6 +276,9 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
             source: "LODGIFY",
           },
         });
+        const yaPasó = res.checkOut <= finDeHoy;
+        if (yaPasó) pastCleaningsDone++;
+
         await prisma.cleaningTask.create({
           data: {
             organizationId,
@@ -268,7 +286,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
             bookingId: booking.id,
             type: "CLEANING",
             date: res.checkOut,
-            status: "PENDING",
+            status: yaPasó ? "DONE" : "PENDING",
             billable: true,
             price: property.cleaningPrice,
           },
@@ -289,6 +307,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
       unmatchedDetails,
       propertiesCreated,
       propertiesUpdated,
+      pastCleaningsDone,
     };
 
     await prisma.integrationSettings.upsert({
