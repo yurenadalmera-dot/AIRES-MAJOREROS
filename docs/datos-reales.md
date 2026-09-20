@@ -220,6 +220,124 @@ los vuestros: la bancaria real es **1,3 %**.
 - Las seis filas de agosto con importes de 639.000 € **no son reservas**: es la tabla de
   equivalencias del pie de la hoja.
 
+## Mirador: lo que ya existe en n8n + Supabase
+
+**Esto no lo sabía hasta el 20/09 y cambia el mapa.** Además de este SaaS hay un sistema en
+marcha —n8n + una base Supabase llamada `mirador-operativa`— que ya hace buena parte de lo
+mismo, con datos reales dentro.
+
+Ojo con el nombre: cuando aquí se dijo «no hay Supabase» era cierto **de este SaaS** (MySQL en
+Hostinger). El Supabase es el de Mirador, que es otro sistema.
+
+### Lo que hay montado
+
+| Workflow | Qué hace |
+|---|---|
+| `Mirador · cargar reservas Lodgify` | **Activo, cada 3 horas.** Trae *todas* las reservas de Lodgify paginando y las vuelca en `reservas` con `on conflict`. Idempotente. |
+| `Mirador · consola SQL` | La única vía de acceso a la base. Se edita el SQL del nodo «Verificar» y se ejecuta a mano. |
+| `Mirador · panel de Emma` | Sirve el panel; el HTML vive en `app_ui`. |
+| `Mirador · disponibilidad para la web` | Endpoint público de solo lectura para los calendarios. |
+| `Informe semanal propietarios` | Viernes 17:00. Agrupa por Villa Monikka, Grupo Chano y Academia. |
+| `Generar limpiezas` / `Facturar limpiezas` | Día 1 de cada mes. La numeración de facturas arranca en 2026-005. |
+
+La base tiene `reservas`, `viviendas`, `propietarios`, `grupos_liquidacion`,
+`reglas_liquidacion`, `tarifas_canal`, `movimientos` (gastos), `limpiezas`, `liquidaciones` +
+`liquidaciones_detalle`, y vistas (`v_comision_reserva`, `v_liquidacion_grupo_mes`,
+`v_coste_grupo_mes`, `v_limpieza_teorica`).
+
+### Lo que ya está cargado de Lodgify (20/09/2026)
+
+| Año | Confirmadas | Ventas |
+|---|---|---|
+| 2025 | 163 | 118.500 € |
+| **2026** | **330** | **291.581 €** |
+| 2027 | 17 | 34.019 € |
+
+Los dos Excel que se analizaron traían 152 reservas de 2026: **eran parciales**. Lo bueno es
+que las comisiones que salieron de ellos se confirmaron después contra el informe semanal real,
+así que el análisis vale igual.
+
+### Datos fiscales: completos
+
+| Quién | CIF | Domicilio |
+|---|---|---|
+| **Inversiones Brito Pérez S.L.** | **B35851872** | Avenida Jahn Reisen, 12 · 35627 Costa Calma - Pájara (Las Palmas) |
+| Academia Cañada del Río S.L. | B76038611 | Avda. Jhan Reisen, 12 · 35627 Costa Calma (Las Palmas) |
+| Aires Majoreros SL (emisora) | B88933890 | Calle El Tabloncillo, 3 — Bloque 3B, Puerta 1. La Lajita · 35627 Pájara |
+
+Los tres pasan la comprobación del dígito de control. **Ya no falta ningún dato fiscal.**
+
+Domingo Javier no tiene CIF ni domicilio y está marcado `facturable: false`: a él solo se le
+pasa resumen, no factura. Coincide con lo que ya se sabía.
+
+Un detalle menor: la calle de Brito y la de Academia son la misma con dos grafías, «Jahn
+Reisen» y «Jhan Reisen». Conviene fijar una.
+
+### La cartera, como está de verdad
+
+| Grupo | Propietario | Viviendas |
+|---|---|---|
+| **Grupo Chano** | Inversiones Brito Pérez | Villa Mónica, 8206, 8209, 8226, 8241, **Montaña Guerime**, y el 103 (inactivo) |
+| **Villa Monikka** | Inversiones Brito Pérez | Sand & Beach, Beach & Ocean, Gold View, Waves & Dreams, White Sand |
+| **Academia** | Academia Cañada del Río | 24 Montaña Tirba, 25 Montaña Tindaya, **59 Montaña Pico de la Zarza** |
+| — | Domingo Javier | Villa Caliche, Villa Gregorio |
+
+Dos cosas que aquí no se tenían: **Montaña Guerime** pertenece al Grupo Chano, y Academia tiene
+**tres** viviendas, no dos. El grupo grande se llama **Grupo Chano** — se acabó la duda de los
+tres nombres.
+
+Y responde otra pregunta que estaba abierta: los cinco de Villa Monikka **sí están en Lodgify**
+(listings 7452xx). Las de Academia y las de Domingo Javier **no** — hay que darlas de alta a
+mano, como ya se suponía.
+
+### ⚠️ Una diferencia de criterio que hay que resolver
+
+Las reglas de liquidación de Mirador:
+
+| Grupo | Regla | Desde |
+|---|---|---|
+| Academia | `fijo_mensual` 600 € | 01/08/2026 |
+| Grupo Chano | `pct_beneficio` 30 % | 01/01/2026 |
+| **Villa Monikka** | **`pct_ventas` 10 %** | 01/01/2026 |
+
+Las dos primeras coinciden con lo implementado aquí. **La tercera no.** Aquí el 10 % de Villa
+Monikka se calcula sobre lo que queda después de comisiones y gastos; en Mirador se calcula
+**sobre las ventas**, en bruto.
+
+No es un matiz. Sobre la semana del 13 al 19 de julio:
+
+- Sobre la base después de gastos: **155,87 €**
+- Sobre las ventas: **183,29 €**
+
+27 € de diferencia en una semana, y siempre en la misma dirección. **Hay que preguntar a Emma
+cuál de los dos es el bueno** antes de liquidar nada con esto.
+
+### Las comisiones de canal: aquí están contrastadas y allí no
+
+`tarifas_canal` de Mirador tiene Booking al 15 % y Airbnb al 15 %, las dos con
+`confirmado: false` y una nota que dice «SUPUESTO… pendiente de contrastar con una factura
+real». No contempla comisión bancaria ni porcentaje distinto por vivienda.
+
+Lo de aquí sí está contrastado, dos veces (los Excel y el informe semanal real):
+
+| Canal | Plataforma | Bancaria |
+|---|---|---|
+| Airbnb | 15,5 % | ninguna |
+| Booking · Apto 8206 y Apto 27 | **17 %** | 1,3 % |
+| Booking · el resto | 15 % | 1,3 % |
+
+**Merece la pena llevar esto a Mirador**: ahora mismo su liquidación calcula con un supuesto
+que sabemos que no es exacto.
+
+Los nombres de canal que devuelve Lodgify son `BookingCom`, `AirbnbIntegration`, `Manual` y
+`OH` (directa). Conviene que `normalizarCanal` los reconozca.
+
+### La pregunta que sigue abierta
+
+La reserva de 180 € del 15 al 16 de julio (Beach & Ocean, huésped Gigliola Scatola) sin
+comisión de Booking pero con 4,75 € de banco —un 2,64 %—. Con `OH` al 0 % de canal, ese cargo
+tiene que venir de otro sitio. Sigue sin explicar.
+
 ## VeriFactu
 
 Una factura emitida ya no vuelve a borrador: la ley no permite modificar ni anular una factura
