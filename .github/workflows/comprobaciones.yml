@@ -1,0 +1,49 @@
+# Comprobaciones automáticas en cada push.
+#
+# Importa más de lo normal aquí: cada push a la rama de despliegue construye y
+# publica el sitio **sin preguntar**, y una compilación que falla deja
+# airesmajoreros.pro con la página por defecto de Hostinger — no con la versión
+# anterior. Así que si algo se rompe, se rompe de cara al público.
+#
+# Esto no lo impide (Hostinger construye por su cuenta), pero avisa en seguida
+# y deja constancia de qué commit estaba sano.
+
+name: Comprobaciones
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar el cliente de Prisma
+        run: npx prisma generate
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Tipos
+        run: npx tsc --noEmit
+
+      # El build no toca la base de datos (no puede: solo acepta conexiones
+      # desde el servidor de hosting), así que aquí basta con un DATABASE_URL
+      # con formato válido para que Prisma no proteste al arrancar.
+      - name: Compilar
+        run: npm run build
+        env:
+          DATABASE_URL: "mysql://comprobacion:comprobacion@127.0.0.1:3306/comprobacion"
+          AUTH_SECRET: "solo-para-la-compilacion-de-prueba-no-es-un-secreto-real"
