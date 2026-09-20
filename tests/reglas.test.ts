@@ -18,6 +18,7 @@ import { puedeCambiarEstadoFactura } from "../lib/constants";
 import { numeroSiguiente } from "../lib/numeracion";
 import { computePropertyStatus } from "../lib/status";
 import { casillaDelDia } from "../lib/calendario";
+import { decidirCuentaAdmin } from "../lib/cuenta-admin";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -210,5 +211,35 @@ describe("calendario semanal", () => {
     const c = casillaDelDia([ana], d("2027-06-13"));
     assert.equal(c.reserva?.guestName, "Ana");
     assert.equal(c.etiqueta, "—");
+  });
+});
+
+describe("cuenta de administración en cada arranque", () => {
+  const decidir = (existeLaCuenta: boolean, pideRestablecer = false) =>
+    decidirCuentaAdmin({ hayContrasenaEnEntorno: true, existeLaCuenta, pideRestablecer }).tipo;
+
+  test("sin ADMIN_PASSWORD no se toca nada", () => {
+    assert.equal(
+      decidirCuentaAdmin({
+        hayContrasenaEnEntorno: false,
+        existeLaCuenta: false,
+        pideRestablecer: true,
+      }).tipo,
+      "nada"
+    );
+  });
+
+  test("si la cuenta no existe, se crea", () => {
+    assert.equal(decidir(false), "crear");
+  });
+
+  // El fallo: cada arranque reescribía el hash, así que la contraseña que
+  // alguien se ponía en «Mi cuenta» volvía sola a la del entorno.
+  test("si ya existe, el arranque NO le toca la contraseña", () => {
+    assert.equal(decidir(true), "asegurar_acceso");
+  });
+
+  test("solo se restablece cuando se pide a propósito", () => {
+    assert.equal(decidir(true, true), "restablecer");
   });
 });

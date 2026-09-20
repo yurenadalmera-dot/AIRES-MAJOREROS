@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 import { addDays, subDays, format } from "date-fns";
 import { calculateCommissions } from "./money";
 import { BUSINESS_TYPES } from "./constants";
+import { decidirCuentaAdmin } from "./cuenta-admin";
 
 const prisma = new PrismaClient();
 
@@ -677,8 +678,13 @@ export async function asegurarAdministrador() {
   }
 
   const existente = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  const accion = decidirCuentaAdmin({
+    hayContrasenaEnEntorno: true,
+    existeLaCuenta: Boolean(existente),
+    pideRestablecer: process.env.ADMIN_PASSWORD_RESET === "1",
+  });
 
-  if (!existente) {
+  if (accion.tipo === "crear") {
     await prisma.user.create({
       data: {
         organizationId: org.id,
@@ -693,7 +699,7 @@ export async function asegurarAdministrador() {
     return;
   }
 
-  const restablecer = process.env.ADMIN_PASSWORD_RESET === "1";
+  const restablecer = accion.tipo === "restablecer";
   await prisma.user.update({
     where: { email },
     data: {
