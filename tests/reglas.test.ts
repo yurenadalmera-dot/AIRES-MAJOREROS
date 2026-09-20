@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import { addDays, addMonths, subDays } from "date-fns";
 
 import { calculateCommissions, splitAmount, round2, calcularImpuesto } from "../lib/money";
+import { importeLodgify } from "../lib/lodgify";
 import { puede } from "../lib/permisos";
 import { puedeCambiarEstadoFactura } from "../lib/constants";
 import { numeroSiguiente, prefijoFacturas, prefijoResumenes } from "../lib/numeracion";
@@ -843,5 +844,42 @@ describe("el reparto de viviendas en tramos", () => {
       gastos: [],
     });
     assert.equal([...tramos.values()].reduce((n, t) => n + t.reservas.length, 0), 0);
+  });
+});
+
+describe("importe de Lodgify: ausente no es cero", () => {
+  // El fallo: `Number(r.total_amount ?? r.totalAmount ?? 0)`. Si Lodgify no
+  // mandaba importe —campo renombrado, respuesta parcial, reserva sin
+  // precio todavía— la reserva se guardaba con 0 €, las comisiones y el
+  // neto salían de ese cero, y en una reserva que YA existía el sync
+  // machacaba el precio bueno. Nada de ello daba error: un 0 tiene pinta
+  // de dato, no de fallo, y el propietario lo veía en su liquidación.
+
+  test("un importe real de 0 € se conserva como 0", () => {
+    // Existe: una estancia de cortesía, un bloqueo de propietario.
+    assert.equal(importeLodgify({ total_amount: 0 }), 0);
+  });
+
+  test("un importe ausente es null, no 0", () => {
+    assert.equal(importeLodgify({}), null);
+    assert.equal(importeLodgify({ total_amount: null }), null);
+    assert.equal(importeLodgify({ total_amount: undefined }), null);
+    assert.equal(importeLodgify({ total_amount: "" }), null);
+  });
+
+  test("distingue el 0 real del hueco", () => {
+    assert.notEqual(importeLodgify({ total_amount: 0 }), importeLodgify({}));
+  });
+
+  test("acepta la variante en camelCase de la API", () => {
+    assert.equal(importeLodgify({ totalAmount: 480 }), 480);
+  });
+
+  test("un valor que no es número es un hueco, no un NaN que se propague", () => {
+    assert.equal(importeLodgify({ total_amount: "sin precio" }), null);
+  });
+
+  test("números en texto se aceptan: la API los manda así a veces", () => {
+    assert.equal(importeLodgify({ total_amount: "780.50" }), 780.5);
   });
 });
