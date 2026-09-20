@@ -6,6 +6,29 @@ import { prisma } from "@/lib/prisma";
 import { conErroresLegibles } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 
+
+/**
+ * Refresca todas las pantallas donde sale una vivienda.
+ *
+ * Dar de baja una vivienda solo refrescaba el listado y los ajustes, así que
+ * el panel y el calendario seguían enseñándola como si nada. Cada sitio que
+ * la muestra tiene que enterarse, no solo el sitio donde se cambia.
+ */
+function revalidarVistasDeViviendas() {
+  for (const ruta of [
+    "/rental",
+    "/rental/properties",
+    "/rental/settings",
+    "/rental/calendar",
+    "/rental/tasks",
+    "/rental/reports",
+    "/cleaning",
+    "/cleaning/tasks",
+  ]) {
+    revalidatePath(ruta);
+  }
+}
+
 const propertySchema = z.object({
   name: z.string().min(1),
   locality: z.string().min(1),
@@ -40,8 +63,7 @@ export async function createProperty(formData: FormData) {
       },
     });
 
-    revalidatePath("/rental/properties");
-    revalidatePath("/rental/settings");
+    revalidarVistasDeViviendas();
   });
 }
 
@@ -82,10 +104,7 @@ export async function updateProperty(propertyId: string, formData: FormData) {
       data: { price: data.cleaningPrice },
     });
 
-    revalidatePath("/rental/properties");
-    revalidatePath("/rental/settings");
-    revalidatePath("/cleaning/tasks");
-    revalidatePath("/cleaning");
+    revalidarVistasDeViviendas();
 
     return { limpiezasActualizadas };
   });
@@ -98,8 +117,7 @@ export async function setPropertyManualStatus(propertyId: string, status: string
       where: { id: propertyId, organizationId },
       data: { manualStatus: status },
     });
-    revalidatePath("/rental/properties");
-    revalidatePath("/rental");
+    revalidarVistasDeViviendas();
   });
 }
 
@@ -107,8 +125,7 @@ export async function setPropertyActive(propertyId: string, active: boolean) {
   return conErroresLegibles(async () => {
     const organizationId = await exigir("operativa.alquiler");
     await prisma.property.updateMany({ where: { id: propertyId, organizationId }, data: { active } });
-    revalidatePath("/rental/properties");
-    revalidatePath("/rental/settings");
+    revalidarVistasDeViviendas();
   });
 }
 

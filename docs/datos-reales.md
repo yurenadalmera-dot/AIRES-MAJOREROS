@@ -21,24 +21,56 @@ Lodgify) no la toca nunca.
 
 ## La cartera
 
-| Vivienda | Entra por | Propietario |
+### Grupo Villa Mónica
+
+| Vivienda | Entra por | Estado |
 |---|---|---|
-| Apto 27, Apto 27 A, Apto 8206, Apto 8209, Apto 8226, Apto 8241 | Lodgify | *pendiente* |
-| Villa Mónica (la villa) | Lodgify | **Inversiones Brito** |
-| Apto 24 «Montaña Tirba», Apto 25 «Montaña Tindaya» (la academia) | Lodgify | *pendiente* |
-| **Villa Caliche, Villa Gregorio** | **a mano** | **Costa Calma Express Inmobiliaria S.L.** |
+| Villa Mónica (la villa) | Lodgify | activa · **Inversiones Brito** |
+| Apto 8206 | Lodgify | activa |
+| Apto 8209 | Lodgify | activa |
+| Apto 8226 | Lodgify | activa |
+| Apto 8241 | Lodgify | activa |
+| Apto 27 | — | **ya no existe** (Emma, 20/09) |
 
-- **Grupo Villa Monika** son **cinco apartamentos**; **Villa Mónica** es **la villa**, una sola
-  casa. Eran dos cosas distintas, no un nombre mal escrito — era la duda que tenía Emma.
-  *Falta saber cuáles de los códigos de arriba son los cinco del grupo, y de quién son.*
-- **Costa Calma Express Inmobiliaria S.L.** · CIF **B35709062** · lleva factura. Es «Domingo
-  Javier».
-- **Inversiones Brito**: falta CIF y domicilio si sus casas también se facturan.
+«Grupo Villa Mónica» es la villa más cinco apartamentos. **Villa Monikka es otra cosa**: eran dos
+nombres distintos, no uno mal escrito, y esa era la duda que arrastraba Emma.
 
-### Las limpiezas de Domingo Javier
+### Villa Monikka — cinco apartamentos
 
-No salen de ninguna reserva: **las encarga él**. Sus casas no están en Lodgify. Se apuntan con
-**«+ Nueva limpieza»** en la pantalla de limpiezas, que las crea al precio de la vivienda.
+Sand Beach · Beach Ocean · Gold View · Waves Dreams · White Sand
+
+*No aparecen en ninguno de los dos Excel. Falta saber si están en Lodgify y de quién son.*
+
+### Academia Cañada
+
+| Vivienda | ID Booking |
+|---|---|
+| Apto 24 «Montaña Tirba» | 16748111 |
+| Apto 25 «Montaña Tindaya» | 16747972 |
+
+Propietario: **Academia Cañada** (Emma, 20/09).
+
+### De Domingo Javier — a mano
+
+**Villa Caliche** y **Villa Gregorio**. No están en Lodgify ni en los Excel de reservas. Se dan de
+alta a mano, sin identificador de Lodgify, para que la sincronización no las toque nunca.
+
+Sus limpiezas **las encarga él**: no salen de ninguna reserva. Se apuntan con «+ Nuevas
+limpiezas», pegando la columna de fechas de salida de su Excel.
+
+Propietario: **Costa Calma Express Inmobiliaria S.L.** · CIF **B35709062** · lleva factura.
+
+### Viviendas que ya no se llevan
+
+**Apto 27** y **Apto 103**. Sus reservas de 2026 cuentan para los números del año, así que hay que
+darlas de alta y luego pulsar **«Marcar como inactiva»** en su ficha: desaparecen del panel, del
+calendario y de las limpiezas, pero su historial se queda.
+
+### Pendiente
+
+- CIF y domicilio de **Inversiones Brito**, si sus casas se facturan.
+- De quién son los cinco de **Villa Monikka**, y si están en Lodgify.
+- Quién es el propietario de los apartamentos del Grupo Villa Mónica (8206, 8209, 8226, 8241).
 
 ## Comisiones reales (de las 152 reservas de 2026)
 
