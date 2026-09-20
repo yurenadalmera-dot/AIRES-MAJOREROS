@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { motivoDelFallo } from "@/lib/version-cliente";
 import { cambiarMiContrasena } from "@/lib/actions/usuarios";
 
 export default function CambiarContrasena() {
@@ -12,12 +13,16 @@ export default function CambiarContrasena() {
     setError(null);
     setHecho(false);
     startTransition(async () => {
-      const r = (await cambiarMiContrasena(formData)) as { error?: string; ok?: boolean };
-      if (r && "error" in r && r.error) {
-        setError(String(r.error));
-        return;
+      try {
+        const r = (await cambiarMiContrasena(formData)) as { error?: string; ok?: boolean };
+        if (r && "error" in r && r.error) {
+          setError(String(r.error));
+          return;
+        }
+        setHecho(true);
+      } catch {
+        setError(await motivoDelFallo());
       }
-      setHecho(true);
     });
   }
 

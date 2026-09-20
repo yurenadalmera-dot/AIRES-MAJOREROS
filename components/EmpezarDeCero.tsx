@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { motivoDelFallo } from "@/lib/version-cliente";
 import { empezarDeCero } from "@/lib/actions/datos";
 import type { ResumenDeDatos } from "@/lib/datos-demo";
 
@@ -43,30 +44,39 @@ export default function EmpezarDeCero({
   const [error, setError] = useState<string | null>(null);
   const [hecho, setHecho] = useState<string | null>(null);
 
+  const vacia = enumerar(resumen) === "nada";
+
   function enviar(formData: FormData) {
     setError(null);
     setHecho(null);
     startTransition(async () => {
-      const r = (await empezarDeCero(formData)) as {
-        error?: string;
-        borrado?: ResumenDeDatos;
-      };
-      if (r?.error) {
-        setError(r.error);
-        return;
+      try {
+        const r = (await empezarDeCero(formData)) as {
+          error?: string;
+          borrado?: ResumenDeDatos;
+        };
+        if (r?.error) {
+          setError(r.error);
+          return;
+        }
+        if (r?.borrado) setHecho(`Se ha borrado: ${enumerar(r.borrado)}.`);
+        router.refresh();
+      } catch {
+        setError(await motivoDelFallo());
       }
-      if (r?.borrado) setHecho(`Se ha borrado: ${enumerar(r.borrado)}.`);
-      router.refresh();
     });
   }
-
-  const vacia = enumerar(resumen) === "nada";
 
   return (
     <div className="card p-5">
       <h2 className="font-medium text-slate-800 mb-1">Datos de la aplicación</h2>
       <p className="text-xs text-slate-500 mb-4">
-        Ahora mismo hay <strong>{enumerar(resumen)}</strong>.
+        {vacia ? "Ahora mismo no hay ningún dato cargado." : null}
+        {!vacia && (
+          <>
+            Ahora mismo hay <strong>{enumerar(resumen)}</strong>.
+          </>
+        )}
       </p>
 
       {esDemostracion && (

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { motivoDelFallo } from "@/lib/version-cliente";
 import { syncLodgifyReservations, type SyncSummary } from "@/lib/actions/lodgify-sync";
 
 export default function SyncLodgifyButton() {
@@ -22,7 +23,9 @@ export default function SyncLodgifyButton() {
         setSummary(result);
         router.refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Error al sincronizar con Lodgify");
+        // Un Error con mensaje propio dice algo útil (por ejemplo, que Lodgify
+        // ha respondido 401). Si no, se mira si la página está desactualizada.
+        setError(e instanceof Error && e.message ? e.message : await motivoDelFallo());
       }
     });
   }

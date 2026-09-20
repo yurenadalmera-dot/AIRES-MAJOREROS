@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { motivoDelFallo } from "@/lib/version-cliente";
 import { USER_ROLES, USER_ROLE_LABEL } from "@/lib/constants";
 import {
   crearUsuario,
@@ -39,13 +40,17 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
     setReciente(null);
     setCopiado(false);
     startTransition(async () => {
-      const r = (await accion()) as { error?: string; creada?: { email: string; contrasena: string } };
-      if (r && typeof r === "object" && "error" in r && r.error) {
-        setError(String(r.error));
-        return;
+      try {
+        const r = (await accion()) as { error?: string; creada?: { email: string; contrasena: string } };
+        if (r && typeof r === "object" && "error" in r && r.error) {
+          setError(String(r.error));
+          return;
+        }
+        if (r && typeof r === "object" && r.creada) setReciente(r.creada);
+        router.refresh();
+      } catch {
+        setError(await motivoDelFallo());
       }
-      if (r && typeof r === "object" && r.creada) setReciente(r.creada);
-      router.refresh();
     });
   }
 

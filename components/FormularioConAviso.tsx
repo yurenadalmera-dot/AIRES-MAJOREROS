@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { motivoDelFallo, AVISO_VERSION_NUEVA } from "@/lib/version-cliente";
 
 type Accion = (formData: FormData) => Promise<void | { error: string } | unknown>;
 
@@ -46,9 +47,10 @@ export default function FormularioConAviso({
         if (onSuccess) router.push(onSuccess);
         router.refresh();
       } catch {
-        // Un fallo inesperado: Next ya ha ocultado el detalle, así que se dice
-        // lo único honesto que se puede decir.
-        setError("No se ha podido guardar. Inténtalo de nuevo.");
+        // Next oculta el detalle en producción, pero el caso más frecuente sí
+        // se puede reconocer: la página lleva abierta desde antes del último
+        // despliegue y sus acciones ya no existen en el servidor.
+        setError(await motivoDelFallo());
       }
     });
   }
@@ -58,6 +60,15 @@ export default function FormularioConAviso({
       {error && (
         <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
           {error}
+          {error === AVISO_VERSION_NUEVA && (
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="ml-2 underline font-medium"
+            >
+              Recargar ahora
+            </button>
+          )}
         </p>
       )}
       {/* Decir que se ha guardado. Sin esto, guardar y que fallara se veían
