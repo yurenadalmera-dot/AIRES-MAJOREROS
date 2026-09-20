@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 import { leerFechas } from "@/lib/fechas";
+import { leerImporte } from "@/lib/money";
 
 const gastoSchema = z.object({
   propertyId: z.string().min(1, "Falta la vivienda"),
@@ -15,12 +16,6 @@ const gastoSchema = z.object({
   amount: z.string().min(1, "Falta el importe"),
   notes: z.string().optional(),
 });
-
-/** Acepta «120,50» y «120.50», que es como la gente escribe un importe. */
-function leerImporte(texto: string): number {
-  const n = Number(texto.trim().replace(/\s/g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : NaN;
-}
 
 /**
  * Apunta un gasto de una vivienda.
@@ -35,7 +30,7 @@ export async function crearGasto(formData: FormData) {
     const data = gastoSchema.parse(Object.fromEntries(formData.entries()));
 
     const importe = leerImporte(data.amount);
-    if (Number.isNaN(importe) || importe <= 0) {
+    if (importe === null || importe <= 0) {
       throw new ErrorDeNegocio("El importe tiene que ser un número mayor que cero.");
     }
 

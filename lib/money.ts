@@ -47,6 +47,48 @@ export function formatCurrency(value: number | string | { toString(): string }):
   }).format(Number.isFinite(n) ? n : 0);
 }
 
+/**
+ * Lee un importe escrito como lo escribe la gente, o como viene impreso en
+ * una factura: «120,50», «120.50», «1.234,56», «1.234,56 €».
+ *
+ * Devuelve `null` cuando no hay un número que leer — nunca 0. Un hueco genera
+ * una pregunta; un cero se contabiliza en silencio.
+ *
+ * El caso que obliga a esto: antes se hacía `replace(",", ".")` a secas, así
+ * que «1.234,56» salía «1.234.56» y de ahí `NaN`. Cualquier gasto de más de
+ * mil euros escrito con puntos era imposible de apuntar.
+ */
+export function leerImporte(valor: unknown): number | null {
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
+  if (typeof valor !== "string") return null;
+
+  const limpio = valor.replace(/[€$\s  ]/g, "").replace(/^\+/, "");
+  if (!/^-?[\d.,]+$/.test(limpio) || !/\d/.test(limpio)) return null;
+
+  const ultimaComa = limpio.lastIndexOf(",");
+  const ultimoPunto = limpio.lastIndexOf(".");
+  let normal: string;
+
+  if (ultimaComa >= 0 && ultimoPunto >= 0) {
+    // Están los dos: el último manda como decimal, el otro era de miles.
+    const decimal = ultimaComa > ultimoPunto ? "," : ".";
+    const miles = decimal === "," ? "." : ",";
+    normal = limpio.split(miles).join("").replace(decimal, ".");
+  } else if (ultimaComa >= 0 || ultimoPunto >= 0) {
+    const sep = ultimaComa >= 0 ? "," : ".";
+    const trozos = limpio.split(sep);
+    // Un único separador seguido de exactamente tres cifras es de miles:
+    // «1.234» son mil doscientos treinta y cuatro, no uno con doscientos.
+    const esDeMiles = trozos.length === 2 && trozos[1].length === 3 && /\d/.test(trozos[0]);
+    normal = trozos.length > 2 || esDeMiles ? trozos.join("") : trozos.join(".");
+  } else {
+    normal = limpio;
+  }
+
+  const n = Number(normal);
+  return Number.isFinite(n) ? n : null;
+}
+
 export function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
   return new Intl.DateTimeFormat("es-ES", {
