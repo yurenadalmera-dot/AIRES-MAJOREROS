@@ -30,11 +30,17 @@ export default function DeleteBookingButton({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <button onClick={handleClick} disabled={pending} className="btn-danger text-xs">
-        {pending ? "Eliminando..." : "Eliminar reserva"}
+      {/* Borrar no es lo que se viene a hacer aquí, así que no compite con
+          «Guardar»: botón de contorno, en rojo, y con su confirmación. */}
+      <button
+        onClick={handleClick}
+        disabled={pending}
+        className="btn-secondary text-xs text-mal border-[#f3d4d3] hover:bg-mal-suave"
+      >
+        {pending ? "Eliminando…" : "Eliminar reserva"}
       </button>
       {error && (
-        <p className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded px-2 py-1 max-w-xs">
+        <p role="alert" className="text-xs text-mal bg-mal-suave border border-[#f3d4d3] rounded px-2 py-1 max-w-xs">
           {error}
         </p>
       )}

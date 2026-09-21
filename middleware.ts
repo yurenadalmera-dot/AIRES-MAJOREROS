@@ -13,7 +13,12 @@ function isPublic(pathname: string) {
   return (
     PUBLIC_PATHS.some((p) => pathname === p) ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
+    pathname.startsWith("/favicon") ||
+    // El logotipo y el icono de la pestaña: se ven en la pantalla de entrada,
+    // antes de que haya sesión. Sin esto, el middleware los manda a /login y
+    // la portada sale con la imagen rota.
+    pathname.startsWith("/marca/") ||
+    pathname.startsWith("/icon")
   );
 }
 

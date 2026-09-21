@@ -57,36 +57,36 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="card print-area p-8">
-        <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-6">
+        <div className="flex justify-between items-start border-b border-borde pb-4 mb-6">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">Factura {invoice.invoiceNumber}</h1>
+            <h1 className="text-lg font-semibold text-tinta">Factura {invoice.invoiceNumber}</h1>
             {/* Quien emite: razón social, NIF y domicilio. Los tres son
                 obligatorios en una factura. */}
-            <p className="text-sm font-medium text-slate-700 mt-1">
+            <p className="text-sm font-medium text-tinta mt-1">
               {cleaningBusiness?.legalName ?? cleaningBusiness?.name}
             </p>
             {cleaningBusiness?.taxId && (
-              <p className="text-sm text-slate-500">NIF/CIF: {cleaningBusiness.taxId}</p>
+              <p className="text-sm text-tinta-suave">NIF/CIF: {cleaningBusiness.taxId}</p>
             )}
             {cleaningBusiness?.address && (
-              <p className="text-sm text-slate-500 whitespace-pre-line">{cleaningBusiness.address}</p>
+              <p className="text-sm text-tinta-suave whitespace-pre-line">{cleaningBusiness.address}</p>
             )}
           </div>
           <div className="text-right">
             <Badge className="mb-2">{INVOICE_STATUS_LABEL[invoice.status]}</Badge>
-            <p className="text-sm text-slate-500">Emitida el {formatDate(invoice.issueDate)}</p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-tinta-suave">Emitida el {formatDate(invoice.issueDate)}</p>
+            <p className="text-sm text-tinta-suave">
               Periodo: {formatDate(invoice.periodStart)} – {formatDate(invoice.periodEnd)}
             </p>
           </div>
         </div>
 
         <div className="mb-6">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Facturado a</p>
-          <p className="text-base font-medium text-slate-800">{invoice.billedToName}</p>
-          {invoice.billedToTaxId && <p className="text-sm text-slate-500">NIF/CIF: {invoice.billedToTaxId}</p>}
+          <p className="text-xs uppercase tracking-wide text-tinta-suave">Facturado a</p>
+          <p className="text-base font-medium text-tinta">{invoice.billedToName}</p>
+          {invoice.billedToTaxId && <p className="text-sm text-tinta-suave">NIF/CIF: {invoice.billedToTaxId}</p>}
           {invoice.billedToAddress && (
-            <p className="text-sm text-slate-500 whitespace-pre-line">{invoice.billedToAddress}</p>
+            <p className="text-sm text-tinta-suave whitespace-pre-line">{invoice.billedToAddress}</p>
           )}
         </div>
 
@@ -126,35 +126,35 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </table>
 
         {invoice.notes && (
-          <p className="text-sm text-slate-500 mt-4">
+          <p className="text-sm text-tinta-suave mt-4">
             <span className="font-medium">Notas:</span> {invoice.notes}
           </p>
         )}
 
         {/* Uso interno: NO se imprime. Cómo se reparte el dinero entre las
             socias no es asunto de quien recibe la factura. */}
-        <div className="mt-8 border-t border-slate-200 pt-4 no-print">
-          <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">
+        <div className="mt-8 border-t border-borde pt-4 no-print">
+          <p className="text-xs uppercase tracking-wide text-tinta-suave mb-2">
             Reparto entre socias · solo aquí, no sale en la factura
           </p>
           <div className="grid grid-cols-2 gap-4 max-w-md">
-            <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-              <p className="text-xs text-slate-500">
+            <div className="rounded-lg bg-marina-suave border border-borde px-3 py-2">
+              <p className="text-xs text-tinta-suave">
                 {partnerA?.name ?? "Socia 1"} ({Number(invoice.partnerAPercent)}%)
               </p>
-              <p className="font-medium text-slate-800">{formatCurrency(invoice.partnerAAmount)}</p>
+              <p className="font-medium text-tinta">{formatCurrency(invoice.partnerAAmount)}</p>
             </div>
-            <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-              <p className="text-xs text-slate-500">
+            <div className="rounded-lg bg-marina-suave border border-borde px-3 py-2">
+              <p className="text-xs text-tinta-suave">
                 {partnerB?.name ?? "Socia 2"} ({Number(invoice.partnerBPercent)}%)
               </p>
-              <p className="font-medium text-slate-800">{formatCurrency(invoice.partnerBAmount)}</p>
+              <p className="font-medium text-tinta">{formatCurrency(invoice.partnerBAmount)}</p>
             </div>
           </div>
         </div>
 
         {(!cleaningBusiness?.taxId || !cleaningBusiness?.address) && (
-          <p className="text-[11px] text-rose-600 mt-8 no-print">
+          <p className="text-[11px] text-mal mt-8 no-print">
             Faltan datos obligatorios de quien emite la factura
             {!cleaningBusiness?.taxId && " (NIF/CIF)"}
             {!cleaningBusiness?.taxId && !cleaningBusiness?.address && " y"}

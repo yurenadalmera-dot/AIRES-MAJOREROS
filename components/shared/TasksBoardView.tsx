@@ -44,7 +44,7 @@ export default async function TasksBoardView({
       <NuevaLimpieza viviendas={properties} empleadas={employees} />
 
       <details className="card p-4 mb-4 no-print">
-        <summary className="cursor-pointer text-sm font-medium text-slate-700">
+        <summary className="cursor-pointer text-sm font-medium text-tinta">
           + Nueva tarea de mantenimiento
         </summary>
         <FormularioConAviso action={createMaintenanceTask} className="mt-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">

@@ -182,12 +182,15 @@ export default async function OwnerReportPrintView({
       </div>
 
       <div className="card print-area p-8">
-        <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-6">
+        <div className="flex justify-between items-start border-b border-borde pb-4 mb-6">
           <div>
-            <h1 className="text-lg font-semibold text-slate-900">Informe de propietario</h1>
-            <p className="text-sm text-slate-500 mt-1">{rentalBusiness?.legalName ?? rentalBusiness?.name}</p>
+            {/* Sin logotipo: este documento sale a nombre de la empresa que
+                gestiona, y ponerle la marca de otra podría confundir a quien
+                lo recibe. Lo que cambia aquí es la tipografía y el color. */}
+            <h1 className="serif text-2xl text-marina">Informe de propietario</h1>
+            <p className="text-sm text-tinta-suave mt-1">{rentalBusiness?.legalName ?? rentalBusiness?.name}</p>
           </div>
-          <div className="text-right text-sm text-slate-500">
+          <div className="text-right text-sm text-tinta-suave">
             <p>Emitido el {formatDate(new Date())}</p>
             <p>
               Periodo: {formatDate(periodStart)} – {formatDate(periodEnd)}
@@ -196,36 +199,36 @@ export default async function OwnerReportPrintView({
         </div>
 
         <div className="mb-6">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Propietario</p>
-          <p className="text-base font-medium text-slate-800">{owner.name}</p>
-          {owner.email && <p className="text-sm text-slate-500">{owner.email}</p>}
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs uppercase tracking-wide text-tinta-suave">Propietario</p>
+          <p className="text-base font-medium text-tinta">{owner.name}</p>
+          {owner.email && <p className="text-sm text-tinta-suave">{owner.email}</p>}
+          <p className="text-sm text-tinta-suave mt-1">
             Viviendas: {owner.properties.map((p) => p.name).join(", ") || "—"}
           </p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {cabecera.map((c) => (
-            <div key={c.etiqueta} className="border border-slate-200 rounded-lg px-3 py-2">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">{c.etiqueta}</p>
-              <p className="text-base font-semibold text-slate-800">{formatCurrency(c.valor)}</p>
+            <div key={c.etiqueta} className="border border-borde rounded-lg px-3 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-tinta-suave">{c.etiqueta}</p>
+              <p className="text-base font-semibold text-tinta">{formatCurrency(c.valor)}</p>
             </div>
           ))}
         </div>
 
         {bookings.length === 0 ? (
           <>
-            <h2 className="text-sm font-semibold text-slate-700 mb-2">Reservas del periodo (0)</h2>
-            <p className="text-sm text-slate-400 mb-6">No hay reservas con entrada en este periodo.</p>
+            <h2 className="text-sm font-semibold text-tinta mb-2">Reservas del periodo (0)</h2>
+            <p className="text-sm text-tinta-suave mb-6">No hay reservas con entrada en este periodo.</p>
           </>
         ) : (
           gruposDeReservas.map(([clave, grupo]) => {
             const sub = totalesDe(grupo.reservas);
             return (
               <div key={clave} className="mb-5">
-                <h2 className="text-sm font-semibold text-slate-700 mb-2">
+                <h2 className="text-sm font-semibold text-tinta mb-2">
                   {gruposDeReservas.length > 1 ? `${grupo.nombre} — reservas` : "Reservas del periodo"}
-                  <span className="font-normal text-slate-400">
+                  <span className="font-normal text-tinta-suave">
                     {" · "}
                     {grupo.reservas.length}
                     {grupo.reservas.length === 1 ? " reserva" : " reservas"}
@@ -291,11 +294,11 @@ export default async function OwnerReportPrintView({
           </table>
         )}
 
-        <h2 className="text-sm font-semibold text-slate-700 mt-6 mb-2">
+        <h2 className="text-sm font-semibold text-tinta mt-6 mb-2">
           Limpiezas del periodo ({cleaningTasks.length})
         </h2>
         {cleaningTasks.length === 0 ? (
-          <p className="text-sm text-slate-400 mb-6">No hay limpiezas registradas en este periodo.</p>
+          <p className="text-sm text-tinta-suave mb-6">No hay limpiezas registradas en este periodo.</p>
         ) : (
           <table className="table-base">
             <thead>
@@ -323,11 +326,11 @@ export default async function OwnerReportPrintView({
           </table>
         )}
 
-        <h2 className="text-sm font-semibold text-slate-700 mt-6 mb-2">
+        <h2 className="text-sm font-semibold text-tinta mt-6 mb-2">
           Otros gastos del periodo ({expenses.length})
         </h2>
         {expenses.length === 0 ? (
-          <p className="text-sm text-slate-400 mb-6">No hay gastos apuntados en este periodo.</p>
+          <p className="text-sm text-tinta-suave mb-6">No hay gastos apuntados en este periodo.</p>
         ) : (
           <table className="table-base">
             <thead>
@@ -345,7 +348,7 @@ export default async function OwnerReportPrintView({
                   <td>{g.property?.name ?? "—"}</td>
                   <td>{g.date ? formatDate(g.date) : "sin fecha"}</td>
                   <td>{g.concept}</td>
-                  <td className="text-slate-500">{g.supplier ?? "—"}</td>
+                  <td className="text-tinta-suave">{g.supplier ?? "—"}</td>
                   <td>{formatCurrency(g.amount)}</td>
                 </tr>
               ))}
@@ -361,7 +364,7 @@ export default async function OwnerReportPrintView({
 
         {desglosePorGrupo.length > 1 && (
           <>
-            <h2 className="text-sm font-semibold text-slate-700 mt-6 mb-2">
+            <h2 className="text-sm font-semibold text-tinta mt-6 mb-2">
               Comisión de gestión por grupo
             </h2>
             <table className="table-base">
@@ -399,40 +402,40 @@ export default async function OwnerReportPrintView({
           </>
         )}
 
-        <div className="mt-8 border-t border-slate-200 pt-4 flex justify-end">
+        <div className="mt-8 border-t border-borde pt-4 flex justify-end">
           <div className="w-80 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-500">Ingresos de las reservas</span>
+              <span className="text-tinta-suave">Ingresos de las reservas</span>
               <span>{formatCurrency(liquidacion.ingresos)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Comisiones de venta</span>
+              <span className="text-tinta-suave">Comisiones de venta</span>
               <span>-{formatCurrency(liquidacion.comisionesDeVenta)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Limpiezas</span>
+              <span className="text-tinta-suave">Limpiezas</span>
               <span>-{formatCurrency(cleaningTotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Otros gastos</span>
+              <span className="text-tinta-suave">Otros gastos</span>
               <span>-{formatCurrency(expensesTotal)}</span>
             </div>
-            <div className="flex justify-between border-t border-slate-200 pt-1.5">
-              <span className="text-slate-500">Base de gestión</span>
+            <div className="flex justify-between border-t border-borde pt-1.5">
+              <span className="text-tinta-suave">Base de gestión</span>
               <span>{formatCurrency(liquidacion.baseDeGestion)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Comisión de gestión</span>
+              <span className="text-tinta-suave">Comisión de gestión</span>
               <span>-{formatCurrency(liquidacion.comisionDeGestion)}</span>
             </div>
             {/* Con varios grupos ya está la tabla de arriba: repetirlo aquí
                 solo mete tres líneas de letra pequeña. */}
             {desglosePorGrupo.length <= 1 && (
-              <p className="text-[11px] text-slate-400 text-right">
+              <p className="text-[11px] text-tinta-suave text-right">
                 {liquidacion.detalleDeLaComision}
               </p>
             )}
-            <div className="flex justify-between text-base font-semibold border-t border-slate-200 pt-1.5">
+            <div className="flex justify-between text-base font-semibold border-t border-borde pt-1.5">
               <span>Total a liquidar al propietario</span>
               <span>{formatCurrency(liquidacion.alPropietario)}</span>
             </div>
@@ -440,7 +443,7 @@ export default async function OwnerReportPrintView({
         </div>
 
         {liquidacion.comisionDeGestion > 0 && (
-          <p className="text-[10px] text-slate-400 mt-8">
+          <p className="text-[10px] text-tinta-suave mt-8">
             La comisión de gestión se calcula sobre lo que queda después de las comisiones de
             venta, las limpiezas y los gastos del periodo.
           </p>

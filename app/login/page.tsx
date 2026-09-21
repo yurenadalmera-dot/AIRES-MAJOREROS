@@ -2,12 +2,15 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Marca } from "@/components/Marca";
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next");
-  const [email, setEmail] = useState("emma@example.com");
+  // Sin correo de ejemplo precargado: era una dirección inventada y en una
+  // pantalla de verdad no pinta nada.
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,16 +41,19 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-6">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg mb-3">
-            GA
-          </div>
-          <h1 className="text-xl font-semibold text-slate-900">Plataforma de gestión</h1>
-          <p className="text-sm text-slate-500 mt-1">Alquileres vacacionales &amp; Limpiezas</p>
+    <div className="min-h-screen flex items-center justify-center bg-arena px-4 py-10">
+      <div className="w-full max-w-[26rem]">
+        <div className="text-center mb-7">
+          {/* El logotipo, sobre superficie clara y con aire alrededor. */}
+          <Marca alto={86} className="mx-auto" />
+          <h1 className="serif text-[1.75rem] leading-tight text-marina mt-7">
+            Plataforma de gestión
+          </h1>
+          <p className="text-sm text-tinta-suave mt-1.5">
+            Alquileres vacacionales &amp; Limpiezas
+          </p>
         </div>
-        <form onSubmit={handleSubmit} className="card p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="card p-6 sm:p-7 space-y-4">
           <div>
             <label className="label" htmlFor="email">
               Correo electrónico
@@ -82,12 +88,15 @@ function LoginForm() {
             />
           </div>
           {error && (
-            <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+            <p
+              role="alert"
+              className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2"
+            >
               {error}
             </p>
           )}
           <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? "Entrando…" : "Entrar"}
           </button>
         </form>
       </div>

@@ -61,8 +61,8 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
       />
 
       <div className="card p-4 mb-4">
-        <p className="text-sm font-medium text-slate-700 mb-2">Forzar estado manualmente (opcional)</p>
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-sm font-medium text-tinta mb-2">Forzar estado manualmente (opcional)</p>
+        <p className="text-xs text-tinta-suave mb-3">
           Por defecto el estado se calcula solo a partir de reservas y tareas. Úsalo solo para casos excepcionales
           (p. ej. vivienda cerrada por obras).
         </p>

@@ -69,7 +69,7 @@ export default function PropertyForm({
   return (
     <form action={handleSubmit} className="space-y-4">
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2">{error}</p>
       )}
       <div className="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -99,7 +99,7 @@ export default function PropertyForm({
         <div>
           <label className="label">Precio de limpieza (€)</label>
           <input type="number" step="0.01" min={0} name="cleaningPrice" defaultValue={initial?.cleaningPrice ?? 0} className="input" />
-          <p className="text-xs text-slate-400 mt-1">Importe que Aires Majoreros factura por cada limpieza de esta vivienda.</p>
+          <p className="text-xs text-tinta-suave mt-1">Importe que Aires Majoreros factura por cada limpieza de esta vivienda.</p>
         </div>
         <div>
           <label className="label">Propietario</label>
@@ -123,7 +123,7 @@ export default function PropertyForm({
               </option>
             ))}
           </select>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-tinta-suave mt-1">
             La comisión de gestión sale del grupo. Se configura en Ajustes.
           </p>
         </div>
@@ -136,14 +136,14 @@ export default function PropertyForm({
             className="input"
             placeholder="vacío"
           />
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-tinta-suave mt-1">
             Solo para una vivienda suelta, sin grupo. Si pertenece a uno, manda el del grupo.
           </p>
         </div>
         <div>
           <label className="label">ID de propiedad en Lodgify (opcional)</label>
           <input name="lodgifyPropertyId" defaultValue={initial?.lodgifyPropertyId ?? ""} className="input" placeholder="p.ej. lodgify-1001" />
-          <p className="text-xs text-slate-400 mt-1">Necesario para emparejar reservas sincronizadas automáticamente.</p>
+          <p className="text-xs text-tinta-suave mt-1">Necesario para emparejar reservas sincronizadas automáticamente.</p>
         </div>
       </div>
 

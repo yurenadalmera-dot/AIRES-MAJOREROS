@@ -45,7 +45,7 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
         actions={
           <div className="flex items-center gap-2">
             {booking.manuallyAdjusted && (
-              <Badge className="bg-amber-100 text-amber-800 border-amber-200">🔒 Ajustada manualmente</Badge>
+              <Badge tono="aviso">Ajustada a mano</Badge>
             )}
             <DeleteBookingButton deleteAction={deleteAction} />
           </div>
@@ -55,8 +55,8 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
       {booking.source === "LODGIFY" && (
         <FormularioConAviso action={toggleLockAction} className="card p-4 mb-4 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-700">Protección frente a la sincronización con Lodgify</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm font-medium text-tinta">Protección frente a la sincronización con Lodgify</p>
+            <p className="text-xs text-tinta-suave mt-0.5">
               {booking.manuallyAdjusted
                 ? "Esta reserva está bloqueada: el próximo sync de Lodgify no la sobrescribirá."
                 : "Cualquier edición manual la bloquea automáticamente. También puedes bloquearla ahora sin editar nada."}

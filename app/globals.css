@@ -2,48 +2,268 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+   Identidad visual
+   ---------------------------------------------------------------------------
+   Los colores viven aquí, en un único sitio, como variables CSS. `tailwind.config.ts`
+   se limita a darles nombre para poder usarlos como utilidades (`bg-marina`,
+   `text-tinta-suave`...). Si algún día cambia la paleta, se cambia aquí.
+
+   La paleta sale del logotipo de Mirador de Sotavento: el azul marino del
+   texto, el azul océano de las olas y el naranja del sol. El burdeos de la
+   montaña queda reservado a la marca (logotipo y poco más): es un color con
+   mucha carga y en una pantalla de trabajo se confundiría con un error.
+
+   Sobre el naranja: se usa para destacar un dato puntual, no como fondo de
+   botón. Sobre blanco tiene un contraste de 2,2:1, insuficiente para texto;
+   por eso `--acento-texto` es una versión oscurecida (4,8:1) y el naranja del
+   logotipo solo aparece en superficies grandes (barras, puntos, bordes).
+--------------------------------------------------------------------------- */
+
+:root {
+  /* Marca */
+  --marina: #102f50;
+  --marina-oscuro: #0b2239;
+  --marina-suave: #eef2f7;
+  --oceano: #246a9a;
+  --oceano-oscuro: #1d577f;
+  --oceano-suave: #edf3f9; /* fondo azul muy suave: sección activa del menú */
+  --acento: #e89542;
+  --acento-texto: #9a5b12;
+  --acento-suave: #fdf3e7;
+
+  /* Superficies */
+  --arena: #f5f1ea;
+  --fondo: #f8fafc;
+  --superficie: #ffffff;
+
+  /* Texto y líneas */
+  --tinta: #172b3a;
+  --tinta-suave: #526477;
+  --borde: #e2e8ef;
+  --borde-fuerte: #ccd6e2;
+
+  /* Estados. Cada uno lleva su par texto/fondo ya contrastado. */
+  --bien: #1c6b51;
+  --bien-suave: #e8f4ef;
+  --aviso: #9a5b12;
+  --aviso-suave: #fdf3e7;
+  --mal: #a8262c;
+  --mal-suave: #fceceb;
+
+  /* Forma */
+  --radio: 0.625rem; /* 10px */
+  --radio-lg: 0.875rem; /* 14px */
+  --sombra: 0 1px 2px rgba(16, 47, 80, 0.06), 0 1px 3px rgba(16, 47, 80, 0.04);
+  --sombra-media: 0 4px 12px rgba(16, 47, 80, 0.08), 0 1px 3px rgba(16, 47, 80, 0.04);
+
+  /* Tipografía. La serif es solo para la portada y algunos títulos; todo lo
+     operativo (menús, formularios, tablas, cifras) va en sans. */
+  --fuente-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --fuente-serif: "Cormorant Garamond", "Iowan Old Style", Georgia, "Times New Roman", serif;
+}
+
 @layer base {
   html {
-    @apply text-slate-900;
+    color: var(--tinta);
+    font-family: var(--fuente-sans);
+    -webkit-font-smoothing: antialiased;
   }
   body {
-    @apply bg-slate-50;
+    background: var(--fondo);
+  }
+  /* Un foco visible y del color de la casa, en todo lo que se navega con
+     teclado. Sin esto, quitar el contorno del navegador deja la aplicación
+     inutilizable sin ratón. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--oceano);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
 @layer components {
-  .card {
-    @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+  /* --- Tipografía de apoyo ------------------------------------------------ */
+  .serif {
+    font-family: var(--fuente-serif);
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
+  /* Cifras de ancho fijo, para que las columnas de importes se puedan comparar
+     de un vistazo sin que bailen los dígitos. */
+  .cifra {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* --- Superficies -------------------------------------------------------- */
+  .card {
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio-lg);
+    box-shadow: var(--sombra);
+  }
+  .card-titulo {
+    @apply flex items-center justify-between gap-3 mb-3;
+  }
+  .card-titulo h2 {
+    @apply text-[0.9375rem] font-semibold;
+    color: var(--tinta);
+  }
+
+  /* --- Botones ------------------------------------------------------------ */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    border-radius: var(--radio);
   }
   .btn-primary {
-    @apply btn bg-slate-900 text-white hover:bg-slate-700;
+    @apply btn text-white;
+    background: var(--marina);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--marina-oscuro);
   }
   .btn-secondary {
-    @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50;
+    @apply btn;
+    background: var(--superficie);
+    color: var(--tinta);
+    border: 1px solid var(--borde-fuerte);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--marina-suave);
   }
   .btn-danger {
-    @apply btn bg-rose-600 text-white hover:bg-rose-700;
+    @apply btn text-white;
+    background: var(--mal);
   }
+  .btn-danger:hover:not(:disabled) {
+    background: #8d1f24;
+  }
+  .btn-fantasma {
+    @apply btn;
+    color: var(--oceano-oscuro);
+    background: transparent;
+  }
+  .btn-fantasma:hover:not(:disabled) {
+    background: var(--oceano-suave);
+  }
+
+  .enlace {
+    color: var(--oceano-oscuro);
+    @apply font-medium;
+  }
+  .enlace:hover {
+    text-decoration: underline;
+  }
+
+  /* --- Formularios -------------------------------------------------------- */
   .input {
-    @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400;
+    @apply w-full px-3 py-2 text-sm;
+    background: var(--superficie);
+    color: var(--tinta);
+    border: 1px solid var(--borde-fuerte);
+    border-radius: var(--radio);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--oceano);
+    box-shadow: 0 0 0 3px rgba(36, 106, 154, 0.15);
+  }
+  .input:disabled {
+    background: var(--marina-suave);
+    color: var(--tinta-suave);
+    cursor: not-allowed;
   }
   .label {
-    @apply block text-xs font-medium text-slate-600 mb-1;
+    @apply block text-xs font-medium mb-1;
+    color: var(--tinta-suave);
   }
+  .ayuda {
+    @apply text-xs mt-1;
+    color: var(--tinta-suave);
+  }
+
+  /* --- Etiquetas de estado ------------------------------------------------
+     Cada estado lleva además su propia palabra, nunca solo el color: quien no
+     distinga los tonos tiene que poder leer igualmente qué pasa. */
   .badge {
-    @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium;
   }
+  .badge-neutro {
+    background: var(--marina-suave);
+    color: var(--tinta-suave);
+    border-color: var(--borde);
+  }
+  .badge-info {
+    background: var(--oceano-suave);
+    color: var(--oceano-oscuro);
+    border-color: #d3e3ef;
+  }
+  .badge-bien {
+    background: var(--bien-suave);
+    color: var(--bien);
+    border-color: #cfe6dd;
+  }
+  .badge-aviso {
+    background: var(--aviso-suave);
+    color: var(--aviso);
+    border-color: #f6e0c4;
+  }
+  .badge-mal {
+    background: var(--mal-suave);
+    color: var(--mal);
+    border-color: #f3d4d3;
+  }
+
+  /* --- Tablas ------------------------------------------------------------- */
   .table-base {
     @apply w-full text-sm border-collapse;
   }
   .table-base th {
-    @apply text-left font-medium text-slate-500 text-xs uppercase tracking-wide border-b border-slate-200 px-3 py-2;
+    @apply text-left font-semibold text-xs uppercase tracking-wide px-3 py-2.5;
+    color: var(--tinta-suave);
+    border-bottom: 1px solid var(--borde);
+    white-space: nowrap;
   }
   .table-base td {
-    @apply border-b border-slate-100 px-3 py-2 align-middle;
+    @apply px-3 py-2.5 align-middle;
+    border-bottom: 1px solid var(--borde);
+  }
+  .table-base tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .table-base tbody tr:hover td {
+    background: #fafcfe;
+  }
+  /* Los importes, a la derecha y con cifras de ancho fijo. */
+  .table-base th.num,
+  .table-base td.num {
+    @apply text-right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Carga -------------------------------------------------------------- */
+  .esqueleto {
+    background: linear-gradient(90deg, var(--marina-suave) 25%, #f7f9fc 50%, var(--marina-suave) 75%);
+    background-size: 200% 100%;
+    animation: esqueleto 1.4s ease-in-out infinite;
+    border-radius: var(--radio);
+  }
+}
+
+@keyframes esqueleto {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto {
+    animation: none;
   }
 }
 

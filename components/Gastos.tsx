@@ -65,20 +65,20 @@ export default function Gastos({
   return (
     <div className="space-y-4">
       <div className="card p-5">
-        <h2 className="font-medium text-slate-800 mb-1">Apuntar un gasto</h2>
-        <p className="text-xs text-slate-500 mb-4">
+        <h2 className="font-medium text-tinta mb-1">Apuntar un gasto</h2>
+        <p className="text-xs text-tinta-suave mb-4">
           Luz, agua, comunidad, una reparación… Lo que se gasta en la vivienda. La comisión de
           gestión se calcula sobre lo que queda <strong>después de los gastos</strong>, así que
           sin apuntarlos el propietario cobra de menos.
         </p>
 
         {error && (
-          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+          <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mb-3">
             {error}
           </p>
         )}
         {hecho && (
-          <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3">
+          <p className="text-sm text-bien bg-bien-suave border border-[#cfe6dd] rounded-lg px-3 py-2 mb-3">
             Gasto apuntado.
           </p>
         )}
@@ -146,14 +146,14 @@ export default function Gastos({
 
       <div className="card p-5">
         <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-medium text-slate-800">Gastos apuntados</h2>
-          <p className="text-sm text-slate-500">
+          <h2 className="font-medium text-tinta">Gastos apuntados</h2>
+          <p className="text-sm text-tinta-suave">
             {gastos.length === 0 ? "ninguno" : `${gastos.length} · ${formatCurrency(total)}`}
           </p>
         </div>
 
         {sinFecha > 0 && (
-          <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 mb-3">
+          <p className="text-sm text-aviso bg-aviso-suave border border-[#f6e0c4] rounded-lg px-3 py-2 mb-3">
             Hay {sinFecha} {sinFecha === 1 ? "gasto" : "gastos"} <strong>sin fecha</strong>. Los
             informes van por periodo, así que mientras no la tengan no salen en ninguno — ni se
             le descuentan a nadie. Ponles la fecha mirando el justificante.
@@ -161,7 +161,7 @@ export default function Gastos({
         )}
 
         {gastos.length === 0 ? (
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-tinta-suave">
             Todavía no hay gastos. Mientras no los haya, los informes al propietario dan la
             comisión de gestión más alta de lo que toca.
           </p>
@@ -173,24 +173,26 @@ export default function Gastos({
                 <th>Vivienda</th>
                 <th>Concepto</th>
                 <th>Proveedor</th>
-                <th>Importe</th>
-                <th />
+                <th className="num">Importe</th>
+                <th>
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {gastos.map((g) => (
                 <tr key={g.id}>
-                  <td>{g.date ? formatDate(g.date) : <span className="text-amber-700">sin fecha</span>}</td>
+                  <td>{g.date ? formatDate(g.date) : <span className="text-aviso">sin fecha</span>}</td>
                   <td>{g.propertyName}</td>
                   <td>{g.concept}</td>
-                  <td className="text-slate-500">{g.supplier ?? "—"}</td>
-                  <td>{formatCurrency(g.amount)}</td>
+                  <td className="text-tinta-suave">{g.supplier ?? "—"}</td>
+                  <td className="num">{formatCurrency(g.amount)}</td>
                   <td className="text-right">
                     <button
                       type="button"
                       disabled={pending}
                       onClick={() => ejecutar(() => borrarGasto(g.id))}
-                      className="text-xs text-slate-500 hover:underline"
+                      className="text-xs text-tinta-suave hover:underline"
                     >
                       Borrar
                     </button>

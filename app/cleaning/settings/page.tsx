@@ -27,19 +27,19 @@ export default async function CleaningSettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-3xl space-y-6">
       <PageHeader title="Ajustes de Aires Majoreros" subtitle="Reparto entre socias y datos de facturación" />
 
       <div className="card p-5">
-        <h2 className="font-medium text-slate-800 mb-1">Reparto entre socias</h2>
-        <p className="text-xs text-slate-500 mb-4">
+        <h2 className="font-medium text-tinta mb-1">Reparto entre socias</h2>
+        <p className="text-xs text-tinta-suave mb-4">
           Por defecto 50/50. Se aplica a las próximas facturas que se generen (el histórico no cambia).
         </p>
         <FormularioConAviso action={updatePartnerSplit} className="space-y-3">
           <input type="hidden" name="partnerAId" value={partnerA?.id} />
           <input type="hidden" name="partnerBId" value={partnerB?.id} />
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-600 w-32 truncate">{partnerA?.name ?? "Socia 1"}</span>
+            <span className="text-sm text-tinta-suave w-32 truncate">{partnerA?.name ?? "Socia 1"}</span>
             <input
               type="number"
               min={0}
@@ -49,7 +49,7 @@ export default async function CleaningSettingsPage() {
               defaultValue={splitConfig ? Number(splitConfig.partnerAPercent) : 50}
               className="input w-28"
             />
-            <span className="text-xs text-slate-400">% (el resto va para {partnerB?.name ?? "Socia 2"})</span>
+            <span className="text-xs text-tinta-suave">% (el resto va para {partnerB?.name ?? "Socia 2"})</span>
           </div>
           <button type="submit" className="btn-primary">
             Guardar reparto
@@ -58,7 +58,7 @@ export default async function CleaningSettingsPage() {
       </div>
 
       <div className="card p-5">
-        <h2 className="font-medium text-slate-800 mb-3">Socias</h2>
+        <h2 className="font-medium text-tinta mb-3">Socias</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {partners.map((p) => {
             async function renameAction(formData: FormData) {
@@ -66,7 +66,7 @@ export default async function CleaningSettingsPage() {
               return updatePartnerName(p.id, formData);
             }
             return (
-              <FormularioConAviso key={p.id} action={renameAction} className="space-y-2 border border-slate-100 rounded-lg p-3">
+              <FormularioConAviso key={p.id} action={renameAction} className="space-y-2 border border-borde rounded-lg p-3">
                 <div>
                   <label className="label">Nombre</label>
                   <input name="name" defaultValue={p.name} required className="input" />
@@ -86,7 +86,7 @@ export default async function CleaningSettingsPage() {
 
       {business && (
         <div className="card p-5">
-          <h2 className="font-medium text-slate-800 mb-3">Datos de facturación de Aires Majoreros</h2>
+          <h2 className="font-medium text-tinta mb-3">Datos de facturación de Aires Majoreros</h2>
           <FormularioConAviso action={businessAction} className="space-y-3">
             <div>
               <label className="label">Nombre visible</label>
@@ -109,7 +109,7 @@ export default async function CleaningSettingsPage() {
                 className="input"
                 placeholder="Calle, número, código postal y municipio"
               />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-tinta-suave mt-1">
                 Sale impreso en cada factura. Sin él la factura no es válida.
               </p>
             </div>
@@ -124,7 +124,7 @@ export default async function CleaningSettingsPage() {
                 defaultValue={Number(business.taxRate)}
                 className="input"
               />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-tinta-suave mt-1">
                 El tipo general en Canarias es el 7 %. Cambiarlo no altera las facturas ya
                 emitidas: cada una guarda el tipo que tenía ese día.
               </p>

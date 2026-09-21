@@ -66,15 +66,15 @@ export default function ComisionesPorCanal({
 
   return (
     <div className="card p-5">
-      <h2 className="font-medium text-slate-800 mb-1">Comisión por canal de venta</h2>
-      <p className="text-xs text-slate-500 mb-4">
+      <h2 className="font-medium text-tinta mb-1">Comisión por canal de venta</h2>
+      <p className="text-xs text-tinta-suave mb-4">
         Cada canal se queda un porcentaje distinto, y no siempre el mismo en todas las casas:
         Booking cobra más en unas que en otras. Lo que no esté aquí usa el general
         ({porDefecto} % de plataforma y {bancoPorDefecto} % de banco).
       </p>
 
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mb-3">
           {error}
         </p>
       )}
@@ -85,28 +85,28 @@ export default function ComisionesPorCanal({
             <div
               key={c.id}
               className={`flex items-center justify-between gap-2 border rounded-lg px-3 py-2 ${
-                c.confirmado === false ? "border-amber-300 bg-amber-50" : "border-slate-100"
+                c.confirmado === false ? "border-[#f6e0c4] bg-aviso-suave" : "border-borde"
               }`}
             >
-              <span className="text-sm text-slate-700">
+              <span className="text-sm text-tinta">
                 {c.channel}
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-tinta-suave">
                   {" · "}
                   {c.propertyName ?? "todas las viviendas"}
                 </span>
                 {/* Un supuesto que no se distingue de un dato comprobado acaba
                     liquidado como si lo fuera. */}
                 {c.confirmado === false && (
-                  <span className="ml-2 text-xs text-amber-900 bg-amber-100 border border-amber-300 rounded px-1.5 py-0.5">
+                  <span className="ml-2 text-xs text-aviso bg-aviso-suave border border-[#f6e0c4] rounded px-1.5 py-0.5">
                     sin contrastar
                   </span>
                 )}
-                {c.nota && <span className="block text-xs text-slate-400 mt-0.5">{c.nota}</span>}
+                {c.nota && <span className="block text-xs text-tinta-suave mt-0.5">{c.nota}</span>}
               </span>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-slate-800">
+                <span className="text-sm font-medium text-tinta">
                   {c.platformPct} %
-                  <span className="text-xs font-normal text-slate-400">
+                  <span className="text-xs font-normal text-tinta-suave">
                     {" + "}
                     {c.bankPct === null ? `${bancoPorDefecto} % banco` : `${c.bankPct} % banco`}
                   </span>
@@ -115,7 +115,7 @@ export default function ComisionesPorCanal({
                   type="button"
                   disabled={pending}
                   onClick={() => ejecutar(() => borrarComisionCanal(c.id))}
-                  className="text-xs text-slate-500 hover:underline"
+                  className="text-xs text-tinta-suave hover:underline"
                 >
                   Quitar
                 </button>
@@ -192,7 +192,7 @@ export default function ComisionesPorCanal({
           <button type="submit" disabled={pending} className="btn-secondary">
             {pending ? "Guardando..." : "Guardar comisión del canal"}
           </button>
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-tinta-suave mt-2">
             Lo más concreto manda: si hay una comisión para «Booking en el Apto 27», esa se
             aplica a ese piso; el resto usa la de «Booking en todas». La bancaria en blanco
             significa la general, no cero.

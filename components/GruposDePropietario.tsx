@@ -69,26 +69,26 @@ export default function GruposDePropietario({
 
   return (
     <div className="card p-5">
-      <h2 className="font-medium text-slate-800 mb-1">Comisión de gestión por grupo</h2>
-      <p className="text-xs text-slate-500 mb-4">
+      <h2 className="font-medium text-tinta mb-1">Comisión de gestión por grupo</h2>
+      <p className="text-xs text-tinta-suave mb-4">
         Lo que se lleva Aires por gestionar, sobre lo que queda{" "}
         <strong>después de las comisiones de venta y de los gastos</strong>. Un propietario puede
         tener varios grupos con comisiones distintas.
       </p>
 
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mb-3">
           {error}
         </p>
       )}
 
       <div className="space-y-4">
         {propietarios.map((p) => (
-          <div key={p.id} className="border border-slate-100 rounded-lg p-3">
-            <p className="text-sm font-medium text-slate-700">
+          <div key={p.id} className="border border-borde rounded-lg p-3">
+            <p className="text-sm font-medium text-tinta">
               {p.name}
               {p.monthlyFee !== null && (
-                <span className="text-xs font-normal text-slate-500">
+                <span className="text-xs font-normal text-tinta-suave">
                   {" · "}cuota fija de {p.monthlyFee} € al mes
                 </span>
               )}
@@ -98,18 +98,18 @@ export default function GruposDePropietario({
                 luego 600. Cada tramo con su fecha, para que un informe de todo
                 el año cobre cada mes a su precio. */}
             {(p.cuotas.length > 0 || p.monthlyFee !== null) && (
-              <div className="mt-2 rounded-lg bg-slate-50 border border-slate-100 p-2">
-                <p className="text-xs font-medium text-slate-600 mb-1">Cuota fija, por tramos</p>
+              <div className="mt-2 rounded-lg bg-marina-suave border border-borde p-2">
+                <p className="text-xs font-medium text-tinta-suave mb-1">Cuota fija, por tramos</p>
                 {p.cuotas.length === 0 ? (
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-aviso">
                     Tiene cuota pero no hay ningún tramo: no se le cobraría nada. Añade uno.
                   </p>
                 ) : (
                   <div className="space-y-1 mb-2">
                     {p.cuotas.map((c) => (
                       <div key={c.id} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="text-slate-600">
-                          <strong className="text-slate-800">{c.importe} €</strong> al mes · desde{" "}
+                        <span className="text-tinta-suave">
+                          <strong className="text-tinta">{c.importe} €</strong> al mes · desde{" "}
                           {c.desde}
                           {c.hasta ? ` hasta ${c.hasta}` : " (en vigor)"}
                         </span>
@@ -117,7 +117,7 @@ export default function GruposDePropietario({
                           type="button"
                           disabled={pending}
                           onClick={() => ejecutar(() => borrarCuotaFija(c.id))}
-                          className="text-slate-400 hover:underline"
+                          className="text-tinta-suave hover:underline"
                         >
                           Quitar
                         </button>
@@ -134,18 +134,18 @@ export default function GruposDePropietario({
                   className="flex flex-wrap items-end gap-2"
                 >
                   <div>
-                    <label className="block text-[11px] text-slate-500">Nueva cuota (€/mes)</label>
+                    <label className="block text-[11px] text-tinta-suave">Nueva cuota (€/mes)</label>
                     <input name="importe" inputMode="decimal" className="input h-8 text-xs w-28" />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-500">Desde</label>
+                    <label className="block text-[11px] text-tinta-suave">Desde</label>
                     <input name="desde" type="date" className="input h-8 text-xs" />
                   </div>
                   <button type="submit" disabled={pending} className="btn-secondary h-8 text-xs">
                     Añadir tramo
                   </button>
                 </form>
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-tinta-suave mt-1">
                   Al añadir un tramo, el anterior se cierra el día antes. No se pisa lo que ya se
                   cobró.
                 </p>
@@ -153,7 +153,7 @@ export default function GruposDePropietario({
             )}
 
             {p.grupos.length === 0 ? (
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-tinta-suave mt-1">
                 Sin grupos. Sus viviendas no llevan comisión de gestión salvo que se les ponga una
                 a cada una.
               </p>
@@ -162,11 +162,11 @@ export default function GruposDePropietario({
                 {p.grupos.map((g) => (
                   <div
                     key={g.id}
-                    className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 rounded px-3 py-2"
+                    className="flex flex-wrap items-center justify-between gap-2 bg-marina-suave rounded px-3 py-2"
                   >
-                    <span className="text-sm text-slate-700">
+                    <span className="text-sm text-tinta">
                       {g.name}
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-tinta-suave">
                         {" · "}
                         {g.viviendas} {g.viviendas === 1 ? "vivienda" : "viviendas"}
                       </span>
@@ -186,12 +186,12 @@ export default function GruposDePropietario({
                         }}
                         className="input py-1 text-sm w-28 text-right"
                       />
-                      <span className="text-sm text-slate-500">%</span>
+                      <span className="text-sm text-tinta-suave">%</span>
                       <button
                         type="button"
                         disabled={pending}
                         onClick={() => ejecutar(() => borrarGrupo(g.id))}
-                        className="text-xs text-slate-500 hover:underline"
+                        className="text-xs text-tinta-suave hover:underline"
                       >
                         Borrar
                       </button>

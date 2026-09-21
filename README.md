@@ -352,6 +352,10 @@ el cliente) y configura el `lodgifyPropertyId` de cada vivienda en **Viviendas**
 ```
 app/                    Rutas (App Router). app/rental/* y app/cleaning/* son los dos negocios.
 components/             Componentes de UI compartidos y formularios.
+components/ui.tsx       Piezas del sistema visual: cabecera, cifras, etiquetas, vacíos, avisos.
+components/iconos.tsx   La única familia de iconos de la aplicación (SVG propio).
+components/Marca.tsx    El logotipo, con sus reglas de uso.
+public/marca/           Los ficheros del logotipo (completo y símbolo).
 components/shared/      Vistas que ambos negocios renderizan (tablero de tareas, informes).
 lib/actions/            Server Actions (mutaciones): reservas, tareas, propiedades, facturas...
 lib/lodgify*.ts         Cliente de integración con Lodgify + datos de demostración.
@@ -360,6 +364,40 @@ lib/money.ts            Cálculo de comisiones, neto a percibir y reparto entre 
 prisma/schema.prisma    Modelo de datos.
 prisma/seed.ts          Datos ficticios de ejemplo (Fuerteventura).
 ```
+
+## Identidad visual
+
+La aplicación lleva la imagen de **Mirador de Sotavento Apartments**. Los valores están
+centralizados: cambiar un color se hace en un sitio y se ve en toda la aplicación.
+
+| Dónde | Qué hay |
+| --- | --- |
+| `app/globals.css` | Los colores, radios, sombras y tipografías, como variables CSS en `:root`, y las clases compartidas (`.card`, `.btn-*`, `.input`, `.badge-*`, `.table-base`). |
+| `tailwind.config.ts` | Solo les pone nombre para usarlos como utilidades (`bg-marina`, `text-tinta-suave`). No duplica los valores. |
+| `components/iconos.tsx` | Una sola familia de iconos, en SVG, con `currentColor`. Nada de emojis en la interfaz: los pinta cada sistema a su manera y no se pueden teñir. |
+| `components/Marca.tsx` | El logotipo. Proporción fija, sobre superficie clara y con margen; en sitios estrechos, la versión de símbolo. |
+| `public/marca/` | `mirador-de-sotavento.png` (completo) y `mirador-simbolo.png` (sol, montaña y olas). Son PNG con transparencia, **no vectores**: el original es una imagen de píxeles. |
+
+La paleta: azul marino `#102F50`, azul océano `#246A9A`, naranja `#E89542` (solo para destacar
+un dato, nunca como fondo de botón: sobre blanco no llega al contraste mínimo para texto),
+arena `#F5F1EA`, fondo `#F8FAFC`, texto `#172B3A` y `#526477`, líneas `#E2E8EF`. El burdeos del
+logotipo se reserva a la marca.
+
+Dos tipografías, cargadas con un `<link>` a Google Fonts desde `app/layout.tsx` y **no** con
+`next/font`: `next/font` descarga las fuentes durante el build, y este build ya ha fallado antes
+por cosas que necesitaban red. Así, si Google Fonts no responde, la aplicación se ve con la
+tipografía del sistema en vez de no compilar. Cormorant Garamond solo en la portada y algunos
+títulos; Inter en todo lo operativo.
+
+Reglas que conviene no romper:
+
+- Ningún estado se distingue solo por el color: siempre lleva su palabra y, cuando pide acción,
+  también un icono o un borde.
+- Los importes van a la derecha y con cifras de ancho fijo (`.num`, `.cifra`), para poder
+  compararlos de una columna a otra.
+- Los mapas de estado a clase que viven en `lib/` (por ejemplo `PROPERTY_STATUS_COLOR`) solo
+  funcionan porque `lib/**` está en el `content` de Tailwind. Si se quita, esas clases se
+  consideran no usadas y desaparecen del CSS.
 
 ## Limitaciones conocidas de esta demo
 

@@ -58,7 +58,7 @@ export default function FormularioConAviso({
   return (
     <form action={enviar} className={className}>
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mb-3">
           {error}
           {error === AVISO_VERSION_NUEVA && (
             <button
@@ -74,7 +74,7 @@ export default function FormularioConAviso({
       {/* Decir que se ha guardado. Sin esto, guardar y que fallara se veían
           exactamente igual: la página se refresca y no pasa nada visible. */}
       {guardado && !pending && (
-        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-bien bg-bien-suave border border-[#cfe6dd] rounded-lg px-3 py-2 mb-3">
           Guardado.
         </p>
       )}

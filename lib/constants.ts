@@ -77,11 +77,30 @@ export const PROPERTY_STATUS_LABEL: Record<string, string> = {
   MAINTENANCE: "En mantenimiento",
 };
 
+/** Tono de la etiqueta de estado (ver `.badge-*` en `app/globals.css`). */
 export const PROPERTY_STATUS_COLOR: Record<string, string> = {
-  OCCUPIED: "bg-blue-100 text-blue-800 border-blue-200",
-  AVAILABLE: "bg-green-100 text-green-800 border-green-200",
-  CLEANING_NEEDED: "bg-amber-100 text-amber-800 border-amber-200",
-  MAINTENANCE: "bg-rose-100 text-rose-800 border-rose-200",
+  OCCUPIED: "badge-info",
+  AVAILABLE: "badge-bien",
+  CLEANING_NEEDED: "badge-aviso",
+  MAINTENANCE: "badge-mal",
+};
+
+/**
+ * Qué significa exactamente cada estado, con las palabras del cálculo que lo
+ * produce (`lib/status.ts`). Se enseña en la leyenda del panel y como título
+ * de la etiqueta.
+ *
+ * Importa sobre todo la diferencia entre «Libre» y «lista para entrar»: el
+ * sistema solo marca «Limpieza pendiente» cuando hoy hay una salida y la
+ * limpieza de hoy no está hecha. Una vivienda que se quedó sucia de ayer
+ * aparece como «Libre», así que libre no quiere decir lista.
+ */
+export const PROPERTY_STATUS_HINT: Record<string, string> = {
+  OCCUPIED: "Hay una reserva confirmada en curso hoy.",
+  AVAILABLE:
+    "Hoy no hay reserva en curso ni salida pendiente de limpiar. No confirma que la vivienda esté lista: eso lo dice el tablero de limpiezas.",
+  CLEANING_NEEDED: "Hoy hay una salida y la limpieza de hoy todavía no está marcada como hecha.",
+  MAINTENANCE: "Hay un mantenimiento en curso o con la fecha ya cumplida.",
 };
 
 export const INVOICE_STATUS = {

@@ -84,7 +84,7 @@ export default function BookingForm({
   return (
     <form action={handleSubmit} className="space-y-6">
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2">{error}</p>
       )}
 
       <div className="card p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -152,7 +152,7 @@ export default function BookingForm({
       </div>
 
       <div className="card p-5">
-        <h3 className="font-medium text-slate-800 mb-3">Importes y comisiones</h3>
+        <h3 className="font-medium text-tinta mb-3">Importes y comisiones</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="label">Precio total (€)</label>
@@ -198,17 +198,17 @@ export default function BookingForm({
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-          <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-            <p className="text-xs text-slate-500">Comisión plataforma</p>
-            <p className="font-medium text-slate-800">{formatCurrency(preview.platformCommissionAmt)}</p>
+          <div className="rounded-lg bg-marina-suave border border-borde px-3 py-2">
+            <p className="text-xs text-tinta-suave">Comisión plataforma</p>
+            <p className="font-medium text-tinta">{formatCurrency(preview.platformCommissionAmt)}</p>
           </div>
-          <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
-            <p className="text-xs text-slate-500">Comisión bancaria</p>
-            <p className="font-medium text-slate-800">{formatCurrency(preview.bankCommissionAmt)}</p>
+          <div className="rounded-lg bg-marina-suave border border-borde px-3 py-2">
+            <p className="text-xs text-tinta-suave">Comisión bancaria</p>
+            <p className="font-medium text-tinta">{formatCurrency(preview.bankCommissionAmt)}</p>
           </div>
-          <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2">
-            <p className="text-xs text-green-700">Neto a percibir</p>
-            <p className="font-semibold text-green-800">{formatCurrency(preview.netAmount)}</p>
+          <div className="rounded-lg bg-bien-suave border border-[#cfe6dd] px-3 py-2">
+            <p className="text-xs text-bien">Neto a percibir</p>
+            <p className="font-semibold text-bien">{formatCurrency(preview.netAmount)}</p>
           </div>
         </div>
       </div>

@@ -36,7 +36,9 @@ export default async function BookingsPage({
     <div>
       <PageHeader
         title="Reservas"
-        subtitle={`${bookings.length} reserva(s)`}
+        subtitle={
+          bookings.length === 1 ? "1 reserva" : `${bookings.length} reservas`
+        }
         actions={
           <Link href="/rental/bookings/new" className="btn-primary">
             + Nueva reserva
@@ -44,10 +46,17 @@ export default async function BookingsPage({
         }
       />
 
-      <form className="card p-3 mb-4 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="label">Vivienda</label>
-          <select name="propertyId" defaultValue={params.propertyId ?? ""} className="input">
+      <form className="card p-4 mb-5 flex flex-wrap gap-4 items-end">
+        <div className="min-w-[12rem]">
+          <label className="label" htmlFor="filtro-vivienda">
+            Vivienda
+          </label>
+          <select
+            id="filtro-vivienda"
+            name="propertyId"
+            defaultValue={params.propertyId ?? ""}
+            className="input"
+          >
             <option value="">Todas</option>
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
@@ -56,9 +65,11 @@ export default async function BookingsPage({
             ))}
           </select>
         </div>
-        <div>
-          <label className="label">Canal</label>
-          <select name="channel" defaultValue={params.channel ?? ""} className="input">
+        <div className="min-w-[10rem]">
+          <label className="label" htmlFor="filtro-canal">
+            Canal
+          </label>
+          <select id="filtro-canal" name="channel" defaultValue={params.channel ?? ""} className="input">
             <option value="">Todos</option>
             {channels.map((c) => (
               <option key={c} value={c}>
@@ -71,50 +82,72 @@ export default async function BookingsPage({
           Filtrar
         </button>
         {(params.propertyId || params.channel) && (
-          <Link href="/rental/bookings" className="text-xs text-slate-500 hover:underline">
-            Limpiar filtros
+          <Link href="/rental/bookings" className="btn-fantasma text-xs">
+            Quitar filtros
           </Link>
         )}
       </form>
 
       {bookings.length === 0 ? (
-        <EmptyState message="No hay reservas que coincidan con el filtro." />
+        <EmptyState
+          icono="reservas"
+          message={
+            params.propertyId || params.channel
+              ? "Ninguna reserva coincide con el filtro. Prueba a quitarlo."
+              : "Todavía no hay reservas. Las de Lodgify entran solas con la sincronización; las demás se añaden a mano."
+          }
+          accion={{ href: "/rental/bookings/new", label: "Nueva reserva" }}
+        />
       ) : (
         <div className="card overflow-x-auto">
-          <table className="table-base">
+          {/* En pantallas estrechas se esconden las dos columnas de comisión:
+              lo que se viene a mirar aquí es quién entra, cuándo y cuánto
+              queda. El desglose completo está en la ficha de cada reserva. */}
+          <table className="table-base min-w-[46rem]">
             <thead>
               <tr>
                 <th>Vivienda</th>
                 <th>Huésped</th>
                 <th>Entrada</th>
                 <th>Salida</th>
-                <th>Canal</th>
-                <th>Total</th>
-                <th>Com. plataforma</th>
-                <th>Com. banco</th>
-                <th>Neto</th>
-                <th></th>
+                <th className="hidden sm:table-cell">Canal</th>
+                <th className="num">Total</th>
+                <th className="num hidden xl:table-cell">Com. plataforma</th>
+                <th className="num hidden xl:table-cell">Com. banco</th>
+                <th className="num">Neto</th>
+                <th>
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {bookings.map((b) => (
-                <tr key={b.id} className="hover:bg-slate-50">
-                  <td className="font-medium text-slate-700">{b.property.name}</td>
+                <tr key={b.id}>
+                  <td className="font-medium text-tinta">{b.property.name}</td>
                   <td>{b.guestName}</td>
                   <td>{formatDate(b.checkIn)}</td>
                   <td>{formatDate(b.checkOut)}</td>
-                  <td>
-                    <Badge className="bg-slate-100 text-slate-700 border-slate-200">{b.channel}</Badge>
+                  <td className="hidden sm:table-cell">
+                    <Badge tono="neutro">{b.channel}</Badge>
                   </td>
-                  <td>{formatCurrency(b.totalPrice)}</td>
-                  <td className="text-rose-600">-{formatCurrency(b.platformCommissionAmt)}</td>
-                  <td className="text-rose-600">-{formatCurrency(b.bankCommissionAmt)}</td>
-                  <td className="font-semibold text-green-700">{formatCurrency(b.netAmount)}</td>
+                  <td className="num">{formatCurrency(b.totalPrice)}</td>
+                  <td className="num hidden xl:table-cell text-tinta-suave">
+                    −{formatCurrency(b.platformCommissionAmt)}
+                  </td>
+                  <td className="num hidden xl:table-cell text-tinta-suave">
+                    −{formatCurrency(b.bankCommissionAmt)}
+                  </td>
+                  <td className="num font-semibold text-tinta">{formatCurrency(b.netAmount)}</td>
                   <td>
                     <div className="flex items-center gap-2 justify-end">
-                      {b.manuallyAdjusted && <span title="Ajustada manualmente">🔒</span>}
-                      <Link href={`/rental/bookings/${b.id}`} className="text-xs text-brand-700 hover:underline">
+                      {b.manuallyAdjusted && (
+                        <Badge tono="aviso">
+                          <span className="sr-only">Reserva </span>ajustada a mano
+                        </Badge>
+                      )}
+                      <Link href={`/rental/bookings/${b.id}`} className="enlace text-xs">
                         Editar
+                        <span className="sr-only"> la reserva de {b.guestName}</span>
                       </Link>
                     </div>
                   </td>

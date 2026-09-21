@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { assignEmployeeToTask, updateTaskStatus, deleteTask } from "@/lib/actions/tasks";
 import { TASK_STATUS_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/money";
+import { IconoAjustes, IconoLimpieza } from "@/components/iconos";
 
 interface TaskRowProps {
   task: {
@@ -51,8 +52,17 @@ export default function TaskRow({ task, employees }: TaskRowProps) {
   return (
     <tr className={pending ? "opacity-50" : ""}>
       <td>{formatDate(task.date)}</td>
-      <td className="font-medium text-slate-700">{task.propertyName}</td>
-      <td>{task.type === "CLEANING" ? "🧹 Limpieza" : "🔧 Mantenimiento"}</td>
+      <td className="font-medium text-tinta">{task.propertyName}</td>
+      <td>
+        <span className="inline-flex items-center gap-2">
+          {task.type === "CLEANING" ? (
+            <IconoLimpieza size={16} className="text-oceano" />
+          ) : (
+            <IconoAjustes size={16} className="text-tinta-suave" />
+          )}
+          {task.type === "CLEANING" ? "Limpieza" : "Mantenimiento"}
+        </span>
+      </td>
       <td>
         <select
           value={task.status}
@@ -82,21 +92,26 @@ export default function TaskRow({ task, employees }: TaskRowProps) {
           ))}
         </select>
       </td>
-      <td>
+      <td className="num">
         {task.billable ? (
-          <span className={task.invoiced ? "text-slate-400" : "text-slate-700"}>
-            {formatCurrency(task.price)} {task.invoiced ? "· facturada" : ""}
+          <span className={task.invoiced ? "text-tinta-suave" : "text-tinta"}>
+            {formatCurrency(task.price)}
+            {task.invoiced ? " · facturada" : ""}
           </span>
         ) : (
-          <span className="text-slate-400">—</span>
+          <span className="text-tinta-suave">—</span>
         )}
       </td>
-      <td className="text-xs text-slate-400 max-w-[160px] truncate" title={task.notes ?? ""}>
+      <td className="text-xs text-tinta-suave max-w-[160px] truncate" title={task.notes ?? ""}>
         {task.notes ?? ""}
       </td>
       <td>
         {!task.invoiced && (
-          <button onClick={handleDelete} disabled={pending} className="text-xs text-rose-600 hover:underline">
+          <button
+            onClick={handleDelete}
+            disabled={pending}
+            className="text-xs font-medium text-mal hover:underline disabled:opacity-50"
+          >
             Eliminar
           </button>
         )}

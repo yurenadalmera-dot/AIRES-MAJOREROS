@@ -28,15 +28,15 @@ export default function CambiarContrasena() {
 
   return (
     <form action={enviar} className="card p-5 space-y-3">
-      <h2 className="font-medium text-slate-800">Cambiar mi contraseña</h2>
+      <h2 className="font-medium text-tinta">Cambiar mi contraseña</h2>
 
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2">
           {error}
         </p>
       )}
       {hecho && (
-        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+        <p className="text-sm text-bien bg-bien-suave border border-[#cfe6dd] rounded-lg px-3 py-2">
           Contraseña cambiada. La próxima vez entra con la nueva.
         </p>
       )}
@@ -67,7 +67,7 @@ export default function CambiarContrasena() {
           required
           className="input"
         />
-        <p className="text-xs text-slate-400 mt-1">Al menos 10 caracteres.</p>
+        <p className="text-xs text-tinta-suave mt-1">Al menos 10 caracteres.</p>
       </div>
       <div>
         <label className="label" htmlFor="repetida">

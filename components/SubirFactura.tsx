@@ -69,7 +69,7 @@ export default function SubirFactura({
   const marcar = (campo: string) => {
     if (!lectura || tocados.has(campo)) return "";
     if (lectura.revision.faltantes.includes(campo)) {
-      return "border-amber-400 bg-amber-50";
+      return "border-acento bg-aviso-suave";
     }
     if (lectura.revision.rellenadosPorIa.includes(campo)) {
       return "border-sky-300 bg-sky-50";
@@ -84,19 +84,19 @@ export default function SubirFactura({
 
   return (
     <div className="card p-5">
-      <h2 className="font-medium text-slate-800 mb-1">Subir una factura</h2>
-      <p className="text-xs text-slate-500 mb-4">
+      <h2 className="font-medium text-tinta mb-1">Subir una factura</h2>
+      <p className="text-xs text-tinta-suave mb-4">
         Foto o PDF de la factura del proveedor. Se lee sola y tú repasas lo que ha entendido
         antes de guardarla. <strong>Nada se apunta hasta que le das a registrar.</strong>
       </p>
 
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mb-3">
           {error}
         </p>
       )}
       {hecho && (
-        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-bien bg-bien-suave border border-[#cfe6dd] rounded-lg px-3 py-2 mb-3">
           Gasto registrado.
         </p>
       )}
@@ -136,10 +136,10 @@ export default function SubirFactura({
       )}
 
       {!lectura && pendientes.length > 0 && (
-        <div className="mt-5 pt-4 border-t border-slate-100">
+        <div className="mt-5 pt-4 border-t border-borde">
           <div className="flex items-baseline justify-between mb-2">
-            <h3 className="text-sm font-medium text-slate-700">Facturas sin registrar</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="text-sm font-medium text-tinta">Facturas sin registrar</h3>
+            <p className="text-xs text-tinta-suave">
               {pendientes.length} {pendientes.length === 1 ? "pendiente" : "pendientes"}
             </p>
           </div>
@@ -158,11 +158,11 @@ export default function SubirFactura({
             <tbody>
               {pendientes.map((f) => (
                 <tr key={f.id}>
-                  <td className="text-slate-500">{formatDate(f.subida)}</td>
-                  <td>{f.proveedor ?? <span className="text-slate-400">sin leer</span>}</td>
+                  <td className="text-tinta-suave">{formatDate(f.subida)}</td>
+                  <td>{f.proveedor ?? <span className="text-tinta-suave">sin leer</span>}</td>
                   <td>
                     {f.total === null ? (
-                      <span className="text-amber-700">falta</span>
+                      <span className="text-aviso">falta</span>
                     ) : (
                       formatCurrency(f.total)
                     )}
@@ -173,12 +173,12 @@ export default function SubirFactura({
                     ) : (
                       <span
                         className={
-                          f.fiabilidad < 0.6 ? "text-amber-700 font-medium" : "text-slate-600"
+                          f.fiabilidad < 0.6 ? "text-aviso font-medium" : "text-tinta-suave"
                         }
                       >
                         {Math.round(f.fiabilidad * 100)} %
                         {f.motivos.length > 0 && (
-                          <span className="block text-[11px] text-slate-400">
+                          <span className="block text-[11px] text-tinta-suave">
                             {f.motivos.join(", ")}
                           </span>
                         )}
@@ -207,7 +207,7 @@ export default function SubirFactura({
                           }
                         )
                       }
-                      className="text-xs text-slate-600 hover:underline"
+                      className="text-xs text-tinta-suave hover:underline"
                     >
                       Revisar
                     </button>
@@ -224,19 +224,19 @@ export default function SubirFactura({
           {/* Los avisos van arriba y en texto, no escondidos tras un icono:
               son frases escritas para leerse. */}
           {lectura.errorLectura && (
-            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <p className="text-sm text-aviso bg-aviso-suave border border-[#f6e0c4] rounded-lg px-3 py-2">
               {lectura.errorLectura}
             </p>
           )}
           {lectura.revision.avisos.length > 0 && (
-            <ul className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 space-y-1">
+            <ul className="text-sm text-aviso bg-aviso-suave border border-[#f6e0c4] rounded-lg px-3 py-2 space-y-1">
               {lectura.revision.avisos.map((a) => (
                 <li key={a}>· {a}</li>
               ))}
             </ul>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-tinta-suave">
             <span>
               Fiabilidad {Math.round(lectura.revision.fiabilidad * 100)} %
               {lectura.revision.motivos.length > 0 && ` — ${lectura.revision.motivos.join(", ")}`}
@@ -357,10 +357,10 @@ export default function SubirFactura({
             </div>
           </form>
 
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-tinta-suave">
             <span className="inline-block w-3 h-3 align-middle rounded-sm border border-sky-300 bg-sky-50" />{" "}
             lo ha rellenado la máquina, repásalo ·{" "}
-            <span className="inline-block w-3 h-3 align-middle rounded-sm border border-amber-400 bg-amber-50" />{" "}
+            <span className="inline-block w-3 h-3 align-middle rounded-sm border border-acento bg-aviso-suave" />{" "}
             no lo ha encontrado, escríbelo tú
           </p>
         </div>

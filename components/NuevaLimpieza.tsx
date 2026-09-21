@@ -57,18 +57,18 @@ export default function NuevaLimpieza({
 
   return (
     <details className="card p-4 mb-4 no-print">
-      <summary className="cursor-pointer text-sm font-medium text-slate-700">
+      <summary className="cursor-pointer text-sm font-medium text-tinta">
         + Nuevas limpiezas
       </summary>
 
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mt-3">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mt-3">
           {error}
         </p>
       )}
 
       {hecho && (
-        <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mt-3">
+        <div className="text-sm text-bien bg-bien-suave border border-[#cfe6dd] rounded-lg px-3 py-2 mt-3">
           <p>
             {hecho.creadas === 0
               ? "No se ha añadido ninguna."
@@ -77,7 +77,7 @@ export default function NuevaLimpieza({
               ` ${hecho.repetidas} ya estaban apuntadas y no se han duplicado.`}
           </p>
           {hecho.invalidas.length > 0 && (
-            <p className="text-amber-800 mt-1">
+            <p className="text-aviso mt-1">
               No he entendido: {hecho.invalidas.join(", ")}
             </p>
           )}
@@ -110,7 +110,7 @@ export default function NuevaLimpieza({
             className="input font-mono text-sm"
             placeholder={"04/09/2026\n08/09/2026\n21/09/2026"}
           />
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-tinta-suave mt-1">
             Una por línea. Puedes pegar directamente la columna de <strong>fechas de salida</strong>{" "}
             del Excel. Las que ya estén apuntadas no se duplican.
           </p>
@@ -143,7 +143,7 @@ export default function NuevaLimpieza({
           <button type="submit" disabled={pending} className="btn-primary">
             {pending ? "Añadiendo..." : "Añadir limpiezas"}
           </button>
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-tinta-suave mt-2">
             Se cobran al precio de limpieza de esa vivienda. Si no lo tiene puesto, la aplicación
             lo dice en lugar de crearlas a 0 €.
           </p>

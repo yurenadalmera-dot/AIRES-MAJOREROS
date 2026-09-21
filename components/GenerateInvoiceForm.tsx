@@ -38,9 +38,9 @@ export default function GenerateInvoiceForm({
 
   return (
     <form action={handleSubmit} className="card p-5 space-y-4">
-      <h3 className="font-medium text-slate-800">Generar factura</h3>
+      <h3 className="font-medium text-tinta">Generar factura</h3>
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2">{error}</p>
       )}
       <div>
         <label className="label">Cliente facturado</label>
@@ -58,7 +58,7 @@ export default function GenerateInvoiceForm({
           className="input"
           placeholder="Calle, número, código postal y municipio"
         />
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-tinta-suave mt-1">
           El NIF y el domicilio del cliente salen impresos en la factura y son obligatorios.
         </p>
       </div>
@@ -80,7 +80,7 @@ export default function GenerateInvoiceForm({
         {pending ? "Generando..." : "Generar factura con las limpiezas del periodo"}
       </button>
       {disabled && (
-        <p className="text-xs text-amber-600">No hay limpiezas pendientes de facturar todavía.</p>
+        <p className="text-xs text-aviso">No hay limpiezas pendientes de facturar todavía.</p>
       )}
     </form>
   );

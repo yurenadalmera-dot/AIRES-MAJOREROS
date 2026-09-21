@@ -3,6 +3,7 @@ import { startOfDay, endOfDay, addDays, differenceInCalendarDays } from "date-fn
 import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PageHeader, StatCard, Badge, EmptyState } from "@/components/ui";
+import { IconoEntrada, IconoSalida } from "@/components/iconos";
 import { formatCurrency, formatDate, round2 } from "@/lib/money";
 import { armarTramos, liquidarPropietario, cuotaDelPeriodo } from "@/lib/liquidacion";
 
@@ -202,10 +203,10 @@ export default async function PanelDeLaSemanaPage() {
       </div>
 
       <div className="card p-4 mb-6">
-        <h2 className="font-medium text-slate-800 mb-1">
+        <h2 className="font-medium text-tinta mb-1">
           Los próximos siete días ({movimientos.length})
         </h2>
-        <p className="text-xs text-slate-500 mb-3">
+        <p className="text-xs text-tinta-suave mb-3">
           De hoy al {formatDate(addDays(hoy, 7))}. Una línea por entrada y por salida.
         </p>
 
@@ -215,7 +216,7 @@ export default async function PanelDeLaSemanaPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-200">
+                <tr className="text-left text-xs text-tinta-suave uppercase tracking-wide border-b border-borde">
                   <th className="py-2 pr-3">Día</th>
                   <th className="py-2 pr-3">Qué</th>
                   <th className="py-2 pr-3">Vivienda</th>
@@ -226,25 +227,24 @@ export default async function PanelDeLaSemanaPage() {
               </thead>
               <tbody>
                 {movimientos.map((m, i) => (
-                  <tr key={i} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-3 whitespace-nowrap text-slate-600">
+                  <tr key={i} className="border-b border-borde last:border-0">
+                    <td className="py-2 pr-3 whitespace-nowrap text-tinta-suave">
                       {formatDate(m.cuando)}
                     </td>
                     <td className="py-2 pr-3">
-                      <Badge
-                        className={
-                          m.clase === "entrada"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-amber-100 text-amber-800"
-                        }
-                      >
-                        {m.clase === "entrada" ? "🟢 Entra" : "🟠 Sale"}
+                      <Badge tono={m.clase === "entrada" ? "info" : "aviso"}>
+                        {m.clase === "entrada" ? (
+                          <IconoEntrada size={14} />
+                        ) : (
+                          <IconoSalida size={14} />
+                        )}
+                        {m.clase === "entrada" ? "Entra" : "Sale"}
                       </Badge>
                     </td>
-                    <td className="py-2 pr-3 font-medium text-slate-800">{m.vivienda}</td>
-                    <td className="py-2 pr-3 text-slate-600">{m.huesped}</td>
-                    <td className="py-2 pr-3 text-right text-slate-600">{m.huespedes}</td>
-                    <td className="py-2 text-slate-500">{m.canal}</td>
+                    <td className="py-2 pr-3 font-medium text-tinta">{m.vivienda}</td>
+                    <td className="py-2 pr-3 text-tinta-suave">{m.huesped}</td>
+                    <td className="py-2 pr-3 text-right text-tinta-suave">{m.huespedes}</td>
+                    <td className="py-2 text-tinta-suave">{m.canal}</td>
                   </tr>
                 ))}
               </tbody>
@@ -254,8 +254,8 @@ export default async function PanelDeLaSemanaPage() {
       </div>
 
       <div className="card p-4 mb-6">
-        <h2 className="font-medium text-slate-800 mb-1">Lo que se liquidaría hoy</h2>
-        <p className="text-xs text-slate-500 mb-3">
+        <h2 className="font-medium text-tinta mb-1">Lo que se liquidaría hoy</h2>
+        <p className="text-xs text-tinta-suave mb-3">
           Del 1 de enero a hoy, con los datos que hay ahora mismo. Se calcula al abrir esta
           página, así que no puede quedarse antiguo.{" "}
           <Link href="/rental/reports" className="underline">
@@ -269,10 +269,10 @@ export default async function PanelDeLaSemanaPage() {
         ) : (
           <div className="space-y-3">
             {liquidaciones.map((x) => (
-              <div key={x.propietario} className="border border-slate-100 rounded-lg p-3">
+              <div key={x.propietario} className="border border-borde rounded-lg p-3">
                 <div className="flex items-baseline justify-between gap-2 mb-2">
-                  <span className="font-medium text-slate-800">{x.propietario}</span>
-                  <span className="text-sm text-slate-500">
+                  <span className="font-medium text-tinta">{x.propietario}</span>
+                  <span className="text-sm text-tinta-suave">
                     base {formatCurrency(x.liquidacion.baseDeGestion)}
                   </span>
                 </div>
@@ -283,11 +283,11 @@ export default async function PanelDeLaSemanaPage() {
                       .filter((t) => t.comisionDeGestion > 0)
                       .map((t) => (
                       <div key={t.nombre} className="flex justify-between gap-2 text-sm">
-                        <span className="text-slate-600">
+                        <span className="text-tinta-suave">
                           {t.nombre}
-                          <span className="text-xs text-slate-400"> · {t.detalleDeLaComision}</span>
+                          <span className="text-xs text-tinta-suave"> · {t.detalleDeLaComision}</span>
                         </span>
-                        <span className="text-slate-700 whitespace-nowrap">
+                        <span className="text-tinta whitespace-nowrap">
                           {formatCurrency(t.comisionDeGestion)}
                         </span>
                         </div>
@@ -295,25 +295,25 @@ export default async function PanelDeLaSemanaPage() {
                   </div>
                 )}
 
-                <div className="flex justify-between gap-2 text-sm font-medium border-t border-slate-100 pt-2">
-                  <span className="text-slate-700">
+                <div className="flex justify-between gap-2 text-sm font-medium border-t border-borde pt-2">
+                  <span className="text-tinta">
                     Comisión de gestión
                     {/* Quien paga cuota no tiene tramos, así que sin esto no se
                         vería de dónde sale el importe — y con una cuota que ha
                         ido subiendo, eso es justo lo que hay que poder mirar. */}
                     {x.liquidacion.tramos.length === 0 && (
-                      <span className="block text-xs font-normal text-slate-400">
+                      <span className="block text-xs font-normal text-tinta-suave">
                         {x.liquidacion.detalleDeLaComision}
                       </span>
                     )}
                   </span>
-                  <span className="text-slate-900">
+                  <span className="text-tinta">
                     {formatCurrency(x.liquidacion.comisionDeGestion)}
                   </span>
                 </div>
                 <div className="flex justify-between gap-2 text-sm">
-                  <span className="text-slate-500">A percibir el propietario</span>
-                  <span className="text-slate-600">{formatCurrency(x.liquidacion.alPropietario)}</span>
+                  <span className="text-tinta-suave">A percibir el propietario</span>
+                  <span className="text-tinta-suave">{formatCurrency(x.liquidacion.alPropietario)}</span>
                 </div>
               </div>
             ))}
@@ -322,8 +322,8 @@ export default async function PanelDeLaSemanaPage() {
       </div>
 
       <div className="card p-4">
-        <h2 className="font-medium text-slate-800 mb-1">La cartera, por lo que produce</h2>
-        <p className="text-xs text-slate-500 mb-3">Reservas de {anio}, de más a menos ventas.</p>
+        <h2 className="font-medium text-tinta mb-1">La cartera, por lo que produce</h2>
+        <p className="text-xs text-tinta-suave mb-3">Reservas de {anio}, de más a menos ventas.</p>
 
         {rendimiento.length === 0 ? (
           <EmptyState message="Todavía no hay viviendas activas." />
@@ -331,7 +331,7 @@ export default async function PanelDeLaSemanaPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-slate-500 uppercase tracking-wide border-b border-slate-200">
+                <tr className="text-left text-xs text-tinta-suave uppercase tracking-wide border-b border-borde">
                   <th className="py-2 pr-3">Vivienda</th>
                   <th className="py-2 pr-3 text-right">Reservas</th>
                   <th className="py-2 pr-3 text-right">Noches</th>
@@ -340,16 +340,16 @@ export default async function PanelDeLaSemanaPage() {
               </thead>
               <tbody>
                 {rendimiento.map((v) => (
-                  <tr key={v.nombre} className="border-b border-slate-100 last:border-0">
-                    <td className="py-2 pr-3 font-medium text-slate-800">
+                  <tr key={v.nombre} className="border-b border-borde last:border-0">
+                    <td className="py-2 pr-3 font-medium text-tinta">
                       {v.nombre}
                       {!v.enLodgify && (
-                        <span className="ml-2 text-xs text-slate-400">a mano</span>
+                        <span className="ml-2 text-xs text-tinta-suave">a mano</span>
                       )}
                     </td>
-                    <td className="py-2 pr-3 text-right text-slate-600">{v.reservas}</td>
-                    <td className="py-2 pr-3 text-right text-slate-600">{v.noches}</td>
-                    <td className="py-2 text-right text-slate-800">{formatCurrency(v.ventas)}</td>
+                    <td className="py-2 pr-3 text-right text-tinta-suave">{v.reservas}</td>
+                    <td className="py-2 pr-3 text-right text-tinta-suave">{v.noches}</td>
+                    <td className="py-2 text-right text-tinta">{formatCurrency(v.ventas)}</td>
                   </tr>
                 ))}
               </tbody>

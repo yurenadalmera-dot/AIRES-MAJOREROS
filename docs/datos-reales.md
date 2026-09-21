@@ -663,3 +663,58 @@ emitida, solo rectificarla con otra. Eso está hecho, y las facturas llevan ya b
 
 El resto del reglamento —encadenado de huellas, registro de eventos, QR y envío a la AEAT— es un
 trabajo aparte. Conviene que la asesoría confirme **qué os aplica y desde cuándo**.
+
+## La imagen de Mirador de Sotavento en la aplicación (21/09/2026)
+
+La aplicación pasa a llevar la identidad del logotipo de **Mirador de Sotavento Apartments**.
+Lo que se ha cambiado es cómo se ve, no lo que hace: la sesión, los permisos, los datos, la
+integración con Lodgify y todos los cálculos se han quedado exactamente igual.
+
+Los detalles técnicos (dónde vive cada color, por qué las fuentes van con `<link>` y no con
+`next/font`, y qué reglas conviene no romper) están en el README, en «Identidad visual». Aquí
+quedan solo las **decisiones** que se tomaron por el camino, que son las que habrá que revisar
+si algún día se discuten:
+
+- **El logotipo se sirve como PNG con transparencia, no como SVG.** El original es una imagen de
+  píxeles; redibujarlo en vectores sería inventárselo. Se guardan dos versiones: la completa y
+  la de símbolo (sol, montaña y olas), que es la que se usa en la cabecera del móvil para no
+  encoger el nombre hasta que no se lea.
+
+- **El burdeos de la montaña no se usa en la interfaz.** Es un color con mucha carga y, en una
+  pantalla de trabajo, se confundiría con un error. Queda para la marca.
+
+- **El naranja no es fondo de botón.** Sobre blanco tiene 2,2:1 de contraste, insuficiente para
+  texto. Se usa para destacar un dato (la barra de «Limpiezas pendientes», la columna de hoy en
+  el calendario) y, cuando hace de texto, en una versión oscurecida.
+
+- **El informe al propietario no lleva el logotipo.** Ese documento sale a nombre de la empresa
+  que gestiona, y ponerle la marca de otra podría confundir a quien lo recibe. Lo que sí ha
+  cambiado ahí es la tipografía y el color. *Si prefieres que lo lleve, es un cambio de una
+  línea.*
+
+- **El nombre del negocio activo sigue saliendo de la base de datos.** El logotipo va encima,
+  como marca de la aplicación, pero no sustituye al nombre de ninguna empresa, propietario ni
+  persona.
+
+- **El calendario ha perdido los ocho colores por vivienda.** Cada fila ya lleva el nombre de su
+  vivienda, así que ese arcoíris no distinguía nada nuevo y competía con lo único que ahí
+  importa: qué días están ocupados y dónde hay entrada o salida. Ahora la ocupación es de un
+  color y lo que cambia de tono es el tipo de día, con su leyenda debajo.
+
+- **En el panel del día, «Libre» no quiere decir «lista».** El sistema solo marca «Limpieza
+  pendiente» cuando hoy hay una salida y la limpieza de hoy no está hecha; una casa que se quedó
+  sucia de ayer aparece como «Libre». Eso ahora está escrito en la propia pantalla, debajo del
+  estado de las viviendas, en vez de darse por sabido.
+
+- **No se ha inventado ningún dato.** No hay horas de entrada (el sistema guarda el día, no la
+  hora), no hay fotos de las viviendas (no hay dónde guardarlas) y no hay porcentajes de
+  «respecto al mes pasado» (no hay histórico de ocupación del que sacarlos).
+
+- **El correo de ejemplo de la pantalla de entrada se ha quitado.** Venía precargado
+  `emma@example.com`, una dirección inventada en una pantalla de verdad.
+
+### Lo que queda por decidir
+
+- Si el informe al propietario debe llevar o no el logotipo (arriba).
+- Las viviendas no tienen fotografía en el modelo de datos. Si algún día se quieren ver en el
+  panel, hay que añadir el campo y de dónde salen; no se ha puesto ninguna imagen de relleno.

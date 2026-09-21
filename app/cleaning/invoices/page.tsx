@@ -6,9 +6,9 @@ import { formatCurrency, formatDate } from "@/lib/money";
 import { INVOICE_STATUS_LABEL } from "@/lib/constants";
 
 const STATUS_COLOR: Record<string, string> = {
-  DRAFT: "bg-slate-100 text-slate-700 border-slate-200",
-  ISSUED: "bg-amber-100 text-amber-800 border-amber-200",
-  PAID: "bg-green-100 text-green-800 border-green-200",
+  DRAFT: "badge-neutro",
+  ISSUED: "badge-info",
+  PAID: "badge-bien",
 };
 
 export default async function InvoicesPage() {
@@ -22,10 +22,19 @@ export default async function InvoicesPage() {
 
   return (
     <div>
-      <PageHeader title="Historial de facturas" subtitle={`${invoices.length} factura(s) · ${formatCurrency(totalInvoiced)} en total`} />
+      <PageHeader
+        title="Historial de facturas"
+        subtitle={`${
+          invoices.length === 1 ? "1 factura" : `${invoices.length} facturas`
+        } · ${formatCurrency(totalInvoiced)} en total`}
+      />
 
       {invoices.length === 0 ? (
-        <EmptyState message="Todavía no se ha generado ninguna factura." />
+        <EmptyState
+          icono="factura"
+          message="Todavía no se ha generado ninguna factura. Se generan desde Facturación, con las limpiezas ya hechas de un periodo."
+          accion={{ href: "/cleaning", label: "Ir a Facturación" }}
+        />
       ) : (
         <div className="card overflow-x-auto">
           <table className="table-base">
@@ -36,14 +45,16 @@ export default async function InvoicesPage() {
                 <th>Periodo</th>
                 <th>Emitida</th>
                 <th>Estado</th>
-                <th>Total</th>
-                <th></th>
+                <th className="num">Total</th>
+                <th>
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {invoices.map((inv) => (
                 <tr key={inv.id}>
-                  <td className="font-medium text-slate-700">{inv.invoiceNumber}</td>
+                  <td className="font-medium text-tinta">{inv.invoiceNumber}</td>
                   <td>{inv.billedToName}</td>
                   <td>
                     {formatDate(inv.periodStart)} – {formatDate(inv.periodEnd)}
@@ -52,10 +63,11 @@ export default async function InvoicesPage() {
                   <td>
                     <Badge className={STATUS_COLOR[inv.status]}>{INVOICE_STATUS_LABEL[inv.status]}</Badge>
                   </td>
-                  <td className="font-medium">{formatCurrency(inv.total)}</td>
+                  <td className="num font-semibold text-tinta">{formatCurrency(inv.total)}</td>
                   <td>
-                    <Link href={`/cleaning/invoices/${inv.id}`} className="text-xs text-aires-700 hover:underline">
-                      Ver →
+                    <Link href={`/cleaning/invoices/${inv.id}`} className="enlace text-xs">
+                      Ver factura
+                      <span className="sr-only"> {inv.invoiceNumber}</span>
                     </Link>
                   </td>
                 </tr>

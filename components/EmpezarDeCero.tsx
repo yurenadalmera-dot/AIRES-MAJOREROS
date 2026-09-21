@@ -69,8 +69,8 @@ export default function EmpezarDeCero({
 
   return (
     <div className="card p-5">
-      <h2 className="font-medium text-slate-800 mb-1">Datos de la aplicación</h2>
-      <p className="text-xs text-slate-500 mb-4">
+      <h2 className="font-medium text-tinta mb-1">Datos de la aplicación</h2>
+      <p className="text-xs text-tinta-suave mb-4">
         {vacia ? "Ahora mismo no hay ningún dato cargado." : null}
         {!vacia && (
           <>
@@ -80,7 +80,7 @@ export default function EmpezarDeCero({
       </p>
 
       {esDemostracion && (
-        <p className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2 mb-4">
+        <p className="text-sm text-aviso bg-aviso-suave border border-[#f6e0c4] rounded-lg px-3 py-2 mb-4">
           Estas viviendas, reservas y propietarios son <strong>de demostración</strong>: los creó
           el primer arranque para poder enseñar la aplicación, y no corresponden a nada real.
           Conviene borrarlos antes de empezar a trabajar, para que no se mezclen con lo vuestro.
@@ -88,26 +88,26 @@ export default function EmpezarDeCero({
       )}
 
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mb-3">
           {error}
         </p>
       )}
       {hecho && (
-        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-bien bg-bien-suave border border-[#cfe6dd] rounded-lg px-3 py-2 mb-3">
           {hecho} Ya podéis dar de alta las viviendas reales o sincronizar con Lodgify.
         </p>
       )}
 
       {!vacia && (
         <details>
-          <summary className="cursor-pointer text-sm text-rose-700">
+          <summary className="cursor-pointer text-sm text-mal">
             Empezar de cero: borrar viviendas, reservas, limpiezas y facturas
           </summary>
-          <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50/50 p-4">
-            <p className="text-sm text-slate-700 mb-1">
+          <div className="mt-3 rounded-lg border border-[#f3d4d3] bg-mal-suave/50 p-4">
+            <p className="text-sm text-tinta mb-1">
               Se borran <strong>{enumerar(resumen)}</strong>.
             </p>
-            <p className="text-xs text-slate-500 mb-3">
+            <p className="text-xs text-tinta-suave mb-3">
               No se tocan las cuentas de acceso ni los datos fiscales de las dos empresas: quien
               entra sigue entrando, y el CIF, la dirección y la numeración de facturas se quedan
               como están. <strong>No se puede deshacer</strong> y no hay copia de seguridad.
@@ -125,7 +125,7 @@ export default function EmpezarDeCero({
                   className="input font-mono"
                 />
               </div>
-              <button type="submit" disabled={pending} className="btn-secondary text-rose-700">
+              <button type="submit" disabled={pending} className="btn-secondary text-mal">
                 {pending ? "Borrando..." : "Borrar y empezar de cero"}
               </button>
             </form>

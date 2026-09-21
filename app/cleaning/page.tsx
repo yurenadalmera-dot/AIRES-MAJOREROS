@@ -31,7 +31,7 @@ export default async function CleaningBillingPage() {
         subtitle="Limpiezas ya realizadas y todavía sin facturar. Este listado se alimenta automáticamente de la operativa — es el mismo registro, sin duplicarse."
         actions={
           <Link href="/cleaning/tasks" className="btn-secondary">
-            🧹 Ver tablero de tareas
+            Ver tablero de tareas
           </Link>
         }
       />
@@ -61,7 +61,7 @@ export default async function CleaningBillingPage() {
                   {pendingTasks.map((t) => (
                     <tr key={t.id}>
                       <td>{formatDate(t.date)}</td>
-                      <td className="font-medium text-slate-700">{t.property.name}</td>
+                      <td className="font-medium text-tinta">{t.property.name}</td>
                       <td>{t.employee?.name ?? "—"}</td>
                       <td>{formatCurrency(t.price)}</td>
                     </tr>

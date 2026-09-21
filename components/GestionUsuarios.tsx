@@ -56,26 +56,26 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
 
   return (
     <div className="card p-5">
-      <h2 className="font-medium text-slate-800 mb-1">Usuarios y accesos</h2>
-      <p className="text-xs text-slate-500 mb-4">
+      <h2 className="font-medium text-tinta mb-1">Usuarios y accesos</h2>
+      <p className="text-xs text-tinta-suave mb-4">
         Cada persona entra con su propio correo. El rol decide qué ve y qué puede hacer.
       </p>
 
       {error && (
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-3">
+        <p className="text-sm text-mal bg-mal-suave border border-[#f3d4d3] rounded-lg px-3 py-2 mb-3">
           {error}
         </p>
       )}
 
       {reciente && (
-        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-3">
-          <p className="text-sm font-medium text-amber-900">
+        <div className="mb-4 rounded-lg border border-[#f6e0c4] bg-aviso-suave px-3 py-3">
+          <p className="text-sm font-medium text-aviso">
             Contraseña de {reciente.email}
           </p>
-          <p className="font-mono text-lg tracking-wide text-amber-900 my-1 select-all break-all">
+          <p className="font-mono text-lg tracking-wide text-aviso my-1 select-all break-all">
             {reciente.contrasena}
           </p>
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-aviso">
             Anótala ahora y entrégasela. <strong>No se puede volver a ver</strong>: si se pierde,
             hay que restablecerla. Conviene que la cambie al entrar, desde «Mi cuenta».
           </p>
@@ -87,7 +87,7 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
               setCopiado(true);
             }}
           >
-            {copiado ? "Copiada ✓" : "Copiar"}
+            {copiado ? "Copiada" : "Copiar"}
           </button>
         </div>
       )}
@@ -96,10 +96,10 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
         {usuarios.map((u) => (
           <div
             key={u.id}
-            className="flex flex-wrap items-center justify-between gap-2 border border-slate-100 rounded-lg px-3 py-2"
+            className="flex flex-wrap items-center justify-between gap-2 border border-borde rounded-lg px-3 py-2"
           >
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-700">
+              <p className="text-sm font-medium text-tinta">
                 {/* El nombre se corrige escribiendo encima: las primeras cuentas
                     se crearon desde el arranque y podían traerlo mal. */}
                 <input
@@ -111,11 +111,11 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
                     if (nuevo && nuevo !== u.name) ejecutar(() => cambiarNombreUsuario(u.id, nuevo));
                     else e.target.value = u.name;
                   }}
-                  className="bg-transparent border border-transparent hover:border-slate-200 focus:border-slate-300 rounded px-1 -mx-1 w-full max-w-[16rem] focus:outline-none"
+                  className="bg-transparent border border-transparent hover:border-borde focus:border-borde-fuerte rounded px-1 -mx-1 w-full max-w-[16rem] focus:outline-none"
                 />
-                {u.esYo && <span className="text-xs text-slate-400 font-normal"> · tú</span>}
+                {u.esYo && <span className="text-xs text-tinta-suave font-normal"> · tú</span>}
               </p>
-              <p className="text-xs text-slate-400 truncate">{u.email}</p>
+              <p className="text-xs text-tinta-suave truncate">{u.email}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -136,7 +136,7 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
                 type="button"
                 disabled={pending}
                 onClick={() => ejecutar(() => restablecerContrasena(u.id))}
-                className="text-xs text-brand-700 hover:underline"
+                className="text-xs text-oceano-oscuro hover:underline"
               >
                 Restablecer contraseña
               </button>
@@ -145,7 +145,7 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
                 type="button"
                 disabled={pending || u.esYo}
                 onClick={() => ejecutar(() => setUsuarioActivo(u.id, !u.active))}
-                className="text-xs text-slate-500 hover:underline disabled:opacity-40"
+                className="text-xs text-tinta-suave hover:underline disabled:opacity-40"
               >
                 {u.active ? "Desactivar" : "Activar"}
               </button>
@@ -155,7 +155,7 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
       </div>
 
       <details>
-        <summary className="cursor-pointer text-sm text-brand-700">+ Dar de alta a alguien</summary>
+        <summary className="cursor-pointer text-sm text-oceano-oscuro">+ Dar de alta a alguien</summary>
         <form
           action={(fd) => ejecutar(() => crearUsuario(fd))}
           className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"

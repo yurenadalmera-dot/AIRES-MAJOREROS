@@ -36,7 +36,7 @@ export default async function PropertiesPage() {
     <div>
       <PageHeader
         title="Viviendas"
-        subtitle={`${properties.length} vivienda(s)`}
+        subtitle={properties.length === 1 ? "1 vivienda" : `${properties.length} viviendas`}
         actions={
           <Link href="/rental/properties/new" className="btn-primary">
             + Nueva vivienda
@@ -58,23 +58,23 @@ export default async function PropertiesPage() {
               <Link key={p.id} href={`/rental/properties/${p.id}`} className="card p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium text-slate-800">{p.name}</p>
-                    <p className="text-xs text-slate-500">{p.locality}</p>
+                    <p className="font-medium text-tinta">{p.name}</p>
+                    <p className="text-xs text-tinta-suave">{p.locality}</p>
                   </div>
-                  {!p.active && <Badge className="bg-slate-200 text-slate-600 border-slate-300">Inactiva</Badge>}
+                  {!p.active && <Badge className="bg-marina-suave text-tinta-suave border-borde-fuerte">Inactiva</Badge>}
                 </div>
                 <div className="mt-3">
                   <Badge className={PROPERTY_STATUS_COLOR[status]}>{PROPERTY_STATUS_LABEL[status]}</Badge>
                 </div>
-                <dl className="mt-3 grid grid-cols-2 gap-y-1 text-xs text-slate-500">
+                <dl className="mt-3 grid grid-cols-2 gap-y-1 text-xs text-tinta-suave">
                   <dt>Capacidad</dt>
-                  <dd className="text-right text-slate-700">{p.capacity} pers.</dd>
+                  <dd className="text-right text-tinta">{p.capacity} pers.</dd>
                   <dt>Hab. / baños</dt>
-                  <dd className="text-right text-slate-700">{p.bedrooms} / {p.bathrooms}</dd>
+                  <dd className="text-right text-tinta">{p.bedrooms} / {p.bathrooms}</dd>
                   <dt>Precio limpieza</dt>
-                  <dd className="text-right text-slate-700">{formatCurrency(p.cleaningPrice)}</dd>
+                  <dd className="text-right text-tinta">{formatCurrency(p.cleaningPrice)}</dd>
                   <dt>Propietario</dt>
-                  <dd className="text-right text-slate-700 truncate">{p.owner?.name ?? "—"}</dd>
+                  <dd className="text-right text-tinta truncate">{p.owner?.name ?? "—"}</dd>
                 </dl>
               </Link>
             );
