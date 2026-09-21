@@ -251,6 +251,15 @@ model CleaningTask {
   date   DateTime
   status String   @default("PENDING") // PENDING | IN_PROGRESS | DONE | CANCELLED
 
+  /// salida | repaso. Solo para las de type=CLEANING: la tarifa cobra distinto
+  /// por una y por otra (60 € frente a 40 € en la «Oficial 2026»). Lo decide
+  /// el hueco hasta la siguiente entrada; ver `lib/limpiezas.ts`.
+  servicio String?
+  /// Con cuántos huéspedes se calculó el precio — los de quien se va. Se
+  /// guarda en vez de mirarlo en la reserva cada vez: si mañana alguien
+  /// corrige la reserva, la limpieza ya facturada no puede cambiar sola.
+  huespedes Int?
+
   employeeId String?
   employee   Employee? @relation(fields: [employeeId], references: [id])
 

@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { precioParaLimpieza } from "@/lib/precio-limpieza";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
@@ -48,6 +49,10 @@ const limpiezaManualSchema = z.object({
   date: z.string().min(1, "Falta la fecha"),
   employeeId: z.string().optional(),
   notes: z.string().optional(),
+  /** Salida o repaso: la tarifa cobra distinto por cada una. */
+  servicio: z.enum(["salida", "repaso"]).default("salida"),
+  /** Cuánta gente se va. En blanco se cobra la base de la tarifa. */
+  huespedes: z.coerce.number().int().min(0).optional(),
 });
 
 /**
@@ -68,13 +73,22 @@ export async function crearLimpiezaManual(formData: FormData) {
 
     const vivienda = await prisma.property.findFirst({
       where: { id: data.propertyId, organizationId },
-      select: { cleaningPrice: true, name: true },
+      select: { name: true },
     });
     if (!vivienda) throw new ErrorDeNegocio("Esa vivienda no existe.");
 
-    if (Number(vivienda.cleaningPrice) === 0) {
+    // El precio sale de la tarifa del propietario —base más tanto por huésped
+    // adicional— y solo si no hay tarifa se cae al precio fijo de la vivienda.
+    const { precio, explicacion } = await precioParaLimpieza({
+      organizationId,
+      propertyId: data.propertyId,
+      servicio: data.servicio,
+      huespedes: data.huespedes ?? null,
+    });
+
+    if (precio === null) {
       throw new ErrorDeNegocio(
-        `«${vivienda.name}» no tiene precio de limpieza: ponlo en Viviendas antes, o la limpieza entraría a 0 € y no se podría cobrar.`
+        `No sé a cuánto cobrar la limpieza de «${vivienda.name}»: ${explicacion}`
       );
     }
 
@@ -110,8 +124,10 @@ export async function crearLimpiezaManual(formData: FormData) {
           date: fecha,
           status: "PENDING",
           employeeId: data.employeeId || null,
+          servicio: data.servicio,
+          huespedes: data.huespedes ?? null,
           billable: true,
-          price: vivienda.cleaningPrice,
+          price: precio,
           notes: data.notes || null,
         })),
       });

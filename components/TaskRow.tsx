@@ -6,6 +6,7 @@ import { assignEmployeeToTask, updateTaskStatus, deleteTask } from "@/lib/action
 import { TASK_STATUS_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/money";
 import { IconoAjustes, IconoLimpieza } from "@/components/iconos";
+import { Badge } from "@/components/ui";
 
 interface TaskRowProps {
   task: {
@@ -19,6 +20,10 @@ interface TaskRowProps {
     notes: string | null;
     employeeId: string | null;
     propertyName: string;
+    /** salida | repaso, solo en las limpiezas. */
+    servicio: string | null;
+    /** Con cuántos huéspedes se calculó el precio. */
+    huespedes: number | null;
   };
   employees: { id: string; name: string }[];
 }
@@ -60,8 +65,27 @@ export default function TaskRow({ task, employees }: TaskRowProps) {
           ) : (
             <IconoAjustes size={16} className="text-tinta-suave" />
           )}
-          {task.type === "CLEANING" ? "Limpieza" : "Mantenimiento"}
+          {task.type === "CLEANING"
+            ? task.servicio === "repaso"
+              ? "Repaso"
+              : "Limpieza de salida"
+            : "Mantenimiento"}
         </span>
+      </td>
+      {/* El dato con el que se cobra: la tarifa es base + tanto por huésped
+          que pase de los incluidos. Sin él no se puede comprobar la factura. */}
+      <td className="num">
+        {task.type === "CLEANING" ? (
+          task.huespedes !== null ? (
+            task.huespedes
+          ) : (
+            <span className="text-tinta-suave" title="No consta cuánta gente se iba">
+              —
+            </span>
+          )
+        ) : (
+          <span className="text-tinta-suave">—</span>
+        )}
       </td>
       <td>
         <select
@@ -93,13 +117,17 @@ export default function TaskRow({ task, employees }: TaskRowProps) {
         </select>
       </td>
       <td className="num">
-        {task.billable ? (
+        {!task.billable ? (
+          <span className="text-tinta-suave">—</span>
+        ) : task.price === 0 ? (
+          // Una limpieza a 0 € no se puede cobrar. Antes entraba así y no se
+          // notaba hasta la factura; ahora se ve en la propia fila.
+          <Badge tono="aviso">sin precio</Badge>
+        ) : (
           <span className={task.invoiced ? "text-tinta-suave" : "text-tinta"}>
             {formatCurrency(task.price)}
             {task.invoiced ? " · facturada" : ""}
           </span>
-        ) : (
-          <span className="text-tinta-suave">—</span>
         )}
       </td>
       <td className="text-xs text-tinta-suave max-w-[160px] truncate" title={task.notes ?? ""}>

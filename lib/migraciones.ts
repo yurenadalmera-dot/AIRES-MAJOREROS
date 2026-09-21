@@ -353,6 +353,31 @@ const MIGRACIONES: Migracion[] = [
     },
   },
   {
+    // Hasta ahora una limpieza no sabía si era una salida o un repaso, y la
+    // tarifa cobra distinto por cada una. Tampoco guardaba con cuántos
+    // huéspedes se había calculado su precio, que es justo el dato con el que
+    // Aires factura.
+    nombre: "Salida o repaso, y con cuántos huéspedes",
+    haceFalta: () => faltaColumna("CleaningTask", "servicio"),
+    aplicar: async () => {
+      for (const sql of [
+        "ALTER TABLE `CleaningTask` ADD COLUMN `servicio` VARCHAR(191) NULL",
+        "ALTER TABLE `CleaningTask` ADD COLUMN `huespedes` INTEGER NULL",
+      ]) {
+        await prisma.$executeRawUnsafe(sql);
+      }
+      // Las que ya hay y vienen de una reserva pueden rellenar los huéspedes
+      // de quien se fue, que es con lo que se cobran. El servicio no se toca:
+      // no se puede saber a toro pasado sin rehacer el cálculo del hueco, y
+      // preferimos dejarlo vacío a inventárnoslo.
+      await prisma.$executeRawUnsafe(
+        "UPDATE `CleaningTask` t JOIN `Booking` b ON b.`id` = t.`bookingId` " +
+          "SET t.`huespedes` = b.`adults` + b.`children` " +
+          "WHERE t.`type` = 'CLEANING' AND t.`huespedes` IS NULL"
+      );
+    },
+  },
+  {
     nombre: "De dónde sale cada comisión de canal",
     haceFalta: () => faltaColumna("ChannelCommission", "confirmado"),
     aplicar: async () => {

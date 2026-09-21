@@ -117,6 +117,41 @@ export default function NuevaLimpieza({
         </div>
 
         <div>
+          {/* El servicio y los huéspedes deciden el precio: la tarifa cobra
+              base + tanto por cada huésped que pase de los incluidos. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label" htmlFor="limpieza-servicio">
+                Servicio
+              </label>
+              <select
+                id="limpieza-servicio"
+                name="servicio"
+                defaultValue="salida"
+                className="input"
+              >
+                <option value="salida">Salida</option>
+                <option value="repaso">Repaso</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="limpieza-huespedes">
+                Huéspedes
+              </label>
+              <input
+                id="limpieza-huespedes"
+                name="huespedes"
+                type="number"
+                min={0}
+                placeholder="los de la tarifa"
+                className="input"
+              />
+            </div>
+          </div>
+          <p className="ayuda mb-3">
+            Los de quien se va. En blanco se cobra la base de la tarifa.
+          </p>
+
           <label className="label" htmlFor="limpieza-empleada">
             Quién la hace
           </label>

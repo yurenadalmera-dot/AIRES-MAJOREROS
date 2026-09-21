@@ -123,11 +123,14 @@ export default async function TasksBoardView({
                 <th>Fecha</th>
                 <th>Vivienda</th>
                 <th>Tipo</th>
+                <th>Huéspedes</th>
                 <th>Estado</th>
                 <th>Empleada</th>
-                <th>Importe</th>
+                <th className="num">Importe</th>
                 <th>Notas</th>
-                <th></th>
+                <th>
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -145,6 +148,8 @@ export default async function TasksBoardView({
                     notes: t.notes,
                     employeeId: t.employeeId,
                     propertyName: t.property.name,
+                    servicio: t.servicio,
+                    huespedes: t.huespedes,
                   }}
                   employees={employees}
                 />

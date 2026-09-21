@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { limpiezaDeSalida } from "@/lib/precio-limpieza";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
@@ -30,6 +31,8 @@ export interface SyncSummary {
   propertiesUpdated: number;
   /** Limpiezas de reservas ya terminadas, dadas por hechas al importarlas. */
   pastCleaningsDone: number;
+  /** Limpiezas creadas sin precio, porque no hay tarifa ni precio de vivienda. */
+  sinPrecio: number;
   /** Por qué no se han podido leer las viviendas de Lodgify, si ha pasado. */
   avisoViviendas: string | null;
 }
@@ -169,6 +172,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     let updated = 0;
     let skippedManuallyAdjusted = 0;
     let pastCleaningsDone = 0;
+    let sinPrecio = 0;
 
     // Una reserva que ya terminó trae una limpieza que ya se hizo.
     //
@@ -322,6 +326,19 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
         const yaPasó = res.checkOut <= finDeHoy;
         if (yaPasó) pastCleaningsDone++;
 
+        // El precio sale de la tarifa del propietario y de cuánta gente se
+        // va, no del precio fijo de la vivienda. Antes, catorce de las
+        // dieciséis viviendas no tenían precio fijo y esto apuntaba la
+        // limpieza a 0 € sin decir nada.
+        const limpieza = await limpiezaDeSalida({
+          organizationId,
+          propertyId: property.id,
+          bookingId: booking.id,
+          checkOut: res.checkOut,
+          huespedes: res.adults + res.children,
+        });
+        if (limpieza.precio === null) sinPrecio++;
+
         await prisma.cleaningTask.create({
           data: {
             organizationId,
@@ -330,8 +347,10 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
             type: "CLEANING",
             date: res.checkOut,
             status: yaPasó ? "DONE" : "PENDING",
+            servicio: limpieza.servicio,
+            huespedes: limpieza.huespedes,
             billable: true,
-            price: property.cleaningPrice,
+            price: limpieza.precio ?? 0,
           },
         });
         created++;
@@ -351,6 +370,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
       propertiesCreated,
       propertiesUpdated,
       pastCleaningsDone,
+      sinPrecio,
       avisoViviendas,
     };
 

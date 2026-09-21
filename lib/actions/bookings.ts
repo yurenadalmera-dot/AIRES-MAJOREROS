@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
 import { calculateCommissions } from "@/lib/money";
+import { limpiezaDeSalida } from "@/lib/precio-limpieza";
 
 const bookingSchema = z.object({
   propertyId: z.string().min(1),
@@ -117,7 +118,16 @@ export async function createBooking(formData: FormData) {
     });
 
     // La limpieza de salida se genera automáticamente, igual que ocurre en el
-    // flujo de sincronización con Lodgify.
+    // flujo de sincronización con Lodgify. El precio sale de la tarifa del
+    // propietario según cuánta gente se va, no de un precio fijo: una salida
+    // de cuatro cuesta más que una de dos.
+    const limpieza = await limpiezaDeSalida({
+      organizationId,
+      propertyId: data.propertyId,
+      bookingId: booking.id,
+      checkOut,
+      huespedes: data.adults + data.children,
+    });
     await prisma.cleaningTask.create({
       data: {
         organizationId,
@@ -126,8 +136,13 @@ export async function createBooking(formData: FormData) {
         type: "CLEANING",
         date: checkOut,
         status: "PENDING",
+        servicio: limpieza.servicio,
+        huespedes: limpieza.huespedes,
         billable: true,
-        price: property?.cleaningPrice ?? 0,
+        // Sin tarifa se queda a 0 y la limpieza sale marcada «sin precio» en
+        // el tablero. Cero es mejor que un número inventado, y la factura no
+        // la deja pasar.
+        price: limpieza.precio ?? 0,
       },
     });
 

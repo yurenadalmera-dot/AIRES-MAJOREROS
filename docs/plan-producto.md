@@ -86,11 +86,20 @@ Ahora mismo están **activos a la vez**:
 | «Informe semanal propietarios» (n8n, viernes 17:00) | Envía el informe por email | Airtable |
 | «Previsión mensual limpiezas» (n8n, lunes) | PDF de carga para Aires | Airtable |
 
-**El riesgo serio es la numeración de facturas.** Si «Facturar limpiezas» sigue numerando desde
-2026-005 en Airtable y el SaaS numera por su cuenta, se emiten dos facturas con el mismo número.
-Eso no se arregla luego con un parche: se arregla con una rectificativa.
+**Corrección (leído ya el workflow).** Escribí aquí que se podían emitir dos facturas con el
+mismo número. **No es exacto y conviene decirlo claro:** los formatos son distintos —n8n numera
+`2026-005` y el SaaS `AM-2026-0001`— así que dos facturas nunca chocarían en el mismo número.
 
-Hay que decidir quién manda, y apagar el resto el mismo día.
+El riesgo de verdad es otro, y sigue siendo serio:
+
+1. **Dos series abiertas a la vez.** Una factura tiene que ir en una serie correlativa. Pasar de
+   `2026-NNN` a `AM-2026-NNNN` a mitad de año es abrir una serie nueva; se puede hacer, pero es
+   una decisión que confirma la asesoría, no un efecto secundario de cambiar de programa.
+2. **Facturar dos veces lo mismo.** «Facturar limpiezas» marca en Airtable las limpiezas como
+   facturadas; el SaaS marca las suyas. Ninguno sabe del otro. Con los dos encendidos, las mismas
+   limpiezas de septiembre se pueden cobrar por duplicado al mismo cliente.
+
+Hay que apagar el de n8n antes del día 1, que es cuando vuelve a dispararse.
 
 ---
 
@@ -218,18 +227,25 @@ constancia de a quién y cuándo se envió.
 
 ## 4. El plan
 
-### Fase 0 — parar la hemorragia (esta semana)
+### Fase 0 — parar la hemorragia
 
-Antes de añadir nada. Son horas, no días.
+**Hecho el 21/09.** El motor de tarifas está enchufado en los tres sitios donde nace una
+limpieza, con el servicio (salida o repaso) y los huéspedes guardados en la propia limpieza.
+Comprobado contra las 16 viviendas reales: **ninguna se queda sin precio**.
 
-1. **Poner precio a las catorce viviendas.** O, mejor, encender el motor de tarifas (1.2) y que
-   el precio salga solo. Mientras tanto, que Lodgify y el alta manual **se nieguen** a crear una
-   limpieza sin precio, igual que ya hace el alta a mano.
-2. **Decidir quién factura** y apagar lo demás. Si manda el SaaS, «Facturar limpiezas» y
-   «Generar limpiezas» de n8n se apagan el mismo día, y la numeración del SaaS arranca donde lo
-   dejó Airtable.
-3. **Apagar «Mirador · cargar reservas Lodgify»**, que sigue corriendo cada 3 horas y ya no hace
-   falta.
+| Propietario | Tarifa | Salida (2) | Salida (4) | Repaso |
+|---|---|---|---|---|
+| Academia Cañada del Río S.L. | Oficial 2026 | 60 € | 80 € | 40 € |
+| Inversiones Brito Pérez S.L. | Inversiones Brito | 50 € | 70 € | 30 € |
+| Villa Caliche y Villa Gregorio | precio cerrado | 100 € | 100 € | 40 € |
+| Villa Mónica | precio cerrado | 120 € | 120 € | 30 € |
+
+Y la factura ya no deja pasar una limpieza a 0 €: se para y dice cuáles son. Una factura emitida
+solo se corrige con una rectificativa, así que el sitio para detectarlo es antes, no después.
+
+**Queda, y es lo urgente:** apagar en n8n «Facturar limpiezas» y «Generar limpiezas» antes del
+día 1, que es cuando vuelven a dispararse contra Airtable. Y «Mirador · cargar reservas
+Lodgify», que sigue corriendo cada 3 horas. Eso no lo toco sin que me lo digas.
 
 ### Fase 1 — que cada una vea lo suyo (1–2 semanas)
 
@@ -272,12 +288,14 @@ Al final de esta fase Aires factura bien sola, que es de donde sale el dinero.
    bloquea todo lo demás, y la que puede duplicar un número de factura si se deja a medias.
 2. **¿Por qué número va la numeración ahora mismo?** «Facturar limpiezas» dice que arranca en
    2026-005; necesito el último emitido de verdad.
-3. **Las catorce viviendas sin precio: ¿tarifa o precio cerrado?** Si me dices qué tarifa le toca
-   a cada propietario, lo dejo calculado y no hay que tocarlo más.
+3. ~~Las catorce viviendas sin precio.~~ **Resuelto sin preguntar nada.** Las tarifas ya estaban
+   asignadas en los datos que vinieron de Mirador: Inversiones Brito Pérez con la suya, y
+   Academia Cañada y Domingo Javier con la «Oficial 2026». Solo había que usarlas. Hecho.
 4. **¿Confirmamos con la asesoría el parte de viajeros** antes de que yo programe nada de la
-   fase 2?
-5. **¿Qué número de WhatsApp?** Uno de empresa, que no sea el personal de nadie: una vez dado de
-   alta en la plataforma de Meta, deja de funcionar en la app normal de WhatsApp.
+   fase 2? Yurena pasó las dos fuentes oficiales, pero el proxy de red de esta sesión bloquea
+   `interior.gob.es` y `sede.interior.gob.es`, así que **no he podido leerlas**. No voy a escribir
+   la lista de campos de memoria: cuando toque la fase 2, que me pase el PDF adjunto por aquí.
+5. ~~¿Qué número de WhatsApp?~~ Queda apuntado como mejora, para más adelante.
 
 ---
 

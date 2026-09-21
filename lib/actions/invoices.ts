@@ -10,6 +10,33 @@ import { format } from "date-fns";
 import { INVOICE_STATUS_LABEL, puedeCambiarEstadoFactura, BUSINESS_TYPES } from "@/lib/constants";
 import { numeroSiguiente, prefijoFacturas } from "@/lib/numeracion";
 
+/**
+ * Lo que se lee en cada línea de la factura.
+ *
+ * Es la misma frase que venía imprimiendo el workflow de n8n —«Limpieza de
+ * salida (4 huéspedes)»— porque quien recibe la factura tiene que poder
+ * comprobar por qué cuesta lo que cuesta: la tarifa cobra por huésped.
+ *
+ * No se exporta a propósito: este fichero es "use server" y ahí solo pueden
+ * salir funciones asíncronas.
+ */
+function descripcionDeLinea(t: {
+  type: string;
+  servicio: string | null;
+  huespedes: number | null;
+}): string {
+  if (t.type !== "CLEANING") return "Servicio";
+  if (t.servicio === "repaso") return "Limpieza de repaso";
+  return t.huespedes !== null
+    ? `Limpieza de salida (${t.huespedes} ${t.huespedes === 1 ? "huésped" : "huéspedes"})`
+    : "Limpieza de salida";
+}
+
+/** Solo para los mensajes de error: dd/mm/aaaa. */
+function formatDate(fecha: Date): string {
+  return format(fecha, "dd/MM/yyyy");
+}
+
 const generateSchema = z.object({
   periodStart: z.string().min(1),
   periodEnd: z.string().min(1),
@@ -73,6 +100,23 @@ export async function generateInvoice(formData: FormData) {
       throw new ErrorDeNegocio("No hay limpiezas pendientes de facturar en ese periodo");
     }
 
+    // Una limpieza a 0 € no se puede cobrar, y emitida ya no hay marcha atrás:
+    // una factura emitida solo se corrige con una rectificativa. Así que se
+    // para aquí y se dice cuáles son, en vez de sumar ceros y dejar el agujero
+    // dentro de un documento con efectos fiscales.
+    const sinPrecio = pendingTasks.filter((t) => Number(t.price) === 0);
+    if (sinPrecio.length > 0) {
+      const cuales = sinPrecio
+        .slice(0, 5)
+        .map((t) => `${t.property.name} (${formatDate(t.date)})`)
+        .join(", ");
+      throw new ErrorDeNegocio(
+        `Hay ${sinPrecio.length} limpieza(s) sin precio en ese periodo y no se pueden facturar: ` +
+          `${cuales}${sinPrecio.length > 5 ? "…" : ""}. ` +
+          "Ponles precio en el tablero de limpiezas, o asígnale una tarifa al propietario."
+      );
+    }
+
     const subtotal = round2(pendingTasks.reduce((sum, t) => sum + Number(t.price), 0));
 
     // El impuesto se copia del negocio a la factura en el momento de emitirla.
@@ -124,7 +168,9 @@ export async function generateInvoice(formData: FormData) {
       data: pendingTasks.map((t) => ({
         invoiceId: invoice.id,
         cleaningTaskId: t.id,
-        description: t.type === "CLEANING" ? "Limpieza de salida" : "Servicio",
+        // Lo mismo que venía imprimiendo el workflow de n8n: quien recibe la
+        // factura tiene que poder comprobar por qué cuesta lo que cuesta.
+        description: descripcionDeLinea(t),
         propertyName: t.property.name,
         date: t.date,
         amount: t.price,
