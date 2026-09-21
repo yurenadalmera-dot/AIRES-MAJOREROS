@@ -520,6 +520,31 @@ Dos diferencias a propósito con el de Mirador:
 
 Decidido el 20/09: los datos se traen aquí y ese Supabase queda libre para otro proyecto.
 
+### Hecho (21/09/2026)
+
+La importación corrió y entró todo: **3 propietarios, 3 grupos, 17 viviendas,
+2 tarifas, 3 precios cerrados, 6 comisiones y 267 movimientos**. Repetida,
+0 nuevos y 267 repetidos: no duplica. `viviendasAdoptadas: 0` y `avisos: []`
+—ninguna vivienda duplicada, y el alias *Apto 27 → Montaña Guerime* encontró
+su vivienda, así que su 17 % está aplicado—. Después, la sincronización de
+Lodgify trajo las reservas.
+
+Tres cosas se atascaron por el camino y valen como aviso para la próxima:
+
+1. **El desplegable de credenciales de n8n.** Ofrece las que ya existen, y se
+   quedó cogida una de otro proyecto («Supabase AsesorIA»), que manda su
+   propia cabecera. El SaaS decía «falta el token» sin poder decir por qué.
+2. **Un autocorrector escribió «barrer» donde iba «Bearer».** El valor era
+   `barrer __n8n_BLANK_VALUE_…`: la palabra mal y el token sin poner.
+3. **La clave de Lodgify del SaaS no era la que funciona.** La de Mirador
+   sigue sincronizando cada 3 horas; eran dos claves distintas.
+
+Los tres eran invisibles desde la pantalla, y eso era el verdadero problema.
+Ahora el 401 de la importación dice cuál de los cuatro fallos es —incluida la
+primera palabra del valor de la cabecera, que es lo que destapó el
+«barrer»—, y un 401/403/429 de Lodgify se lee en pantalla en vez de acabar
+en «An error occurred in the Server Components render…».
+
 ### Cómo se hace
 
 n8n alcanza airesmajoreros.pro (yo no, el proxy lo bloquea), así que empuja él:
