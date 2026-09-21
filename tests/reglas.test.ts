@@ -27,6 +27,8 @@ import {
   comisionDeGestionDe,
   liquidarPropietario,
   mesesDelPeriodo,
+  cuotaDelPeriodo,
+  armarTramos,
 } from "../lib/liquidacion";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
@@ -448,7 +450,7 @@ describe("liquidación al propietario", () => {
 
   test("sin gastos, el 30 % va sobre lo que queda tras Booking y banco", () => {
     const r = calcularLiquidacion({
-      reservas: villaMonica, gastos: [], managementPct: 30, cuotaFijaMensual: null,
+      reservas: villaMonica, gastos: [], managementPct: 30, cuotaFija: null,
     });
     assert.equal(r.ingresos, 1126.51);
     assert.equal(r.comisionesDeVenta, 183.62);
@@ -460,7 +462,7 @@ describe("liquidación al propietario", () => {
   // Lo que cambia de verdad al tener gastos: la base baja y la comisión también.
   test("con gastos, la comisión baja", () => {
     const r = calcularLiquidacion({
-      reservas: villaMonica, gastos: [120.5, 45], managementPct: 30, cuotaFijaMensual: null,
+      reservas: villaMonica, gastos: [120.5, 45], managementPct: 30, cuotaFija: null,
     });
     assert.equal(r.gastos, 165.5);
     assert.equal(r.baseDeGestion, 777.39);
@@ -470,14 +472,14 @@ describe("liquidación al propietario", () => {
 
   test("Villa Monikka va al 10 %", () => {
     const r = calcularLiquidacion({
-      reservas: villaMonica, gastos: [], managementPct: 10, cuotaFijaMensual: null,
+      reservas: villaMonica, gastos: [], managementPct: 10, cuotaFija: null,
     });
     assert.equal(r.comisionDeGestion, 94.29);
   });
 
   test("Academia paga 600 € al mes, no un porcentaje", () => {
     const r = calcularLiquidacion({
-      reservas: villaMonica, gastos: [], managementPct: 30, cuotaFijaMensual: 600,
+      reservas: villaMonica, gastos: [], managementPct: 30, cuotaFija: { importe: 600, detalle: "Cuota fija mensual de 600 €" },
     });
     assert.equal(r.comisionDeGestion, 600);
     assert.match(r.detalleDeLaComision, /Cuota fija mensual/);
@@ -485,7 +487,7 @@ describe("liquidación al propietario", () => {
 
   test("y 1.800 € en un trimestre", () => {
     const r = calcularLiquidacion({
-      reservas: villaMonica, gastos: [], managementPct: null, cuotaFijaMensual: 600, meses: 3,
+      reservas: villaMonica, gastos: [], managementPct: null, cuotaFija: { importe: 1800, detalle: "Cuota fija: 600 € × 3 meses" },
     });
     assert.equal(r.comisionDeGestion, 1800);
   });
@@ -493,7 +495,7 @@ describe("liquidación al propietario", () => {
   // A las de Domingo Javier solo se les gestiona la limpieza.
   test("sin porcentaje ni cuota, no se cobra gestión", () => {
     const r = calcularLiquidacion({
-      reservas: villaMonica, gastos: [80], managementPct: null, cuotaFijaMensual: null,
+      reservas: villaMonica, gastos: [80], managementPct: null, cuotaFija: null,
     });
     assert.equal(r.comisionDeGestion, 0);
     assert.equal(r.alPropietario, 862.89);
@@ -503,7 +505,7 @@ describe("liquidación al propietario", () => {
   // Un mes malo no genera comisión: genera pérdida.
   test("si los gastos se comen los ingresos, no se cobra comisión", () => {
     const r = calcularLiquidacion({
-      reservas: villaMonica, gastos: [2000], managementPct: 30, cuotaFijaMensual: null,
+      reservas: villaMonica, gastos: [2000], managementPct: 30, cuotaFija: null,
     });
     assert.ok(r.baseDeGestion < 0, String(r.baseDeGestion));
     assert.equal(r.comisionDeGestion, 0);
@@ -511,7 +513,7 @@ describe("liquidación al propietario", () => {
 
   test("un periodo sin reservas no revienta", () => {
     const r = calcularLiquidacion({
-      reservas: [], gastos: [], managementPct: 30, cuotaFijaMensual: null,
+      reservas: [], gastos: [], managementPct: 30, cuotaFija: null,
     });
     assert.deepEqual(
       [r.ingresos, r.baseDeGestion, r.comisionDeGestion, r.alPropietario],
@@ -577,7 +579,7 @@ describe("liquidación de un propietario con varios grupos", () => {
   test("cada grupo lleva su porcentaje y luego se suman", () => {
     const r = liquidarPropietario({
       tramos: [villaMonica, villaMonikka],
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     });
     assert.equal(r.ingresos, 1626.51);
     assert.equal(r.comisionesDeVenta, 238.62);
@@ -591,10 +593,10 @@ describe("liquidación de un propietario con varios grupos", () => {
   test("no es lo mismo que aplicar el 30 % a todo", () => {
     const deGolpe = calcularLiquidacion({
       reservas: [...villaMonica.reservas, ...villaMonikka.reservas],
-      gastos: [], managementPct: 30, cuotaFijaMensual: null,
+      gastos: [], managementPct: 30, cuotaFija: null,
     });
     const porGrupos = liquidarPropietario({
-      tramos: [villaMonica, villaMonikka], cuotaFijaMensual: null,
+      tramos: [villaMonica, villaMonikka], cuotaFija: null,
     });
     assert.equal(deGolpe.comisionDeGestion, 416.37);
     assert.ok(porGrupos.comisionDeGestion < deGolpe.comisionDeGestion);
@@ -602,7 +604,7 @@ describe("liquidación de un propietario con varios grupos", () => {
 
   test("el desglose explica de dónde sale cada parte", () => {
     const r = liquidarPropietario({
-      tramos: [villaMonica, villaMonikka], cuotaFijaMensual: null,
+      tramos: [villaMonica, villaMonikka], cuotaFija: null,
     });
     assert.equal(r.tramos.length, 2);
     assert.equal(r.tramos[0].comisionDeGestion, 282.87);
@@ -615,7 +617,7 @@ describe("liquidación de un propietario con varios grupos", () => {
   test("los gastos bajan la comisión del grupo al que pertenecen", () => {
     const r = liquidarPropietario({
       tramos: [villaMonica, { ...villaMonikka, gastos: [100] }],
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     });
     assert.equal(r.gastos, 100);
     assert.equal(r.tramos[0].comisionDeGestion, 282.87); // el 30 % no se entera
@@ -626,14 +628,14 @@ describe("liquidación de un propietario con varios grupos", () => {
   test("con cuota fija no se reparte por grupos", () => {
     const r = liquidarPropietario({
       tramos: [{ ...villaMonica, nombre: "Academia Cañada", managementPct: null }],
-      cuotaFijaMensual: 600,
+      cuotaFija: { importe: 600, detalle: "Cuota fija mensual de 600 €" },
     });
     assert.equal(r.comisionDeGestion, 600);
     assert.deepEqual(r.tramos, []);
   });
 
   test("la cuota fija manda aunque el grupo tenga porcentaje", () => {
-    const r = liquidarPropietario({ tramos: [villaMonica], cuotaFijaMensual: 600 });
+    const r = liquidarPropietario({ tramos: [villaMonica], cuotaFija: { importe: 600, detalle: "Cuota fija mensual de 600 €" } });
     assert.equal(r.comisionDeGestion, 600);
   });
 
@@ -641,7 +643,7 @@ describe("liquidación de un propietario con varios grupos", () => {
   test("sin porcentaje ni cuota, se liquida todo lo que queda", () => {
     const r = liquidarPropietario({
       tramos: [{ nombre: "Villa Caliche", managementPct: null, reservas: villaMonica.reservas, gastos: [80] }],
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     });
     assert.equal(r.comisionDeGestion, 0);
     assert.equal(r.alPropietario, 862.89);
@@ -649,7 +651,7 @@ describe("liquidación de un propietario con varios grupos", () => {
   });
 
   test("un propietario sin viviendas no revienta", () => {
-    const r = liquidarPropietario({ tramos: [], cuotaFijaMensual: null });
+    const r = liquidarPropietario({ tramos: [], cuotaFija: null });
     assert.deepEqual([r.ingresos, r.comisionDeGestion, r.alPropietario], [0, 0, 0]);
   });
 });
@@ -674,5 +676,142 @@ describe("meses que cubre un periodo", () => {
 
   test("cruza el año", () => {
     assert.equal(mesesDelPeriodo(d("2025-11-01"), d("2026-02-28")), 4);
+  });
+});
+
+// ── La cuota fija es una escalera ────────────────────────────────────
+//
+// A Academia Cañada se le empezó cobrando 400 € al mes, luego 500 y luego
+// 600. Multiplicar el importe de hoy por los meses del periodo le cobraría
+// 600 € también por los meses en que pagaba 400, y esa diferencia se factura.
+
+describe("la cuota fija de un periodo", () => {
+  const d = (anio: number, mes: number) => new Date(Date.UTC(anio, mes - 1, 1, 12));
+
+  // La escalera de Academia Cañada, con fechas de ejemplo: lo que importa es
+  // que cada mes se cobre al precio que tocaba.
+  const escalera = [
+    { importe: 400, desde: d(2026, 1), hasta: d(2026, 3) },
+    { importe: 500, desde: d(2026, 4), hasta: d(2026, 7) },
+    { importe: 600, desde: d(2026, 8), hasta: null },
+  ];
+
+  test("cada mes se cobra al importe que estaba en vigor", () => {
+    const r = cuotaDelPeriodo({ inicio: d(2026, 1), fin: d(2026, 9), cuotas: escalera });
+    // 3 × 400 + 4 × 500 + 2 × 600 = 1.200 + 2.000 + 1.200
+    assert.equal(r.importe, 4400);
+    assert.match(r.detalle, /400/);
+    assert.match(r.detalle, /600/);
+  });
+
+  // El error que esto viene a evitar: con el importe de hoy por los meses del
+  // periodo salían 5.400 €, mil euros de más.
+  test("no se cobra el importe de hoy por los meses de antes", () => {
+    const r = cuotaDelPeriodo({ inicio: d(2026, 1), fin: d(2026, 9), cuotas: escalera });
+    assert.notEqual(r.importe, 600 * 9);
+    assert.equal(600 * 9 - r.importe, 1000, "lo que se le cobraría de más");
+  });
+
+  test("un solo tramo se comporta como antes", () => {
+    const r = cuotaDelPeriodo({
+      inicio: d(2026, 1),
+      fin: d(2026, 3),
+      cuotas: [{ importe: 600, desde: d(2020, 1), hasta: null }],
+    });
+    assert.equal(r.importe, 1800);
+  });
+
+  test("los meses en que la cuota aún no había empezado no se cobran", () => {
+    const r = cuotaDelPeriodo({
+      inicio: d(2026, 1),
+      fin: d(2026, 9),
+      cuotas: [{ importe: 600, desde: d(2026, 8), hasta: null }],
+    });
+    assert.equal(r.importe, 1200, "agosto y septiembre, no nueve meses");
+  });
+
+  test("una cuota que empieza después del periodo no se cobra", () => {
+    const r = cuotaDelPeriodo({
+      inicio: d(2026, 1),
+      fin: d(2026, 3),
+      cuotas: [{ importe: 600, desde: d(2026, 8), hasta: null }],
+    });
+    assert.equal(r.importe, 0);
+    assert.match(r.detalle, /todavía no había empezado/);
+  });
+
+  test("sin cuotas no se cobra cuota", () => {
+    const r = cuotaDelPeriodo({ inicio: d(2026, 1), fin: d(2026, 9), cuotas: [] });
+    assert.equal(r.importe, 0);
+  });
+
+  // Si dos tramos se solapan por un error de captura, manda el que empezó más
+  // tarde: es el último que alguien decidió.
+  test("con dos tramos solapados manda el más reciente", () => {
+    const r = cuotaDelPeriodo({
+      inicio: d(2026, 5),
+      fin: d(2026, 5),
+      cuotas: [
+        { importe: 400, desde: d(2026, 1), hasta: null },
+        { importe: 500, desde: d(2026, 4), hasta: null },
+      ],
+    });
+    assert.equal(r.importe, 500);
+  });
+});
+
+// ── A qué tramo va cada vivienda ──────────────────────────────────────
+//
+// Esta regla decide cuánto se le cobra a quién, así que vive en un solo sitio
+// y se prueba aquí. Inversiones Brito es el caso: dos grupos con porcentajes
+// distintos en el mismo informe.
+
+describe("el reparto de viviendas en tramos", () => {
+  const chano = { name: "Grupo Chano", managementPct: 30 };
+  const monikka = { name: "Villa Monikka", managementPct: 10 };
+
+  const viviendas = [
+    { id: "v1", name: "Villa Mónica", managementPct: null, groupId: "g1", group: chano },
+    { id: "v2", name: "Apto 8206", managementPct: null, groupId: "g1", group: chano },
+    { id: "v3", name: "Sand & Beach", managementPct: null, groupId: "g2", group: monikka },
+    { id: "v4", name: "Villa Caliche", managementPct: null, groupId: null, group: null },
+  ];
+
+  test("las de un grupo van juntas y con el porcentaje del grupo", () => {
+    const { tramos } = armarTramos({ viviendas, reservas: [], gastos: [] });
+    assert.equal(tramos.size, 3, "dos grupos y una suelta");
+    assert.equal(tramos.get("g:g1")?.managementPct, 30);
+    assert.equal(tramos.get("g:g2")?.managementPct, 10);
+    assert.equal(tramos.get("p:v4")?.managementPct, null, "sin grupo y sin porcentaje: no se cobra");
+  });
+
+  test("cada reserva y cada gasto caen en el tramo de su vivienda", () => {
+    const { tramos } = armarTramos({
+      viviendas,
+      reservas: [
+        { propertyId: "v1", totalPrice: 1000, platformCommissionAmt: 150, bankCommissionAmt: 13 },
+        { propertyId: "v3", totalPrice: 500, platformCommissionAmt: 77.5, bankCommissionAmt: 0 },
+      ],
+      gastos: [
+        { propertyId: "v2", amount: 60 },
+        { propertyId: "v3", amount: 40 },
+        // Un gasto sin vivienda no es de nadie: no puede caer en un tramo.
+        { propertyId: null, amount: 999 },
+      ],
+    });
+    assert.equal(tramos.get("g:g1")?.reservas.length, 1);
+    assert.deepEqual(tramos.get("g:g1")?.gastos, [60]);
+    assert.equal(tramos.get("g:g2")?.reservas.length, 1);
+    assert.deepEqual(tramos.get("g:g2")?.gastos, [40]);
+    assert.deepEqual(tramos.get("p:v4")?.gastos, [], "el gasto sin vivienda no se cuela aquí");
+  });
+
+  test("una vivienda de un grupo que no se pasa no rompe nada", () => {
+    const { tramos } = armarTramos({
+      viviendas,
+      reservas: [{ propertyId: "v-que-no-esta", totalPrice: 100, platformCommissionAmt: 0, bankCommissionAmt: 0 }],
+      gastos: [],
+    });
+    assert.equal([...tramos.values()].reduce((n, t) => n + t.reservas.length, 0), 0);
   });
 });

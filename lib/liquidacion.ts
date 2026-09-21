@@ -48,17 +48,17 @@ export function calcularLiquidacion({
   reservas,
   gastos,
   managementPct,
-  cuotaFijaMensual,
-  meses = 1,
+  cuotaFija,
 }: {
   reservas: ReservaDelPeriodo[];
   gastos: number[];
   /** Porcentaje de gestión de las viviendas. `null` = no se cobra gestión. */
   managementPct: number | null;
-  /** Cuota fija mensual, si el propietario paga cuota en vez de porcentaje. */
-  cuotaFijaMensual: number | null;
-  /** Cuántos meses cubre el periodo, para la cuota fija. */
-  meses?: number;
+  /**
+   * Lo que suma la cuota fija en el periodo, ya calculada con
+   * `cuotaDelPeriodo`. `null` = este propietario no paga cuota.
+   */
+  cuotaFija: { importe: number; detalle: string } | null;
 }): Liquidacion {
   const ingresos = round2(reservas.reduce((s, r) => s + r.totalPrice, 0));
   const comisionesDeVenta = round2(
@@ -71,12 +71,9 @@ export function calcularLiquidacion({
   let comisionDeGestion = 0;
   let detalleDeLaComision = "Sin comisión de gestión";
 
-  if (cuotaFijaMensual !== null && cuotaFijaMensual > 0) {
-    comisionDeGestion = round2(cuotaFijaMensual * meses);
-    detalleDeLaComision =
-      meses === 1
-        ? `Cuota fija mensual de ${formatCurrency(cuotaFijaMensual)}`
-        : `Cuota fija de ${formatCurrency(cuotaFijaMensual)} × ${meses} meses`;
+  if (cuotaFija !== null && cuotaFija.importe > 0) {
+    comisionDeGestion = round2(cuotaFija.importe);
+    detalleDeLaComision = cuotaFija.detalle;
   } else if (managementPct !== null && managementPct > 0) {
     // Sobre una base negativa no se cobra: un mes con más gastos que ingresos
     // no genera comisión, genera pérdida.
@@ -147,23 +144,21 @@ export interface LiquidacionDePropietario extends Liquidacion {
  */
 export function liquidarPropietario({
   tramos,
-  cuotaFijaMensual,
-  meses = 1,
+  cuotaFija,
 }: {
   tramos: TramoDeGestion[];
-  cuotaFijaMensual: number | null;
-  meses?: number;
+  /** Ya calculada con `cuotaDelPeriodo`. `null` = paga porcentaje. */
+  cuotaFija: { importe: number; detalle: string } | null;
 }): LiquidacionDePropietario {
   const todasLasReservas = tramos.flatMap((t) => t.reservas);
   const todosLosGastos = tramos.flatMap((t) => t.gastos);
 
-  if (cuotaFijaMensual !== null && cuotaFijaMensual > 0) {
+  if (cuotaFija !== null && cuotaFija.importe > 0) {
     const total = calcularLiquidacion({
       reservas: todasLasReservas,
       gastos: todosLosGastos,
       managementPct: null,
-      cuotaFijaMensual,
-      meses,
+      cuotaFija,
     });
     return { ...total, tramos: [] };
   }
@@ -175,7 +170,7 @@ export function liquidarPropietario({
       reservas: t.reservas,
       gastos: t.gastos,
       managementPct: t.managementPct,
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     }),
   }));
 
@@ -185,7 +180,7 @@ export function liquidarPropietario({
     reservas: todasLasReservas,
     gastos: todosLosGastos,
     managementPct: null,
-    cuotaFijaMensual: null,
+    cuotaFija: null,
   });
   const comisionDeGestion = round2(liquidados.reduce((s, t) => s + t.comisionDeGestion, 0));
 
@@ -225,4 +220,127 @@ export function comisionDeGestionDe(vivienda: {
   const delGrupo = vivienda.group?.managementPct;
   if (delGrupo !== null && delGrupo !== undefined) return delGrupo;
   return vivienda.managementPct;
+}
+
+/**
+ * Reparte las viviendas de un propietario en tramos, y mete en cada uno sus
+ * reservas y sus gastos.
+ *
+ * La regla —cada vivienda al tramo de su grupo, y una vivienda suelta hace
+ * tramo propio— decide **cuánto se le cobra a quién**, así que vive en un solo
+ * sitio. Inversiones Brito es el caso: el Grupo Chano al 30 % y Villa Monikka
+ * al 10 %, los dos en el mismo informe. Con la regla duplicada bastaría con
+ * tocar una copia para que el informe y el panel dijeran cosas distintas.
+ *
+ * Devuelve también en qué tramo ha caído cada vivienda, porque quien pinta el
+ * informe necesita agrupar las reservas igual que se han liquidado.
+ */
+export function armarTramos({
+  viviendas,
+  reservas,
+  gastos,
+}: {
+  viviendas: {
+    id: string;
+    name: string;
+    managementPct: number | null;
+    groupId: string | null;
+    group: { name: string; managementPct: number | null } | null;
+  }[];
+  reservas: { propertyId: string; totalPrice: number; platformCommissionAmt: number; bankCommissionAmt: number }[];
+  /** Limpiezas y demás gastos. Un gasto sin vivienda no entra en ningún tramo. */
+  gastos: { propertyId: string | null; amount: number }[];
+}): { tramos: Map<string, TramoDeGestion>; tramoDe: Map<string, string> } {
+  const tramos = new Map<string, TramoDeGestion>();
+  const tramoDe = new Map<string, string>();
+
+  for (const v of viviendas) {
+    const clave = v.groupId ? `g:${v.groupId}` : `p:${v.id}`;
+    tramoDe.set(v.id, clave);
+    if (!tramos.has(clave)) {
+      tramos.set(clave, {
+        nombre: v.group?.name ?? v.name,
+        managementPct: comisionDeGestionDe({
+          managementPct: v.managementPct,
+          group: v.group ? { managementPct: v.group.managementPct } : null,
+        }),
+        reservas: [],
+        gastos: [],
+      });
+    }
+  }
+
+  const alTramo = (propertyId: string) => tramos.get(tramoDe.get(propertyId) ?? "");
+
+  for (const r of reservas) {
+    alTramo(r.propertyId)?.reservas.push({
+      totalPrice: r.totalPrice,
+      platformCommissionAmt: r.platformCommissionAmt,
+      bankCommissionAmt: r.bankCommissionAmt,
+    });
+  }
+  for (const g of gastos) {
+    if (g.propertyId) alTramo(g.propertyId)?.gastos.push(g.amount);
+  }
+
+  return { tramos, tramoDe };
+}
+
+/** Un tramo de cuota fija: cuánto al mes, y desde cuándo hasta cuándo. */
+export interface TramoDeCuota {
+  importe: number;
+  desde: Date;
+  /** Nulo mientras sea la que está en vigor. */
+  hasta: Date | null;
+}
+
+/**
+ * Cuánta cuota fija se cobra en un periodo.
+ *
+ * **La cuota sube.** A Academia Cañada se le empezó cobrando 400 € al mes,
+ * luego 500 y luego 600. Multiplicar el importe de hoy por los meses del
+ * periodo le cobraría 600 € también por los meses en que pagaba 400, y esa
+ * diferencia acaba en una factura.
+ *
+ * Así que se va mes a mes y se cobra **el importe que estuviera en vigor el
+ * día 1 de cada mes**. Un mes sin ningún tramo vigente no se cobra: la cuota
+ * todavía no había empezado.
+ */
+export function cuotaDelPeriodo({
+  inicio,
+  fin,
+  cuotas,
+}: {
+  inicio: Date;
+  fin: Date;
+  cuotas: TramoDeCuota[];
+}): { importe: number; detalle: string } {
+  if (cuotas.length === 0) return { importe: 0, detalle: "Sin cuota fija" };
+
+  // Cuántos meses se cobran a cada importe, para poder explicarlo.
+  const mesesPorImporte = new Map<number, number>();
+
+  const primero = new Date(Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), 1, 12));
+  const ultimo = fin.getUTCFullYear() * 12 + fin.getUTCMonth();
+  for (
+    let mes = new Date(primero);
+    mes.getUTCFullYear() * 12 + mes.getUTCMonth() <= ultimo;
+    mes.setUTCMonth(mes.getUTCMonth() + 1)
+  ) {
+    // La más reciente de las que ya habían empezado y no habían terminado.
+    const vigente = cuotas
+      .filter((c) => c.desde <= mes && (c.hasta === null || c.hasta >= mes))
+      .sort((a, b) => b.desde.getTime() - a.desde.getTime())[0];
+    if (!vigente) continue;
+    mesesPorImporte.set(vigente.importe, (mesesPorImporte.get(vigente.importe) ?? 0) + 1);
+  }
+
+  const partes = [...mesesPorImporte.entries()].sort((a, b) => a[0] - b[0]);
+  const importe = round2(partes.reduce((s, [imp, n]) => s + imp * n, 0));
+
+  if (partes.length === 0) return { importe: 0, detalle: "La cuota todavía no había empezado" };
+  const detalle = partes
+    .map(([imp, n]) => (n === 1 ? `${formatCurrency(imp)}` : `${formatCurrency(imp)} × ${n} meses`))
+    .join(" + ");
+  return { importe, detalle: partes.length === 1 && partes[0][1] === 1 ? `Cuota fija mensual de ${detalle}` : `Cuota fija: ${detalle}` };
 }

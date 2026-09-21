@@ -26,6 +26,7 @@ interface ShellProps {
 
 const RENTAL_NAV: NavItem[] = [
   { href: "/rental", label: "Panel del día", icon: "📋", permiso: "operativa.alquiler" },
+  { href: "/rental/panel", label: "La semana y el año", icon: "📈", permiso: "operativa.alquiler" },
   { href: "/rental/calendar", label: "Calendario semanal", icon: "🗓️", permiso: "operativa.alquiler" },
   { href: "/rental/bookings", label: "Reservas", icon: "🛎️", permiso: "operativa.alquiler" },
   { href: "/rental/properties", label: "Viviendas", icon: "🏠", permiso: "operativa.alquiler" },

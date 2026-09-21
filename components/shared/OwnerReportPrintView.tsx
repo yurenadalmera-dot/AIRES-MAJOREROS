@@ -3,12 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PrintButton, BackButton } from "@/components/ui";
 import { formatCurrency, formatDate, round2 } from "@/lib/money";
 import { BUSINESS_TYPES } from "@/lib/constants";
-import {
-  liquidarPropietario,
-  comisionDeGestionDe,
-  mesesDelPeriodo,
-  type TramoDeGestion,
-} from "@/lib/liquidacion";
+import { liquidarPropietario, armarTramos, cuotaDelPeriodo } from "@/lib/liquidacion";
 
 /** Los `Decimal` de Prisma, a número; y `null` se queda en `null`. */
 const num = (v: { toString(): string } | null | undefined): number | null =>
@@ -46,7 +41,7 @@ export default async function OwnerReportPrintView({
   const [owner, rentalBusiness] = await Promise.all([
     prisma.owner.findFirst({
       where: { id: ownerId, organizationId },
-      include: { properties: { include: { group: true } } },
+      include: { properties: { include: { group: true } }, cuotas: true },
     }),
     prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
   ]);
@@ -105,25 +100,29 @@ export default async function OwnerReportPrintView({
 
   // Cada vivienda va al tramo de su grupo; una vivienda suelta hace tramo
   // propio. Es lo que permite que Inversiones Brito lleve el 30 % del Grupo
-  // Villa Mónica y el 10 % de Villa Monikka en el mismo informe.
-  const tramos = new Map<string, TramoDeGestion>();
-  const tramoDe = new Map<string, string>();
-  for (const p of owner.properties) {
-    const clave = p.groupId ? `g:${p.groupId}` : `p:${p.id}`;
-    tramoDe.set(p.id, clave);
-    if (!tramos.has(clave)) {
-      tramos.set(clave, {
-        nombre: p.group?.name ?? p.name,
-        managementPct: comisionDeGestionDe({
-          managementPct: num(p.managementPct),
-          group: p.group ? { managementPct: num(p.group.managementPct) } : null,
-        }),
-        reservas: [],
-        gastos: [],
-      });
-    }
-  }
-  const alTramo = (propertyId: string) => tramos.get(tramoDe.get(propertyId) ?? "");
+  // Villa Mónica y el 10 % de Villa Monikka en el mismo informe. La regla está
+  // en `armarTramos` y no aquí, porque el panel de la semana la necesita igual.
+  const { tramos, tramoDe } = armarTramos({
+    viviendas: owner.properties.map((p) => ({
+      id: p.id,
+      name: p.name,
+      managementPct: num(p.managementPct),
+      groupId: p.groupId,
+      group: p.group ? { name: p.group.name, managementPct: num(p.group.managementPct) } : null,
+    })),
+    reservas: bookings.map((b) => ({
+      propertyId: b.propertyId,
+      totalPrice: Number(b.totalPrice),
+      platformCommissionAmt: Number(b.platformCommissionAmt),
+      bankCommissionAmt: Number(b.bankCommissionAmt),
+    })),
+    // Las limpiezas son un gasto más de la vivienda: bajan lo que se liquida
+    // y, con ello, la base sobre la que se calcula la gestión.
+    gastos: [
+      ...cleaningTasks.map((t) => ({ propertyId: t.propertyId, amount: Number(t.price) })),
+      ...expenses.map((g) => ({ propertyId: g.propertyId, amount: Number(g.amount) })),
+    ],
+  });
 
   // Las mismas reservas, agrupadas para pintarlas: el propietario las ve por
   // complejo y con su subtotal, que es como se las viene dando el informe que
@@ -136,26 +135,20 @@ export default async function OwnerReportPrintView({
       reservasPorGrupo.set(clave, { nombre: tramos.get(clave)?.nombre ?? "Sin grupo", reservas: [] });
     }
     reservasPorGrupo.get(clave)!.reservas.push(b);
-
-    alTramo(b.propertyId)?.reservas.push({
-      totalPrice: Number(b.totalPrice),
-      platformCommissionAmt: Number(b.platformCommissionAmt),
-      bankCommissionAmt: Number(b.bankCommissionAmt),
-    });
-  }
-  // Las limpiezas son un gasto más de la vivienda: bajan lo que se liquida y,
-  // con ello, la base sobre la que se calcula la gestión.
-  for (const t of cleaningTasks) alTramo(t.propertyId)?.gastos.push(Number(t.price));
-  for (const g of expenses) {
-    if (g.propertyId) alTramo(g.propertyId)?.gastos.push(Number(g.amount));
   }
 
-  const cuotaFijaMensual = num(owner.monthlyFee);
-  const liquidacion = liquidarPropietario({
-    tramos: [...tramos.values()],
-    cuotaFijaMensual,
-    meses: mesesDelPeriodo(periodStart, new Date(end)),
+  // Mes a mes y al importe que estuviera en vigor: la cuota sube, y cobrar la
+  // de hoy por los meses de antes se factura de más.
+  const cuotaFija = cuotaDelPeriodo({
+    inicio: periodStart,
+    fin: new Date(end),
+    cuotas: owner.cuotas.map((c) => ({
+      importe: Number(c.importe),
+      desde: c.desde,
+      hasta: c.hasta,
+    })),
   });
+  const liquidacion = liquidarPropietario({ tramos: [...tramos.values()], cuotaFija });
   const desglosePorGrupo = liquidacion.tramos.filter((t) => t.comisionDeGestion > 0);
   const gruposDeReservas = [...reservasPorGrupo.entries()];
 

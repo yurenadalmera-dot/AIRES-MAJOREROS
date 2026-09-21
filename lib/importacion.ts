@@ -38,8 +38,12 @@ export interface PropietarioEntrante {
   cif?: string | null;
   direccion?: string | null;
   email?: string | null;
-  /** Cuota fija mensual de gestión, si la paga. */
-  cuotaFija?: number | null;
+  /**
+   * Los tramos de cuota fija, si paga cuota. Es una lista y no un número
+   * porque **la cuota sube**: a Academia Cañada se le empezó cobrando 400 €,
+   * luego 500 y luego 600.
+   */
+  cuotas?: { importe: number | string; desde?: string | null; hasta?: string | null }[];
 }
 
 export interface GrupoEntrante {
@@ -146,6 +150,12 @@ export interface MovimientoListo {
   propietarioRef: string | null;
 }
 
+export interface CuotaLista {
+  importe: number;
+  desde: Date;
+  hasta: Date | null;
+}
+
 export interface ComisionLista {
   canal: string;
   /** La referencia de la vivienda en el volcado, o `null` para todas. */
@@ -158,6 +168,8 @@ export interface ComisionLista {
 
 export interface VolcadoRevisado {
   propietarios: PropietarioEntrante[];
+  /** Los tramos de cuota de cada propietario, por su referencia. */
+  cuotas: Map<string, CuotaLista[]>;
   grupos: GrupoEntrante[];
   viviendas: ViviendaEntrante[];
   movimientos: MovimientoListo[];
@@ -187,6 +199,17 @@ function leerFecha(v: unknown): { fecha: Date | null; mal: boolean } {
   const d = new Date(Date.UTC(anio, mes - 1, dia, 12));
   if (d.getUTCDate() !== dia || d.getUTCMonth() !== mes - 1) return { fecha: null, mal: true };
   return { fecha: d, mal: false };
+}
+
+/**
+ * Una fecha del volcado, sin más: la que se entiende o `null`.
+ *
+ * La usa quien escribe en la base para campos que no son cuentas —como desde
+ * cuándo se cobra una cuota—, donde una fecha rara se ignora en vez de
+ * rechazar la fila entera.
+ */
+export function fechaDelVolcado(v: unknown): Date | null {
+  return leerFecha(v).fecha;
 }
 
 /** Un porcentaje del volcado. `null` cuando no es un número entre 0 y 100. */
@@ -410,6 +433,27 @@ export function revisarVolcado(bruto: unknown): VolcadoRevisado {
     return true;
   });
 
+  // Los tramos de cuota, ya en fechas. Un tramo sin importe o sin fecha de
+  // inicio no se puede cobrar, así que se rechaza y se dice.
+  const cuotasPorPropietario = new Map<string, CuotaLista[]>();
+  for (const p of propietarios) {
+    const suyas: CuotaLista[] = [];
+    for (const c of p.cuotas ?? []) {
+      const importe = leerImporte(c?.importe);
+      const desde = leerFecha(c?.desde);
+      if (importe === null || importe <= 0) {
+        rechazados.push({ que: `cuota de ${p.nombre}`, porque: `«${String(c?.importe)}» no es un importe` });
+        continue;
+      }
+      if (!desde.fecha) {
+        rechazados.push({ que: `cuota de ${p.nombre}`, porque: "no dice desde cuándo se cobra" });
+        continue;
+      }
+      suyas.push({ importe, desde: desde.fecha, hasta: leerFecha(c?.hasta).fecha });
+    }
+    if (suyas.length > 0) cuotasPorPropietario.set(p.ref, suyas);
+  }
+
   const refsPropietario = new Set(propietarios.map((p) => p.ref));
 
   const grupos = (v.grupos ?? []).filter((g) => {
@@ -596,6 +640,7 @@ export function revisarVolcado(bruto: unknown): VolcadoRevisado {
 
   return {
     propietarios,
+    cuotas: cuotasPorPropietario,
     grupos,
     viviendas,
     movimientos,

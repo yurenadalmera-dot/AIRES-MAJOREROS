@@ -303,6 +303,55 @@ const MIGRACIONES: Migracion[] = [
   // comisiones de canal marcadas «SUPUESTO, pendiente de contrastar con una
   // factura real», y al traerlas aquí esa advertencia no se puede perder: un
   // porcentaje supuesto que nadie distingue del comprobado acaba liquidado.
+  // Una cuota fija sin fecha de inicio se cobra desde siempre. La de Academia
+  // Cañada empezó el 1 de agosto de 2026, así que un informe de enero a
+  // septiembre le cobraba nueve meses donde le tocan dos: 5.400 € en vez de
+  // 1.200 €.
+  {
+    nombre: "Desde cuándo se cobra la cuota fija",
+    haceFalta: () => faltaColumna("Owner", "monthlyFeeDesde"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "ALTER TABLE `Owner` ADD COLUMN `monthlyFeeDesde` DATETIME(3) NULL"
+      );
+    },
+  },
+  // La cuota fija no es un número, es una escalera: a Academia Cañada se le
+  // empezó cobrando 400 €, luego 500 y luego 600. Con un solo importe, un
+  // informe del año entero cobra el último también por los meses en que se
+  // cobraba menos.
+  {
+    nombre: "El histórico de cuotas fijas",
+    haceFalta: async () => {
+      const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+        SELECT COUNT(*) AS n FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_name = 'CuotaFija'
+      `;
+      return Number(filas[0]?.n ?? 0) === 0;
+    },
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "CREATE TABLE `CuotaFija` (" +
+          "`id` VARCHAR(191) NOT NULL," +
+          "`ownerId` VARCHAR(191) NOT NULL," +
+          "`importe` DECIMAL(65, 30) NOT NULL," +
+          "`desde` DATETIME(3) NOT NULL," +
+          "`hasta` DATETIME(3) NULL," +
+          "INDEX `CuotaFija_ownerId_idx`(`ownerId`)," +
+          "PRIMARY KEY (`id`)" +
+          ") DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+      );
+      // La cuota que ya hubiera puesta pasa a ser el primer tramo, para que
+      // nadie se quede sin cuota por el camino. Sin fecha de inicio se toma
+      // el principio de los tiempos: es lo que hacía antes.
+      await prisma.$executeRawUnsafe(
+        "INSERT INTO `CuotaFija` (`id`, `ownerId`, `importe`, `desde`, `hasta`) " +
+          "SELECT CONCAT('cuota-', `id`), `id`, `monthlyFee`, " +
+          "COALESCE(`monthlyFeeDesde`, '2000-01-01 12:00:00'), NULL " +
+          "FROM `Owner` WHERE `monthlyFee` IS NOT NULL"
+      );
+    },
+  },
   {
     nombre: "De dónde sale cada comisión de canal",
     haceFalta: () => faltaColumna("ChannelCommission", "confirmado"),

@@ -104,9 +104,11 @@ model Owner {
   /// NIF/CIF y domicilio: hacen falta para facturarle.
   taxId          String?
   address        String?      @db.Text
-  /// Cuota fija mensual de gestión, si la hay. Academia Cañada paga 600 € al
-  /// mes en vez de un porcentaje.
+  /// Cuota fija mensual de gestión **vigente hoy**, si la hay: es lo que se
+  /// enseña y lo que se escribe en Ajustes. El histórico está en `cuotas`, y
+  /// es ese el que manda al liquidar.
   monthlyFee     Decimal?
+  monthlyFeeDesde DateTime?
   createdAt      DateTime     @default(now())
 
   /// La lista de precios de limpieza que se le aplica.
@@ -116,8 +118,27 @@ model Owner {
   properties Property[]
   expenses   Expense[]
   groups     PropertyGroup[]
+  cuotas     CuotaFija[]
 
   @@index([organizationId])
+}
+
+/// Un tramo de cuota fija: cuánto se cobra al mes y desde cuándo.
+///
+/// No basta con un importe y una fecha porque **la cuota sube**: a Academia
+/// Cañada se le empezó cobrando 400 €, luego 500 y luego 600. Con un solo
+/// número, un informe de todo el año cobra el último importe también por los
+/// meses en que se cobraba menos, y la diferencia se factura.
+model CuotaFija {
+  id      String    @id @default(cuid())
+  ownerId String
+  owner   Owner     @relation(fields: [ownerId], references: [id])
+  importe Decimal
+  desde   DateTime
+  /// Nulo mientras sea la que está en vigor.
+  hasta   DateTime?
+
+  @@index([ownerId])
 }
 
 model Property {

@@ -56,12 +56,19 @@ export default async function RentalSettingsPage() {
           orderBy: { name: "asc" },
           include: { _count: { select: { properties: true } } },
         },
+        cuotas: { orderBy: { desde: "asc" } },
       },
     })
   ).map((o) => ({
     id: o.id,
     name: o.name,
     monthlyFee: o.monthlyFee === null ? null : Number(o.monthlyFee),
+    cuotas: o.cuotas.map((c) => ({
+      id: c.id,
+      importe: Number(c.importe),
+      desde: formatDate(c.desde),
+      hasta: c.hasta ? formatDate(c.hasta) : null,
+    })),
     grupos: o.groups.map((g) => ({
       id: g.id,
       name: g.name,

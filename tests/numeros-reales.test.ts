@@ -167,7 +167,7 @@ describe("la liquidación sobre esa misma semana", () => {
       reservas: conLaRara,
       gastos: GASTOS_DE_LA_SEMANA,
       managementPct: null,
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     });
     assert.equal(r.ingresos, 4938.51);
     assert.equal(r.comisionesDeVenta, 788.86);
@@ -183,7 +183,7 @@ describe("la liquidación sobre esa misma semana", () => {
       reservas: conLaRara,
       gastos: GASTOS_DE_LA_SEMANA,
       managementPct: null,
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     });
     assert.equal(r.comisionDeGestion, 0);
     assert.equal(r.alPropietario, 2290.75);
@@ -218,7 +218,7 @@ describe("la liquidación sobre esa misma semana", () => {
           gastos: GASTOS_DE_LA_SEMANA,
         },
       ],
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     });
 
     assert.equal(r.ingresos, 4938.51, "los ingresos no cambian");
@@ -234,7 +234,7 @@ describe("la liquidación sobre esa misma semana", () => {
       reservas: conLaRara,
       gastos: GASTOS_DE_LA_SEMANA,
       managementPct: 30,
-      cuotaFijaMensual: null,
+      cuotaFija: null,
     });
     assert.equal(deGolpe.comisionDeGestion, 687.23);
     assert.ok(deGolpe.comisionDeGestion - r.comisionDeGestion > 300);
@@ -267,13 +267,13 @@ describe("la liquidación de Inversiones Brito, enero a julio de 2026", () => {
   ];
 
   test("la base de cada grupo es la de Mirador al céntimo", () => {
-    const r = liquidarPropietario({ tramos, cuotaFijaMensual: null, meses: 7 });
+    const r = liquidarPropietario({ tramos, cuotaFija: null });
     assert.equal(r.tramos[0].baseDeGestion, 45126.98, "Grupo Chano");
     assert.equal(r.tramos[1].baseDeGestion, 63396.33, "Villa Monikka");
   });
 
   test("y la comisión de cada uno también", () => {
-    const r = liquidarPropietario({ tramos, cuotaFijaMensual: null, meses: 7 });
+    const r = liquidarPropietario({ tramos, cuotaFija: null });
     assert.equal(r.tramos[0].comisionDeGestion, 13538.09, "30 % del Grupo Chano");
     assert.equal(r.tramos[1].comisionDeGestion, 6339.63, "10 % de Villa Monikka");
     assert.equal(r.comisionDeGestion, 19877.72, "y el total del borrador regenerado");
@@ -282,7 +282,7 @@ describe("la liquidación de Inversiones Brito, enero a julio de 2026", () => {
   // El error que se corrigió, escrito como prueba para que no vuelva: sobre
   // ventas salían 9.537,58 €, más de 3.000 € de más en siete meses.
   test("el 10 % de Villa Monikka NO es sobre ventas", () => {
-    const r = liquidarPropietario({ tramos, cuotaFijaMensual: null, meses: 7 });
+    const r = liquidarPropietario({ tramos, cuotaFija: null });
     const sobreVentas = round2((95375.78 * 10) / 100);
     assert.equal(sobreVentas, 9537.58, "esto es lo que decía el borrador viejo");
     assert.notEqual(r.tramos[1].comisionDeGestion, sobreVentas);
@@ -293,7 +293,7 @@ describe("la liquidación de Inversiones Brito, enero a julio de 2026", () => {
   // por el porcentaje y le pasaría al propietario una comisión negativa.
   test("un grupo en pérdidas no genera comisión", () => {
     const enPerdidas = [tramo("Un mes malo", 30, 1000, 150, 2000)];
-    const r = liquidarPropietario({ tramos: enPerdidas, cuotaFijaMensual: null, meses: 1 });
+    const r = liquidarPropietario({ tramos: enPerdidas, cuotaFija: null });
     assert.ok(r.baseDeGestion < 0);
     assert.equal(r.comisionDeGestion, 0);
   });

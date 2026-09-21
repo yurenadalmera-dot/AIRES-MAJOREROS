@@ -168,6 +168,8 @@ const ownerSchema = z.object({
   address: z.string().optional(),
   /** Cuota fija mensual de gestión, si la paga. Vacío = cobra por porcentaje. */
   monthlyFee: z.string().optional(),
+  /** Desde cuándo se le cobra esa cuota. */
+  monthlyFeeDesde: z.string().optional(),
 });
 
 export async function createOwner(formData: FormData) {
@@ -175,7 +177,7 @@ export async function createOwner(formData: FormData) {
     const organizationId = await exigir("operativa.alquiler");
     const raw = Object.fromEntries(formData.entries());
     const data = ownerSchema.parse(raw);
-    await prisma.owner.create({
+    const creado = await prisma.owner.create({
       data: {
         organizationId,
         name: data.name,
@@ -184,10 +186,115 @@ export async function createOwner(formData: FormData) {
         taxId: data.taxId || null,
         address: data.address || null,
         monthlyFee: leerCuota(data.monthlyFee),
+        monthlyFeeDesde: leerDia(data.monthlyFeeDesde),
       },
     });
+    // La cuota también nace como tramo: es el histórico el que manda al
+    // liquidar, y un propietario cuya cuota solo viva en `monthlyFee` no se
+    // cobraría.
+    const cuota = leerCuota(data.monthlyFee);
+    if (cuota !== null) {
+      await prisma.cuotaFija.create({
+        data: {
+          ownerId: creado.id,
+          importe: cuota,
+          desde: leerDia(data.monthlyFeeDesde) ?? new Date(Date.UTC(2000, 0, 1, 12)),
+          hasta: null,
+        },
+      });
+    }
     revalidatePath("/rental/settings");
     revalidatePath("/rental/reports");
+  });
+}
+
+/** Una fecha `aaaa-mm-dd` del formulario, a mediodía UTC. `null` si no viene. */
+function leerDia(v: string | undefined): Date | null {
+  const m = (v ?? "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12));
+}
+
+const cuotaSchema = z.object({
+  ownerId: z.string().min(1),
+  importe: z.string().min(1),
+  desde: z.string().min(1),
+});
+
+/**
+ * Sube (o baja) la cuota de un propietario a partir de una fecha.
+ *
+ * No pisa el importe anterior: lo **cierra** el día antes y abre uno nuevo.
+ * Esa es toda la gracia — a Academia Cañada se le cobró 400 €, luego 500 y
+ * luego 600, y un informe de todo el año tiene que cobrar cada mes a su
+ * precio.
+ */
+export async function guardarCuotaFija(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    const data = cuotaSchema.parse(Object.fromEntries(formData.entries()));
+
+    const importe = leerCuota(data.importe);
+    if (importe === null || importe <= 0) {
+      throw new ErrorDeNegocio("La cuota tiene que ser un importe mayor que cero.");
+    }
+    const desde = leerDia(data.desde);
+    if (!desde) throw new ErrorDeNegocio("Hace falta desde cuándo se cobra.");
+
+    const suyo = await prisma.owner.findFirst({
+      where: { id: data.ownerId, organizationId },
+      select: { id: true },
+    });
+    if (!suyo) throw new ErrorDeNegocio("Ese propietario no existe.");
+
+    // El tramo anterior se cierra el día antes de que empiece el nuevo.
+    const vispera = new Date(desde);
+    vispera.setUTCDate(vispera.getUTCDate() - 1);
+    await prisma.cuotaFija.updateMany({
+      where: { ownerId: suyo.id, hasta: null, desde: { lt: desde } },
+      data: { hasta: vispera },
+    });
+
+    await prisma.cuotaFija.create({
+      data: { ownerId: suyo.id, importe, desde, hasta: null },
+    });
+    await prisma.owner.update({
+      where: { id: suyo.id },
+      data: { monthlyFee: importe, monthlyFeeDesde: desde },
+    });
+
+    revalidatePath("/rental/settings");
+    revalidatePath("/rental/reports");
+    revalidatePath("/rental/panel");
+  });
+}
+
+export async function borrarCuotaFija(id: string) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    const cuota = await prisma.cuotaFija.findFirst({
+      where: { id, owner: { organizationId } },
+      select: { id: true, ownerId: true },
+    });
+    if (!cuota) throw new ErrorDeNegocio("Esa cuota no existe.");
+    await prisma.cuotaFija.delete({ where: { id: cuota.id } });
+
+    // Lo que se enseña en la ficha vuelve a ser el tramo que quede abierto.
+    const abierta = await prisma.cuotaFija.findFirst({
+      where: { ownerId: cuota.ownerId, hasta: null },
+      orderBy: { desde: "desc" },
+    });
+    await prisma.owner.update({
+      where: { id: cuota.ownerId },
+      data: {
+        monthlyFee: abierta ? abierta.importe : null,
+        monthlyFeeDesde: abierta ? abierta.desde : null,
+      },
+    });
+
+    revalidatePath("/rental/settings");
+    revalidatePath("/rental/reports");
+    revalidatePath("/rental/panel");
   });
 }
 

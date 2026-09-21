@@ -3,7 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motivoDelFallo } from "@/lib/version-cliente";
-import { crearGrupo, cambiarComisionDeGrupo, borrarGrupo } from "@/lib/actions/properties";
+import {
+  crearGrupo,
+  cambiarComisionDeGrupo,
+  borrarGrupo,
+  guardarCuotaFija,
+  borrarCuotaFija,
+} from "@/lib/actions/properties";
 
 interface GrupoVisible {
   id: string;
@@ -12,10 +18,19 @@ interface GrupoVisible {
   viviendas: number;
 }
 
+interface CuotaVisible {
+  id: string;
+  importe: number;
+  desde: string;
+  hasta: string | null;
+}
+
 interface PropietarioVisible {
   id: string;
   name: string;
   monthlyFee: number | null;
+  /** El histórico de cuotas, de la más antigua a la más nueva. */
+  cuotas: CuotaVisible[];
   grupos: GrupoVisible[];
 }
 
@@ -78,6 +93,64 @@ export default function GruposDePropietario({
                 </span>
               )}
             </p>
+
+            {/* La cuota sube: a Academia Cañada se le cobró 400 €, luego 500 y
+                luego 600. Cada tramo con su fecha, para que un informe de todo
+                el año cobre cada mes a su precio. */}
+            {(p.cuotas.length > 0 || p.monthlyFee !== null) && (
+              <div className="mt-2 rounded-lg bg-slate-50 border border-slate-100 p-2">
+                <p className="text-xs font-medium text-slate-600 mb-1">Cuota fija, por tramos</p>
+                {p.cuotas.length === 0 ? (
+                  <p className="text-xs text-amber-700">
+                    Tiene cuota pero no hay ningún tramo: no se le cobraría nada. Añade uno.
+                  </p>
+                ) : (
+                  <div className="space-y-1 mb-2">
+                    {p.cuotas.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-slate-600">
+                          <strong className="text-slate-800">{c.importe} €</strong> al mes · desde{" "}
+                          {c.desde}
+                          {c.hasta ? ` hasta ${c.hasta}` : " (en vigor)"}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => ejecutar(() => borrarCuotaFija(c.id))}
+                          className="text-slate-400 hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <form
+                  action={(fd) => {
+                    fd.set("ownerId", p.id);
+                    ejecutar(() => guardarCuotaFija(fd));
+                  }}
+                  className="flex flex-wrap items-end gap-2"
+                >
+                  <div>
+                    <label className="block text-[11px] text-slate-500">Nueva cuota (€/mes)</label>
+                    <input name="importe" inputMode="decimal" className="input h-8 text-xs w-28" />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-slate-500">Desde</label>
+                    <input name="desde" type="date" className="input h-8 text-xs" />
+                  </div>
+                  <button type="submit" disabled={pending} className="btn-secondary h-8 text-xs">
+                    Añadir tramo
+                  </button>
+                </form>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Al añadir un tramo, el anterior se cierra el día antes. No se pisa lo que ya se
+                  cobró.
+                </p>
+              </div>
+            )}
 
             {p.grupos.length === 0 ? (
               <p className="text-xs text-slate-400 mt-1">

@@ -291,6 +291,26 @@ Y responde otra pregunta que estaba abierta: los cinco de Villa Monikka **sí es
 (listings 7452xx). Las de Academia y las de Domingo Javier **no** — hay que darlas de alta a
 mano, como ya se suponía.
 
+### La cuota de Academia Cañada es una escalera: 400 → 500 → 600
+
+Lo dijo Yurena el 21/09 y lo confirma el briefing de Mirador: *«Academia importe fijo
+escalonado (400 → 500 → 600 €)»*.
+
+**No está en los Excel.** Los dos que hay son hojas de reservas y no tienen ni una celda con
+400, 500 o 600. En los movimientos del banco tampoco: los importes redondos de ahí son sueldos
+de Malik y de Mohamed. Y Mirador solo guarda **el último tramo**, 600 € desde el 01/08/2026.
+
+Por qué importa: con un único importe, un informe de todo el año cobra 600 € también por los
+meses en que se cobraban 400. Sobre enero–septiembre son **1.000 € de más**.
+
+Así que la cuota se guarda por tramos (`CuotaFija`: importe, desde, hasta) y se cobra **mes a
+mes al importe que estuviera en vigor el día 1**. En Ajustes se ven los tramos y se añade uno
+nuevo con su fecha: el anterior se cierra solo el día antes, sin pisar lo ya cobrado.
+
+**Faltan las dos fechas:** cuándo pasó de 400 a 500 y de 500 a 600 (esta última, si es el
+01/08/2026 que dice Mirador, ya está). Hasta saberlas no se puede liquidar bien el año, y no me
+las invento: se cobra de menos o de más a un cliente real.
+
 ### Resuelto: el 10 % de Villa Monikka va sobre el beneficio
 
 Las reglas de liquidación, ya con el criterio bueno:
@@ -466,6 +486,27 @@ el 15 % y el 17 % son unos **358 €** que estaban mal repartidos, más lo de 20
 La reserva de 180 € del 15 al 16 de julio (Beach & Ocean, huésped Gigliola Scatola) sin
 comisión de Booking pero con 4,75 € de banco —un 2,64 %—. Con `OH` al 0 % de canal, ese cargo
 tiene que venir de otro sitio. Sigue sin explicar.
+
+## El panel de Emma, traído al SaaS
+
+Era lo único de Mirador que no tenía sitio aquí. Está en **Alquileres → La semana y el año**
+(`/rental/panel`), y no repite el «Panel del día», que mira solo a hoy:
+
+- **Los próximos siete días**, una línea por entrada y por salida, con huésped, número de
+  huéspedes y canal. Es lo que hace falta para cuadrar limpiezas y llaves con tiempo.
+- **Lo que se liquidaría hoy**, por propietario y por grupo, con el desglose de dónde sale cada
+  euro.
+- **La cartera por lo que produce**: reservas, noches y ventas de cada vivienda, de más a menos.
+- Cuatro cifras arriba, incluida **cuántas viviendas no están en Lodgify** y hay que llevar a
+  mano.
+
+Dos diferencias a propósito con el de Mirador:
+
+1. Los totales son **del año en curso**. Aquel sumaba 2025, 2026 y 2027 en la misma cifra, y una
+   venta que mezcla tres años no sirve para decidir nada.
+2. La liquidación **se calcula al abrir la página**, no se lee de un borrador guardado. Es
+   exactamente lo que falló en Mirador: el borrador se generó antes de corregir la regla del
+   10 % y siguió enseñando 3.197,95 € de más hasta que se regeneró a mano.
 
 ## La mudanza de Mirador al SaaS
 

@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { revisarVolcado, resumirImportacion, claveDeVivienda, seParecen } from "@/lib/importacion";
+import {
+  revisarVolcado,
+  resumirImportacion,
+  claveDeVivienda,
+  seParecen,
+} from "@/lib/importacion";
 import { tokenCoincide, tokenDeLaCabecera } from "@/lib/token-importacion";
 
 /**
@@ -90,12 +95,35 @@ export async function POST(request: Request) {
       address: p.direccion ?? null,
       email: p.email ?? null,
       tarifaId: p.tarifaRef ? (idPorTarifa.get(p.tarifaRef) ?? null) : null,
-      ...(p.cuotaFija !== undefined && p.cuotaFija !== null ? { monthlyFee: p.cuotaFija } : {}),
     };
     const id = existente
       ? (await prisma.owner.update({ where: { id: existente.id }, data: datos, select: { id: true } })).id
       : (await prisma.owner.create({ data: { organizationId, name: p.nombre, ...datos }, select: { id: true } })).id;
     idPorPropietario.set(p.ref, id);
+
+    // Los tramos de cuota se reemplazan enteros: el volcado es la lista
+    // completa, y conservar tramos viejos que ya no vienen dejaría cobrando
+    // una cuota que alguien quitó. Solo se tocan si el volcado trae alguno.
+    const cuotas = volcado.cuotas.get(p.ref);
+    if (cuotas && cuotas.length > 0) {
+      await prisma.cuotaFija.deleteMany({ where: { ownerId: id } });
+      for (const c of cuotas) {
+        await prisma.cuotaFija.create({
+          data: { ownerId: id, importe: c.importe, desde: c.desde, hasta: c.hasta },
+        });
+      }
+      // La vigente hoy, que es la que se enseña en Ajustes.
+      const vigente = cuotas
+        .filter((c) => c.desde <= new Date() && (c.hasta === null || c.hasta >= new Date()))
+        .sort((a, b) => b.desde.getTime() - a.desde.getTime())[0];
+      await prisma.owner.update({
+        where: { id },
+        data: {
+          monthlyFee: vigente?.importe ?? null,
+          monthlyFeeDesde: vigente?.desde ?? null,
+        },
+      });
+    }
   }
 
   // ── Grupos ──────────────────────────────────────────────────────────
