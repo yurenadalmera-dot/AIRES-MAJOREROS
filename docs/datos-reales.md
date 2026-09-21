@@ -687,10 +687,12 @@ si algún día se discuten:
   texto. Se usa para destacar un dato (la barra de «Limpiezas pendientes», la columna de hoy en
   el calendario) y, cuando hace de texto, en una versión oscurecida.
 
-- **El informe al propietario no lleva el logotipo.** Ese documento sale a nombre de la empresa
-  que gestiona, y ponerle la marca de otra podría confundir a quien lo recibe. Lo que sí ha
-  cambiado ahí es la tipografía y el color. *Si prefieres que lo lleve, es un cambio de una
-  línea.*
+- **Cada documento lleva el logotipo de quien lo emite.** La factura de limpiezas, el de Aires
+  Majoreros SL, que es la emisora (ver los datos fiscales de más arriba). El informe al
+  propietario, el de Mirador de Sotavento: el informe semanal que Inversiones Brito ya venía
+  recibiendo llega encabezado así, o sea que es su documento. *(En la primera versión dejé el
+  informe sin logotipo por prudencia; lo corregí al releer lo que hay escrito unas líneas más
+  arriba sobre ese informe.)*
 
 - **El nombre del negocio activo sigue saliendo de la base de datos.** El logotipo va encima,
   como marca de la aplicación, pero no sustituye al nombre de ninguna empresa, propietario ni
@@ -713,8 +715,27 @@ si algún día se discuten:
 - **El correo de ejemplo de la pantalla de entrada se ha quitado.** Venía precargado
   `emma@example.com`, una dirección inventada en una pantalla de verdad.
 
+## Dos marcas, una por negocio (21/09/2026)
+
+La primera versión puso Mirador de Sotavento en toda la aplicación. Yurena avisó: **la parte de
+Aires Majoreros tiene que llevar su propia imagen.** Corregido.
+
+- `/rental/**` → **Mirador de Sotavento Apartments**.
+- `/cleaning/**` → **Aires Majoreros** · limpiezas y mantenimiento de casas vacacionales.
+- La pantalla de entrada y «Mi cuenta» enseñan **las dos**: desde ahí se entra a las dos, así que
+  enseñar solo una sería elegir por quien entra.
+- El selector de negocio de la barra lateral enseña el **símbolo** de la otra empresa junto a su
+  nombre. Símbolo y no logotipo entero porque a ese tamaño el nombre no se leería.
+
+Lo único que cambia de color entre un negocio y otro es **la sección activa del menú**: azul de
+Mirador en alquileres, verde de Aires en limpiezas. Todo lo demás es común a propósito — cambiar
+de negocio no debería parecer cambiar de aplicación.
+
+El logotipo de Aires venía dentro de un PDF, con fondo blanco. Se le ha quitado el fondo, pero
+**solo el blanco de fuera**, extendiéndose desde el borde: un «todo lo blanco a transparente»
+habría agujereado las paredes de la casa y los destellos del dibujo, que también son blancos.
+
 ### Lo que queda por decidir
 
-- Si el informe al propietario debe llevar o no el logotipo (arriba).
 - Las viviendas no tienen fotografía en el modelo de datos. Si algún día se quieren ver en el
   panel, hay que añadir el campo y de dónde salen; no se ha puesto ninguna imagen de relleno.

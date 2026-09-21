@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, EmptyState } from "@/components/ui";
 import { updatePartnerSplit, updatePartnerName } from "@/lib/actions/invoices";
 import { updateBusinessInfo } from "@/lib/actions/settings";
 import { BUSINESS_TYPES } from "@/lib/constants";
@@ -59,6 +59,12 @@ export default async function CleaningSettingsPage() {
 
       <div className="card p-5">
         <h2 className="font-medium text-tinta mb-3">Socias</h2>
+        {partners.length === 0 && (
+          <EmptyState
+            icono="usuario"
+            message="Todavía no hay socias dadas de alta, así que el reparto de arriba no tiene a quién repartir."
+          />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {partners.map((p) => {
             async function renameAction(formData: FormData) {

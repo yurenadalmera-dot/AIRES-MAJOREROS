@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PrintButton, BackButton } from "@/components/ui";
+import { Marca } from "@/components/Marca";
 import { formatCurrency, formatDate, round2 } from "@/lib/money";
 import { BUSINESS_TYPES } from "@/lib/constants";
 import { liquidarPropietario, armarTramos, cuotaDelPeriodo } from "@/lib/liquidacion";
@@ -184,9 +185,11 @@ export default async function OwnerReportPrintView({
       <div className="card print-area p-8">
         <div className="flex justify-between items-start border-b border-borde pb-4 mb-6">
           <div>
-            {/* Sin logotipo: este documento sale a nombre de la empresa que
-                gestiona, y ponerle la marca de otra podría confundir a quien
-                lo recibe. Lo que cambia aquí es la tipografía y el color. */}
+            {/* El informe que los propietarios ya venían recibiendo llega
+                encabezado «Mirador de Sotavento» (ver docs/datos-reales.md),
+                así que es su documento y lleva su logotipo. La factura de
+                limpiezas, que emite Aires Majoreros SL, lleva el de Aires. */}
+            <Marca negocio="rental" alto={52} className="mb-3" />
             <h1 className="serif text-2xl text-marina">Informe de propietario</h1>
             <p className="text-sm text-tinta-suave mt-1">{rentalBusiness?.legalName ?? rentalBusiness?.name}</p>
           </div>

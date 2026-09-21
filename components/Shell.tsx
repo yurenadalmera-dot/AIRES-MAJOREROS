@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { puede, type Permiso } from "@/lib/permisos";
-import { Marca, MarcaEnlace } from "@/components/Marca";
+import { Marca, MarcaEnlace, MARCAS } from "@/components/Marca";
 import {
   ICONOS,
   IconoCerrar,
@@ -81,6 +81,7 @@ export default function Shell({
     puede(rol, i.permiso)
   );
   const otherHref = activeBusiness === "rental" ? "/cleaning" : "/rental";
+  const otroNegocio = activeBusiness === "rental" ? "cleaning" : "rental";
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -117,20 +118,20 @@ export default function Shell({
             aria-current={activo ? "page" : undefined}
             className={`relative flex items-center gap-3 rounded-lg py-2.5 pl-4 pr-3 text-sm transition-colors ${
               activo
-                ? "bg-oceano-suave font-semibold text-marina"
+                ? "bg-marca-suave font-semibold text-marina"
                 : "text-tinta-suave hover:bg-marina-suave hover:text-tinta"
             }`}
           >
-            {/* La sección activa, además del fondo azul suave, lleva una marca
-                vertical azul marino: el color por sí solo no debería ser la
-                única pista de dónde estamos. */}
+            {/* La sección activa, además del fondo suave, lleva una barra
+                vertical del color de la empresa: el color de fondo por sí solo
+                no debería ser la única pista de dónde estamos. */}
             {activo && (
               <span
                 aria-hidden
-                className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-marina"
+                className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-marca"
               />
             )}
-            <Icono size={19} className={activo ? "text-oceano-oscuro" : "text-borde-fuerte"} />
+            <Icono size={19} className={activo ? "text-marca-media" : "text-borde-fuerte"} />
             <span className="min-w-0">{item.label}</span>
           </Link>
         );
@@ -147,9 +148,17 @@ export default function Shell({
         className="mt-2.5 block rounded-lg border border-borde-fuerte px-3 py-2 transition-colors hover:bg-marina-suave"
       >
         <span className="block text-xs text-tinta-suave">Cambiar a</span>
-        <span className="mt-0.5 flex items-center gap-1 text-xs font-medium text-oceano-oscuro">
-          {otherBusinessName}
-          <IconoFlecha size={13} />
+        <span className="mt-1 flex items-center gap-2">
+          {/* El símbolo del otro negocio, no su nombre completo: al otro lado
+              hay otra empresa, no otra pestaña de la misma. Va el símbolo
+              porque el logotipo entero, a este tamaño, no se leería. */}
+          <Marca negocio={otroNegocio} variante="simbolo" alto={22} />
+          {/* El nombre de la empresa se parte en dos líneas si hace falta,
+              pero no se corta: un nombre a medias no dice a dónde se va. */}
+          <span className="min-w-0 flex-1 text-xs font-medium leading-snug text-tinta">
+            {otherBusinessName}
+          </span>
+          <IconoFlecha size={13} className="text-tinta-suave" />
         </span>
       </Link>
     </div>
@@ -161,8 +170,9 @@ export default function Shell({
           cerrar: el logotipo no se recorta ni se le pone nada encima. */}
       <div className={`px-5 pt-6 pb-5 ${enCajon ? "pr-14" : ""}`}>
         <MarcaEnlace
+          negocio={activeBusiness}
           href={activeBusiness === "rental" ? "/rental" : "/cleaning"}
-          alto={enCajon ? 52 : 64}
+          alto={enCajon ? MARCAS[activeBusiness].altoBarra - 10 : undefined}
         />
       </div>
       <div className="border-b border-borde" />
@@ -173,7 +183,7 @@ export default function Shell({
   );
 
   return (
-    <div className="min-h-screen lg:flex bg-fondo">
+    <div className="min-h-screen lg:flex bg-fondo" data-negocio={activeBusiness}>
       {/* Menú fijo a partir de pantallas grandes. */}
       <aside
         className="no-print hidden lg:flex w-[264px] shrink-0 flex-col border-r border-borde bg-superficie"
@@ -219,7 +229,7 @@ export default function Shell({
                 estamos; en pantalla grande eso ya lo dice el propio menú y
                 aquí se deja el contexto del negocio. */}
             <div className="min-w-0 lg:hidden flex items-center gap-2.5">
-              <Marca variante="simbolo" alto={26} />
+              <Marca negocio={activeBusiness} variante="simbolo" alto={26} />
               <p className="truncate font-semibold text-marina">{seccion}</p>
             </div>
             <p className="hidden lg:block truncate text-sm text-tinta-suave">

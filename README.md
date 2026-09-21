@@ -367,21 +367,37 @@ prisma/seed.ts          Datos ficticios de ejemplo (Fuerteventura).
 
 ## Identidad visual
 
-La aplicación lleva la imagen de **Mirador de Sotavento Apartments**. Los valores están
-centralizados: cambiar un color se hace en un sitio y se ve en toda la aplicación.
+La plataforma lleva **dos marcas, una por negocio**: **Mirador de Sotavento Apartments** en la
+operativa de alquiler y **Aires Majoreros** en la de limpiezas y mantenimiento. No es decoración:
+son dos empresas distintas, y la factura de limpiezas la emite Aires Majoreros SL.
+
+Lo que cambia entre una y otra es el logotipo y tres variables de color (`--marca-fuerte`,
+`--marca-media`, `--marca-suave`), que `data-negocio` fija en la raíz del panel y que solo pintan
+la sección activa del menú. Todo lo demás es común, para que cambiar de negocio no parezca
+cambiar de aplicación. Los valores están centralizados: cambiar un color se hace en un sitio y se
+ve en toda la aplicación.
+
+| Dónde sale cada marca | Cuál |
+| --- | --- |
+| Barra lateral y cabecera de `/rental/**` | Mirador de Sotavento |
+| Barra lateral y cabecera de `/cleaning/**` | Aires Majoreros |
+| Pantalla de entrada y «Mi cuenta» | Las dos: desde ahí se entra a las dos |
+| Informe al propietario | Mirador de Sotavento — es el que los propietarios ya venían recibiendo |
+| Factura de limpiezas | Aires Majoreros — es quien la emite |
 
 | Dónde | Qué hay |
 | --- | --- |
 | `app/globals.css` | Los colores, radios, sombras y tipografías, como variables CSS en `:root`, y las clases compartidas (`.card`, `.btn-*`, `.input`, `.badge-*`, `.table-base`). |
 | `tailwind.config.ts` | Solo les pone nombre para usarlos como utilidades (`bg-marina`, `text-tinta-suave`). No duplica los valores. |
 | `components/iconos.tsx` | Una sola familia de iconos, en SVG, con `currentColor`. Nada de emojis en la interfaz: los pinta cada sistema a su manera y no se pueden teñir. |
-| `components/Marca.tsx` | El logotipo. Proporción fija, sobre superficie clara y con margen; en sitios estrechos, la versión de símbolo. |
-| `public/marca/` | `mirador-de-sotavento.png` (completo) y `mirador-simbolo.png` (sol, montaña y olas). Son PNG con transparencia, **no vectores**: el original es una imagen de píxeles. |
+| `components/Marca.tsx` | Los dos logotipos y sus reglas. Proporción fija, sobre superficie clara y con margen; en sitios estrechos, la versión de símbolo. `MARCAS` define cada uno. |
+| `public/marca/` | `mirador-de-sotavento.png` / `mirador-simbolo.png` y `aires-majoreros.png` / `aires-simbolo.png`. Son PNG con transparencia, **no vectores**: los originales son imágenes de píxeles. |
 
-La paleta: azul marino `#102F50`, azul océano `#246A9A`, naranja `#E89542` (solo para destacar
+La paleta común: azul marino `#102F50`, azul océano `#246A9A`, naranja `#E89542` (solo para destacar
 un dato, nunca como fondo de botón: sobre blanco no llega al contraste mínimo para texto),
 arena `#F5F1EA`, fondo `#F8FAFC`, texto `#172B3A` y `#526477`, líneas `#E2E8EF`. El burdeos del
-logotipo se reserva a la marca.
+logotipo se reserva a la marca. El acento de Aires sale de su propio logotipo: azul `#183D84` y
+verde `#88B93C`, este último oscurecido a `#5E8C22` para que llegue al contraste mínimo.
 
 Dos tipografías, cargadas con un `<link>` a Google Fonts desde `app/layout.tsx` y **no** con
 `next/font`: `next/font` descarga las fuentes durante el build, y este build ya ha fallado antes

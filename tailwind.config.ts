@@ -34,6 +34,13 @@ const config: Config = {
           texto: "var(--acento-texto)",
           suave: "var(--acento-suave)",
         },
+        // El acento del negocio activo: azul de Mirador en alquileres, verde
+        // de Aires en limpiezas. Lo fija `data-negocio` en la raíz del panel.
+        marca: {
+          DEFAULT: "var(--marca-fuerte)",
+          media: "var(--marca-media)",
+          suave: "var(--marca-suave)",
+        },
         arena: "var(--arena)",
         fondo: "var(--fondo)",
         superficie: "var(--superficie)",

@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Marca } from "@/components/Marca";
+import { MarcaDoble } from "@/components/Marca";
 
 function LoginForm() {
   const router = useRouter();
@@ -44,9 +44,10 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-arena px-4 py-10">
       <div className="w-full max-w-[26rem]">
         <div className="text-center mb-7">
-          {/* El logotipo, sobre superficie clara y con aire alrededor. */}
-          <Marca alto={86} className="mx-auto" />
-          <h1 className="serif text-[1.75rem] leading-tight text-marina mt-7">
+          {/* Las dos empresas, sobre superficie clara y con aire alrededor.
+              Desde aquí se entra a las dos, así que aquí están las dos. */}
+          <MarcaDoble />
+          <h1 className="serif text-[1.75rem] leading-tight text-marina mt-9">
             Plataforma de gestión
           </h1>
           <p className="text-sm text-tinta-suave mt-1.5">

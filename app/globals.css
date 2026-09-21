@@ -43,6 +43,18 @@
   --borde: #e2e8ef;
   --borde-fuerte: #ccd6e2;
 
+  /* El acento de cada negocio.
+     La plataforma lleva dos marcas: Mirador de Sotavento en los alquileres y
+     Aires Majoreros en las limpiezas. Estas tres variables son lo único que
+     cambia entre una y otra —la sección activa del menú—; el resto del sistema
+     es común, para que cambiar de negocio no parezca cambiar de aplicación.
+     Los valores por defecto son los de Mirador; `[data-negocio="cleaning"]`
+     los sustituye por los del logotipo de Aires (azul #183D84 y verde
+     #88B93C, este último oscurecido para que tenga contraste suficiente). */
+  --marca-fuerte: var(--marina);
+  --marca-suave: var(--oceano-suave);
+  --marca-media: var(--oceano-oscuro);
+
   /* Estados. Cada uno lleva su par texto/fondo ya contrastado. */
   --bien: #1c6b51;
   --bien-suave: #e8f4ef;
@@ -62,6 +74,12 @@
   --fuente-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   --fuente-serif: "Cormorant Garamond", "Iowan Old Style", Georgia, "Times New Roman", serif;
+}
+
+[data-negocio="cleaning"] {
+  --marca-fuerte: #183d84;
+  --marca-suave: #f1f6e8;
+  --marca-media: #5e8c22;
 }
 
 @layer base {

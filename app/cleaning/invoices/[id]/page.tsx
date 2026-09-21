@@ -6,6 +6,14 @@ import { formatCurrency, formatDate } from "@/lib/money";
 import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TRANSITIONS, BUSINESS_TYPES } from "@/lib/constants";
 import { updateInvoiceStatus } from "@/lib/actions/invoices";
 import FormularioConAviso from "@/components/FormularioConAviso";
+import { Marca } from "@/components/Marca";
+
+/** Mismo criterio que en el historial de facturas. */
+const ESTADO_TONO: Record<string, string> = {
+  DRAFT: "badge-neutro",
+  ISSUED: "badge-info",
+  PAID: "badge-bien",
+};
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -59,7 +67,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       <div className="card print-area p-8">
         <div className="flex justify-between items-start border-b border-borde pb-4 mb-6">
           <div>
-            <h1 className="text-lg font-semibold text-tinta">Factura {invoice.invoiceNumber}</h1>
+            {/* El logotipo de quien emite. Esta factura la emite Aires
+                Majoreros, así que aquí sí va su marca: es su documento. */}
+            <Marca negocio="cleaning" alto={48} className="mb-3" />
+            <h1 className="serif text-2xl text-marina">Factura {invoice.invoiceNumber}</h1>
             {/* Quien emite: razón social, NIF y domicilio. Los tres son
                 obligatorios en una factura. */}
             <p className="text-sm font-medium text-tinta mt-1">
@@ -73,7 +84,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             )}
           </div>
           <div className="text-right">
-            <Badge className="mb-2">{INVOICE_STATUS_LABEL[invoice.status]}</Badge>
+            <Badge className={`mb-2 ${ESTADO_TONO[invoice.status] ?? "badge-neutro"}`}>
+              {INVOICE_STATUS_LABEL[invoice.status]}
+            </Badge>
             <p className="text-sm text-tinta-suave">Emitida el {formatDate(invoice.issueDate)}</p>
             <p className="text-sm text-tinta-suave">
               Periodo: {formatDate(invoice.periodStart)} – {formatDate(invoice.periodEnd)}
@@ -96,7 +109,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               <th>Fecha</th>
               <th>Vivienda</th>
               <th>Concepto</th>
-              <th>Importe</th>
+              <th className="num">Importe</th>
             </tr>
           </thead>
           <tbody>
@@ -105,22 +118,28 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 <td>{formatDate(line.date)}</td>
                 <td>{line.propertyName}</td>
                 <td>{line.description}</td>
-                <td>{formatCurrency(line.amount)}</td>
+                <td className="num">{formatCurrency(line.amount)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3}>Base imponible</td>
-              <td>{formatCurrency(invoice.subtotal)}</td>
+              <td colSpan={3} className="text-right">
+                Base imponible
+              </td>
+              <td className="num">{formatCurrency(invoice.subtotal)}</td>
             </tr>
             <tr>
-              <td colSpan={3}>IGIC ({Number(invoice.taxRate)} %)</td>
-              <td>{formatCurrency(invoice.taxAmount)}</td>
+              <td colSpan={3} className="text-right">
+                IGIC ({Number(invoice.taxRate)} %)
+              </td>
+              <td className="num">{formatCurrency(invoice.taxAmount)}</td>
             </tr>
             <tr className="font-semibold">
-              <td colSpan={3}>Total factura</td>
-              <td>{formatCurrency(invoice.total)}</td>
+              <td colSpan={3} className="text-right">
+                Total factura
+              </td>
+              <td className="num">{formatCurrency(invoice.total)}</td>
             </tr>
           </tfoot>
         </table>
