@@ -25,7 +25,11 @@ function isPublic(pathname: string) {
     // antes de que haya sesión. Sin esto, el middleware los manda a /login y
     // la portada sale con la imagen rota.
     pathname.startsWith("/marca/") ||
-    pathname.startsWith("/icon")
+    pathname.startsWith("/icon") ||
+    // El formulario donde el huésped rellena sus datos antes de llegar. No
+    // lleva sesión —el huésped no tiene cuenta— y su autorización es el
+    // propio enlace, que caduca y del que aquí solo se guarda la huella.
+    pathname.startsWith("/viajeros/")
   );
 }
 

@@ -326,14 +326,26 @@ Recomiendo el de n8n, por el token y por el histórico.
 asignarlas si hace falta. La separación es de pantallas, no un candado — si quieres que además
 no pueda, se cambia en `lib/permisos.ts` y en ningún sitio más.*
 
-### Fase 2 — la ficha del huésped y la policía (2–3 semanas)
+### Fase 2 — la ficha del huésped y la policía
 
-8. Entidad `Huesped`, cifrada.
-9. Formulario público con enlace único por reserva, con OCR del documento.
-10. Envío a SES.HOSPEDAJES desde n8n y acuse guardado.
-11. Panel de partes pendientes.
+**Casi hecha el 21/09.** Todo lo que no depende de la especificación del servicio web:
 
-*Empieza cuando la asesoría confirme campos y plazos.*
+8. ✅ `Huesped` colgando de la reserva. El **documento y el número de soporte van cifrados**
+   (AES-256-GCM): comprobado que en un volcado de la base no aparecen en claro.
+9. ✅ **Formulario público** en `/viajeros/<token>`, pensado para el móvil. El enlace se genera
+   desde la ficha de la reserva, caduca a los 30 días y de él solo se guarda la huella. Valida el
+   dígito de control del DNI y del NIE mientras la persona lo tiene delante, pide el número de
+   soporte solo a documentos españoles, y exige el parentesco cuando el viajero es menor.
+10. ⏳ **Envío a SES.HOSPEDAJES**: falta la especificación del servicio web.
+11. ✅ **Panel de partes pendientes** en Alquileres, ordenado por entrada, con aviso de lo que
+    entra en menos de dos días sin datos.
+
+**Un fallo encontrado probándolo, y arreglado.** React vacía el formulario cuando termina una
+acción, acierte o falle. Como fallar es lo normal —un DNI mal copiado—, el huésped se encontraba
+el formulario **en blanco** con el error encima; corregía el documento, pulsaba y no pasaba nada,
+porque los demás campos obligatorios estaban vacíos y el navegador bloqueaba el envío sin decir
+ni pío. A esas alturas cualquiera manda una foto del DNI por WhatsApp y se acabó el formulario.
+Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
 
 ### Fase 3 — hablar con el huésped (2–3 semanas)
 

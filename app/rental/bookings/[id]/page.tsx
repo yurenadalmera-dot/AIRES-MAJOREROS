@@ -7,6 +7,8 @@ import BookingForm from "@/components/BookingForm";
 import { updateBooking, deleteBooking, setBookingManualLock } from "@/lib/actions/bookings";
 import DeleteBookingButton from "@/components/DeleteBookingButton";
 import FormularioConAviso from "@/components/FormularioConAviso";
+import ParteDeLaReserva from "@/components/ParteDeLaReserva";
+import { viajerosDeLaReserva } from "@/lib/parte-viajeros";
 
 export default async function EditBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,6 +23,8 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
   ]);
 
   if (!booking) notFound();
+
+  const viajeros = await viajerosDeLaReserva(organizationId, booking.id);
 
   async function updateAction(formData: FormData) {
     "use server";
@@ -91,6 +95,31 @@ export default async function EditBookingPage({ params }: { params: Promise<{ id
         action={updateAction}
         redirectTo="/rental/bookings"
       />
+
+      {/* Los datos que hay que dar a la policía por cada persona que se aloja.
+          Va aquí, en la reserva, porque es de esta reserva de quien son. */}
+      <div className="mt-6">
+        <ParteDeLaReserva
+          bookingId={booking.id}
+          esperados={booking.adults + booking.children}
+          comunicadoEl={booking.comunicadoEl?.toISOString() ?? null}
+          hayEnlace={Boolean(booking.huellaFormulario)}
+          expira={booking.formularioExpira?.toISOString() ?? null}
+          viajeros={viajeros.map((v) => ({
+            id: v.id,
+            titular: v.titular,
+            nombre: v.nombre,
+            apellido1: v.apellido1,
+            apellido2: v.apellido2,
+            tipoDocumento: v.tipoDocumento,
+            documento: v.documento,
+            numeroSoporte: v.numeroSoporte,
+            nacionalidad: v.nacionalidad,
+            fechaNacimiento: v.fechaNacimiento.toISOString(),
+            parentesco: v.parentesco,
+          }))}
+        />
+      </div>
     </div>
   );
 }
