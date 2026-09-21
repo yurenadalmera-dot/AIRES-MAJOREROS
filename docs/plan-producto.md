@@ -306,15 +306,25 @@ escritura que `/api/importar`, es idempotente y se puede llamar cada hora sin du
 
 Recomiendo el de n8n, por el token y por el histórico.
 
-### Fase 1 — que cada una vea lo suyo (1–2 semanas)
+### Fase 1 — que cada una vea lo suyo
 
-4. Separar limpiezas y mantenimiento como en el punto 2.
-5. Enchufar el motor de tarifas, con `servicio` (salida/repaso) en `CleaningTask` y la regla de
-   los 7 días traída de n8n.
-6. Enseñar en el tablero de Aires los huéspedes, la reserva y los turnarounds del mismo día.
-7. Vista de carga por día, con aviso de los días fuertes.
+**Hecha el 21/09.**
 
-Al final de esta fase Aires factura bien sola, que es de donde sale el dinero.
+4. ✅ **Separadas.** `/cleaning/tasks` es «Limpiezas» y `/rental/tasks` es «Mantenimiento». Cada
+   pantalla enseña solo lo suyo, con su formulario de alta y sin el filtro de tipo, que ya no
+   pinta nada. Emma no se queda ciega: el panel del día le sigue diciendo qué vivienda tiene
+   salida hoy y no está limpia, y desde ahí se va al tablero de Aires.
+5. ✅ El motor de tarifas, con `servicio` y `huespedes` guardados en la limpieza y la regla de los
+   7 días copiada de n8n, con sus pruebas.
+6. ✅ El tablero de Aires enseña el servicio y los huéspedes, y marca «sin precio» lo que antes
+   salía como un 0,00 € que no cantaba.
+7. ✅ **Carga de las próximas tres semanas**, con los días de seis o más limpiezas en naranja.
+   Sustituye al PDF que mandaba «Previsión mensual limpiezas»: aquel leía de Airtable y se miraba
+   una vez; esto está donde se trabaja.
+
+*Lo que no se ha tocado: los permisos. Emma sigue pudiendo entrar al tablero de limpiezas y
+asignarlas si hace falta. La separación es de pantallas, no un candado — si quieres que además
+no pueda, se cambia en `lib/permisos.ts` y en ningún sitio más.*
 
 ### Fase 2 — la ficha del huésped y la policía (2–3 semanas)
 

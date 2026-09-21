@@ -151,7 +151,7 @@ export default async function RentalDashboardPage() {
                 ? "Pendientes o en curso · ir al tablero"
                 : "Nada pendiente"
             }
-            href="/rental/tasks"
+            href="/cleaning/tasks"
           />
         </div>
       </section>
@@ -161,7 +161,7 @@ export default async function RentalDashboardPage() {
           Hay {cleaningNeededCount}{" "}
           {cleaningNeededCount === 1 ? "vivienda con salida hoy" : "viviendas con salida hoy"} cuya
           limpieza todavía no está marcada como hecha.{" "}
-          <Link href="/rental/tasks" className="underline font-medium">
+          <Link href="/cleaning/tasks" className="underline font-medium">
             Ver el tablero de limpieza
           </Link>
           .
@@ -226,7 +226,7 @@ export default async function RentalDashboardPage() {
                 {checkOuts.length}
               </span>
             </h2>
-            <EnlaceVer href="/rental/tasks">Tablero de limpieza</EnlaceVer>
+            <EnlaceVer href="/cleaning/tasks">Tablero de limpiezas</EnlaceVer>
           </div>
           {checkOuts.length === 0 ? (
             <EmptyState
@@ -271,8 +271,8 @@ export default async function RentalDashboardPage() {
         <p className="text-xs text-tinta-suave mb-4">
           «Libre» quiere decir que hoy no hay reserva en curso. Que la vivienda esté lista para
           entrar lo dice el{" "}
-          <Link href="/rental/tasks" className="enlace">
-            tablero de limpieza
+          <Link href="/cleaning/tasks" className="enlace">
+            tablero de limpiezas
           </Link>
           .
         </p>

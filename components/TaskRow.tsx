@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { assignEmployeeToTask, updateTaskStatus, deleteTask } from "@/lib/actions/tasks";
 import { TASK_STATUS_LABEL } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/money";
-import { IconoAjustes, IconoLimpieza } from "@/components/iconos";
+import { IconoLimpieza, IconoMantenimiento } from "@/components/iconos";
 import { Badge } from "@/components/ui";
 
 interface TaskRowProps {
@@ -63,12 +63,12 @@ export default function TaskRow({ task, employees }: TaskRowProps) {
           {task.type === "CLEANING" ? (
             <IconoLimpieza size={16} className="text-oceano" />
           ) : (
-            <IconoAjustes size={16} className="text-tinta-suave" />
+            <IconoMantenimiento size={16} className="text-tinta-suave" />
           )}
           {task.type === "CLEANING"
             ? task.servicio === "repaso"
               ? "Repaso"
-              : "Limpieza de salida"
+              : "Salida"
             : "Mantenimiento"}
         </span>
       </td>

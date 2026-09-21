@@ -155,6 +155,15 @@ export function IconoAjustes(p: PropsIcono) {
   );
 }
 
+/** Mantenimiento: una llave inglesa. */
+export function IconoMantenimiento(p: PropsIcono) {
+  return (
+    <Svg {...p}>
+      <path d="M15.4 4.4a4.6 4.6 0 0 0-5.9 5.9L4 15.8a2 2 0 0 0 2.8 2.8l5.5-5.5a4.6 4.6 0 0 0 5.9-5.9l-2.6 2.6-2.4-.6-.6-2.4z" />
+    </Svg>
+  );
+}
+
 /* --- Interfaz ------------------------------------------------------------ */
 
 export function IconoUsuario(p: PropsIcono) {
@@ -284,6 +293,7 @@ export const ICONOS = {
   factura: IconoFactura,
   euro: IconoEuro,
   ajustes: IconoAjustes,
+  mantenimiento: IconoMantenimiento,
   usuario: IconoUsuario,
   entrada: IconoEntrada,
   salida: IconoSalida,

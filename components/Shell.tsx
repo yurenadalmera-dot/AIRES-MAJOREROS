@@ -40,7 +40,7 @@ const RENTAL_NAV: NavItem[] = [
   { href: "/rental/calendar", label: "Calendario semanal", icono: "calendario", permiso: "operativa.alquiler" },
   { href: "/rental/bookings", label: "Reservas", icono: "reservas", permiso: "operativa.alquiler" },
   { href: "/rental/properties", label: "Viviendas", icono: "casa", permiso: "operativa.alquiler" },
-  { href: "/rental/tasks", label: "Limpieza y mantenimiento", icono: "limpieza", permiso: "operativa.estado_tarea" },
+  { href: "/rental/tasks", label: "Mantenimiento", icono: "mantenimiento", permiso: "operativa.estado_tarea" },
   { href: "/rental/gastos", label: "Gastos", icono: "recibo", permiso: "operativa.alquiler" },
   { href: "/rental/reports", label: "Informes propietarios", icono: "informe", permiso: "operativa.alquiler" },
   { href: "/rental/settings", label: "Ajustes", icono: "ajustes", permiso: "administracion" },
@@ -49,7 +49,7 @@ const RENTAL_NAV: NavItem[] = [
 const CLEANING_NAV: NavItem[] = [
   { href: "/cleaning", label: "Facturación", icono: "euro", permiso: "facturacion" },
   { href: "/cleaning/invoices", label: "Historial de facturas", icono: "factura", permiso: "facturacion" },
-  { href: "/cleaning/tasks", label: "Limpieza y mantenimiento", icono: "limpieza", permiso: "operativa.estado_tarea" },
+  { href: "/cleaning/tasks", label: "Limpiezas", icono: "limpieza", permiso: "operativa.estado_tarea" },
   { href: "/cleaning/reports", label: "Informes propietarios", icono: "informe", permiso: "facturacion" },
   { href: "/cleaning/settings", label: "Reparto y ajustes", icono: "ajustes", permiso: "administracion" },
 ];
