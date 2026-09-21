@@ -357,11 +357,19 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
 
 ### Fase 4 — informes y cierre (1 semana)
 
-16. El informe semanal **rehecho contra el SaaS** (no «cambiarle la fuente»: en Airtable no están
-    los gastos ni las comisiones contrastadas), con PDF adjunto.
-17. Botón de «enviar al propietario» con registro de envíos.
-18. Apagar «Informe semanal propietarios». Con eso **no queda nada leyendo de Airtable**, y la
-    base se puede archivar.
+16. ✅ El informe **rehecho contra el SaaS** (no «cambiarle la fuente»: en Airtable no están los
+    gastos ni las comisiones contrastadas). El cálculo está en `lib/informe-propietario.ts`, en un
+    solo sitio, y lo usan por igual la pantalla y el correo: si estuviera copiado, el propietario
+    acabaría recibiendo unas cifras y viendo otras al entrar. Comprobado contra el informe de
+    antes, cifra por cifra.
+17. ✅ **Registro de envíos.** «Marcar como enviado» / «Entregado a mano» en la pantalla del
+    informe, y la lista de los últimos diez en `/rental/reports`. Sin eso, «¿le mandamos ya el de
+    septiembre?» solo lo sabe quien lo mandó, y solo mirando su bandeja de enviados.
+18. ✅ «Informe semanal propietarios» apagado. **Ya no queda nada leyendo de Airtable.**
+19. ⏳ **El correo en sí.** `GET /api/informe?start=&end=` ya devuelve los números de cada
+    propietario, con el mismo token que `/api/importar`; `POST /api/informe` apunta el envío.
+    Falta el workflow que con eso redacte el correo, adjunte el PDF y lo mande. **No lo monto sin
+    que Yurena lo diga**: el primer disparo le llega a propietarios de verdad.
 
 ---
 
@@ -389,6 +397,16 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
    **Eso es lo que necesito:** que Yurena entre en SES.HOSPEDAJES, siga la sección 14 y me pase
    ese documento. Con él monto el envío; sin él estaría adivinando el formato.
 5. ~~¿Qué número de WhatsApp?~~ Queda apuntado como mejora, para más adelante.
+6. **¿Quién llama a `POST /api/sincronizar`?** Las reservas de Lodgify entran por ahí desde que se
+   apagó lo de Airtable, pero hoy hay que darle a mano. Dos sitios:
+
+   - **Un cron de Hostinger.** Es lo más corto, pero el token queda escrito a la vista en el panel
+     y, si un día falla, no queda rastro de por qué.
+   - **Un workflow de n8n cada 3 horas.** El token va en una credencial cifrada y cada ejecución
+     queda registrada, con su error si lo hubo. **Es el que recomiendo**, y además es el hueco que
+     dejó «Mirador · cargar reservas Lodgify» al apagarse.
+
+   Mientras no se decida, las reservas nuevas no aparecen solas.
 
 ---
 
@@ -408,7 +426,8 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
 
 ## 7. Pendientes anteriores que siguen abiertos
 
-- El workflow «Mirador · cargar reservas Lodgify» sigue activo cada 3 horas.
+- ~~El workflow «Mirador · cargar reservas Lodgify» sigue activo cada 3 horas.~~ Apagado. Su
+  hueco lo cubre `POST /api/sincronizar`, que hoy no lo llama nadie (decisión 6).
 - La tabla `documentos_ocr` de Supabase puede sobrar ya.
 - El OCR nunca se ha probado contra el modelo real: no había clave en la sesión.
 - Falta el propietario del Apto 103 («histórico – pendiente de identificar»).
