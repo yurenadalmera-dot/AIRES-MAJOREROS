@@ -688,28 +688,37 @@ describe("meses que cubre un periodo", () => {
 describe("la cuota fija de un periodo", () => {
   const d = (anio: number, mes: number) => new Date(Date.UTC(anio, mes - 1, 1, 12));
 
-  // La escalera de Academia Cañada, con fechas de ejemplo: lo que importa es
-  // que cada mes se cobre al precio que tocaba.
+  // La escalera de Academia Cañada, tal como la confirmó Yurena el 21/09:
+  // enero–abril 400, mayo–julio 500, y desde agosto 600.
   const escalera = [
-    { importe: 400, desde: d(2026, 1), hasta: d(2026, 3) },
-    { importe: 500, desde: d(2026, 4), hasta: d(2026, 7) },
-    { importe: 600, desde: d(2026, 8), hasta: null },
+    { importe: 400, desde: new Date(Date.UTC(2026, 0, 1, 12)), hasta: new Date(Date.UTC(2026, 3, 30, 12)) },
+    { importe: 500, desde: new Date(Date.UTC(2026, 4, 1, 12)), hasta: new Date(Date.UTC(2026, 6, 31, 12)) },
+    { importe: 600, desde: new Date(Date.UTC(2026, 7, 1, 12)), hasta: null },
   ];
 
   test("cada mes se cobra al importe que estaba en vigor", () => {
     const r = cuotaDelPeriodo({ inicio: d(2026, 1), fin: d(2026, 9), cuotas: escalera });
-    // 3 × 400 + 4 × 500 + 2 × 600 = 1.200 + 2.000 + 1.200
-    assert.equal(r.importe, 4400);
+    // 4 × 400 + 3 × 500 + 2 × 600 = 1.600 + 1.500 + 1.200
+    assert.equal(r.importe, 4300);
     assert.match(r.detalle, /400/);
     assert.match(r.detalle, /600/);
   });
 
   // El error que esto viene a evitar: con el importe de hoy por los meses del
-  // periodo salían 5.400 €, mil euros de más.
+  // periodo salían 5.400 €, 1.100 € de más.
   test("no se cobra el importe de hoy por los meses de antes", () => {
     const r = cuotaDelPeriodo({ inicio: d(2026, 1), fin: d(2026, 9), cuotas: escalera });
     assert.notEqual(r.importe, 600 * 9);
-    assert.equal(600 * 9 - r.importe, 1000, "lo que se le cobraría de más");
+    assert.equal(600 * 9 - r.importe, 1100, "lo que se le cobraría de más");
+  });
+
+  // El último día del tramo cuenta entero: abril se cobra a 400 aunque el
+  // tramo termine el día 30.
+  test("el mes en que acaba un tramo se cobra a ese tramo", () => {
+    const abril = cuotaDelPeriodo({ inicio: d(2026, 4), fin: d(2026, 4), cuotas: escalera });
+    assert.equal(abril.importe, 400);
+    const mayo = cuotaDelPeriodo({ inicio: d(2026, 5), fin: d(2026, 5), cuotas: escalera });
+    assert.equal(mayo.importe, 500);
   });
 
   test("un solo tramo se comporta como antes", () => {

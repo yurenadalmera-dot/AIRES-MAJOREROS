@@ -307,9 +307,17 @@ Así que la cuota se guarda por tramos (`CuotaFija`: importe, desde, hasta) y se
 mes al importe que estuviera en vigor el día 1**. En Ajustes se ven los tramos y se añade uno
 nuevo con su fecha: el anterior se cierra solo el día antes, sin pisar lo ya cobrado.
 
-**Faltan las dos fechas:** cuándo pasó de 400 a 500 y de 500 a 600 (esta última, si es el
-01/08/2026 que dice Mirador, ya está). Hasta saberlas no se puede liquidar bien el año, y no me
-las invento: se cobra de menos o de más a un cliente real.
+**Las fechas, confirmadas por Yurena el 21/09:**
+
+| Importe | Desde | Hasta |
+|---|---|---|
+| 400 € | 01/01/2026 | 30/04/2026 |
+| 500 € | 01/05/2026 | 31/07/2026 |
+| **600 €** | 01/08/2026 | en vigor |
+
+Ya están escritas en `reglas_liquidacion` de Mirador, así que **la importación se las trae
+sola**. De enero a septiembre de 2026 son **4.300 €** (4×400 + 3×500 + 2×600), no 5.400 €:
+**1.100 € de diferencia**, y el panel enseña el desglose entero para que se pueda comprobar.
 
 ### Resuelto: el 10 % de Villa Monikka va sobre el beneficio
 
