@@ -521,3 +521,38 @@ function normalizarClave(nombre: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]/g, "");
 }
+
+// ── Un endpoint prohibido no puede tirar la sincronización ────────────
+//
+// La clave de Lodgify de Aires abre las reservas pero no las viviendas:
+// `/v2/properties` contesta 403. Eso mataba la sincronización entera antes de
+// pedir una sola reserva, así que no entraba nada y el panel salía vacío sin
+// decir por qué. Las viviendas ya estaban dadas de alta con su identificador:
+// lo que hacía falta eran las reservas.
+
+describe("cuando Lodgify no deja leer las viviendas", () => {
+  /** El trozo de `sincronizarViviendas` que decide: seguir o abortar. */
+  async function traerViviendas(pedir: () => Promise<string[]>) {
+    try {
+      const viviendas = await pedir();
+      return { viviendas, aviso: null as string | null };
+    } catch (error) {
+      const motivo = error instanceof Error ? error.message : String(error);
+      return { viviendas: [] as string[], aviso: `No se han podido leer las viviendas de Lodgify (${motivo}).` };
+    }
+  }
+
+  test("un 403 se convierte en aviso, no en excepción", async () => {
+    const r = await traerViviendas(async () => {
+      throw new Error("Lodgify respondió 403 al pedir las viviendas (página 1)");
+    });
+    assert.deepEqual(r.viviendas, []);
+    assert.match(r.aviso ?? "", /403/);
+  });
+
+  test("cuando sí se pueden leer, no hay aviso", async () => {
+    const r = await traerViviendas(async () => ["639390", "641828"]);
+    assert.equal(r.aviso, null);
+    assert.equal(r.viviendas.length, 2);
+  });
+});

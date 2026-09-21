@@ -30,6 +30,8 @@ export interface SyncSummary {
   propertiesUpdated: number;
   /** Limpiezas de reservas ya terminadas, dadas por hechas al importarlas. */
   pastCleaningsDone: number;
+  /** Por qué no se han podido leer las viviendas de Lodgify, si ha pasado. */
+  avisoViviendas: string | null;
 }
 
 /**
@@ -43,9 +45,29 @@ export interface SyncSummary {
  * precio de limpieza, el propietario y el estado manual **no se tocan**: son
  * cosa de aquí, Lodgify no sabe nada de ellos y sobrescribirlos borraría el
  * trabajo de quien los puso.
+ *
+ * **Si Lodgify no deja leer las viviendas, no se aborta.** Hay claves que
+ * abren las reservas y no las viviendas —Lodgify contesta 403 a
+ * `/v2/properties`— y ahí lo que importa son las reservas: las viviendas
+ * pueden estar ya dadas de alta con su identificador. Antes, ese 403 tiraba
+ * la sincronización entera antes de pedir una sola reserva, así que no
+ * entraba nada y no se veía por qué.
  */
 async function sincronizarViviendas(organizationId: string, apiKey: string | null) {
-  const viviendas = await fetchAllLodgifyProperties(apiKey);
+  let viviendas;
+  try {
+    viviendas = await fetchAllLodgifyProperties(apiKey);
+  } catch (error) {
+    const motivo = error instanceof Error ? error.message : String(error);
+    return {
+      propertiesCreated: 0,
+      propertiesUpdated: 0,
+      aviso:
+        `No se han podido leer las viviendas de Lodgify (${motivo}). ` +
+        "Se ha seguido con las reservas, emparejándolas con las viviendas que ya hay aquí. " +
+        "Una vivienda que esté en Lodgify y no aquí habrá que darla de alta a mano.",
+    };
+  }
 
   let propertiesCreated = 0;
   let propertiesUpdated = 0;
@@ -94,7 +116,7 @@ async function sincronizarViviendas(organizationId: string, apiKey: string | nul
     }
   }
 
-  return { propertiesCreated, propertiesUpdated };
+  return { propertiesCreated, propertiesUpdated, aviso: null as string | null };
 }
 
 /**
@@ -134,10 +156,11 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     // una reserva solo entra si su vivienda existe, así que traerlas al revés
     // dejaba fuera todas las reservas de casas todavía no dadas de alta —que
     // es exactamente la situación de una instalación recién vaciada.
-    const { propertiesCreated, propertiesUpdated } = await sincronizarViviendas(
-      organizationId,
-      apiKey
-    );
+    const {
+      propertiesCreated,
+      propertiesUpdated,
+      aviso: avisoViviendas,
+    } = await sincronizarViviendas(organizationId, apiKey);
 
     const all = await fetchAllLodgifyReservations(apiKey);
     const confirmed = onlyConfirmed(all);
@@ -328,6 +351,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
       propertiesCreated,
       propertiesUpdated,
       pastCleaningsDone,
+      avisoViviendas,
     };
 
     await prisma.integrationSettings.upsert({
@@ -345,6 +369,7 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     });
 
     revalidatePath("/rental");
+    revalidatePath("/rental/panel");
     revalidatePath("/rental/bookings");
     revalidatePath("/rental/calendar");
     revalidatePath("/rental/tasks");

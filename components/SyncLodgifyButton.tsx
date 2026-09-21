@@ -43,10 +43,18 @@ export default function SyncLodgifyButton() {
               ? "Datos reales de Lodgify"
               : "Datos de ejemplo (no hay clave de Lodgify guardada)"}
           </p>
-          <p>
-            🏠 Viviendas: {summary.propertiesCreated} dadas de alta ·{" "}
-            {summary.propertiesUpdated} actualizadas
-          </p>
+          {summary.avisoViviendas ? (
+            // Que se vea, pero sin alarmar: no haber podido leer las viviendas
+            // no impide traer las reservas si ya están dadas de alta.
+            <p className="text-amber-900 bg-amber-50 border border-amber-300 rounded px-2 py-1">
+              🏠 {summary.avisoViviendas}
+            </p>
+          ) : (
+            <p>
+              🏠 Viviendas: {summary.propertiesCreated} dadas de alta ·{" "}
+              {summary.propertiesUpdated} actualizadas
+            </p>
+          )}
           <p>Reservas recibidas: {summary.fetched} · Confirmadas (Booked): {summary.confirmed}</p>
           <p>✅ Creadas: {summary.created} · 🔄 Actualizadas: {summary.updated}</p>
           {summary.cancelled > 0 && (
