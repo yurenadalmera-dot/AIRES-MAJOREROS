@@ -316,8 +316,50 @@ Yurena lo confirmó el 20/09 («sobre el beneficio pon el 10%») y la regla ya
 está corregida en Mirador. Los dos sistemas dicen ahora lo mismo, y la
 importación se trae el 10 % sola.
 
-**Queda pendiente regenerar el borrador de liquidación**: sigue calculado con
-la regla vieja, así que esos 9.537,58 € que enseña no son los buenos.
+### El borrador, regenerado (21/09)
+
+Hecho. La función `fn_generar_liquidacion` de Mirador ya manejaba bien
+`pct_beneficio`; lo único que pasaba es que el borrador se había generado
+antes de corregir la regla. Vuelto a generar para Inversiones Brito,
+enero–julio de 2026:
+
+| Grupo | Antes | Ahora | Base |
+|---|---|---|---|
+| Grupo Chano · 30 % | 13.538,09 € | 13.538,09 € | beneficio 45.126,98 € |
+| **Villa Monikka · 10 %** | **9.537,58 €** (sobre ventas) | **6.339,63 €** (sobre beneficio) | beneficio 63.396,33 € |
+| **Total** | **23.075,67 €** | **19.877,72 €** | |
+
+**3.197,95 € menos**, que es lo que se le venía cobrando de más.
+
+`tests/numeros-reales.test.ts` reproduce esas cifras **al céntimo** con
+`liquidarPropietario`: los dos sistemas calculan ahora sobre la misma base
+—ingresos menos comisiones de venta menos gastos— y si alguien los separa
+otra vez, salta la prueba antes de que llegue a una factura.
+
+Una diferencia a favor del SaaS: si un grupo cierra el mes en pérdidas, aquí
+la comisión es **cero**; Mirador multiplicaría la base negativa por el
+porcentaje y le pasaría al propietario una comisión en negativo.
+
+#### Lo que ese borrador sigue teniendo de más: 438,54 €
+
+No es la regla, son las comisiones de venta. Mirador las calcula con sus
+supuestos —Booking y Airbnb al 15 %, sin comisión bancaria— y eso **infla el
+beneficio**, que es la base del porcentaje:
+
+| | Con lo supuesto (Mirador) | Con lo contrastado |
+|---|---|---|
+| Comisiones de venta | 24.306 € | 26.471 € |
+| Grupo Chano · 30 % | 13.538,09 € | 13.205,05 € |
+| Villa Monikka · 10 % | 6.339,63 € | 6.234,13 € |
+| **Total** | **19.877,72 €** | **19.439,18 €** |
+
+Mirador **no puede** llegar a esa cifra: `tarifas_canal` no tiene ni comisión
+bancaria ni porcentaje por vivienda, así que no sabe expresar el 1,3 % del
+banco ni el 17 % del 8206 y de Guerime. El SaaS sí.
+
+**Conclusión práctica:** el borrador regenerado ya no tiene el error gordo,
+pero **no conviene facturar de él**. La cifra buena —19.439,18 €— sale del
+SaaS en cuanto entren los datos.
 
 ### Revisión completa de la base de Mirador (20/09, de noche)
 

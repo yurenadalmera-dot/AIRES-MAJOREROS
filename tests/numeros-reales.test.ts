@@ -240,3 +240,61 @@ describe("la liquidación sobre esa misma semana", () => {
     assert.ok(deGolpe.comisionDeGestion - r.comisionDeGestion > 300);
   });
 });
+
+// ── El borrador de liquidación de enero a julio de 2026 ───────────────
+//
+// Las cifras son las de Mirador, sacadas de `v_liquidacion_grupo_mes` el
+// 21/09. Sirven para lo mismo que el informe semanal de Brito: contrastar
+// esto contra una fuente que no es este código.
+//
+// Aquí el peligro era de criterio, no de céntimos. El borrador de Mirador
+// calculaba el 10 % de Villa Monikka **sobre ventas** y le cobraba a
+// Inversiones Brito 9.537,58 € donde le tocan 6.339,63 €. Si los dos sistemas
+// se separan otra vez en esto, que salte aquí y no en una factura.
+
+describe("la liquidación de Inversiones Brito, enero a julio de 2026", () => {
+  /** Un tramo con sus cifras ya agregadas, como las da Mirador. */
+  const tramo = (nombre: string, managementPct: number, ventas: number, comision: number, costes: number) => ({
+    nombre,
+    managementPct,
+    reservas: [{ totalPrice: ventas, platformCommissionAmt: comision, bankCommissionAmt: 0 }],
+    gastos: [costes],
+  });
+
+  const tramos = [
+    tramo("Grupo Chano", 30, 70422.42, 10120.23, 15175.21),
+    tramo("Villa Monikka", 10, 95375.78, 14186.45, 17793),
+  ];
+
+  test("la base de cada grupo es la de Mirador al céntimo", () => {
+    const r = liquidarPropietario({ tramos, cuotaFijaMensual: null, meses: 7 });
+    assert.equal(r.tramos[0].baseDeGestion, 45126.98, "Grupo Chano");
+    assert.equal(r.tramos[1].baseDeGestion, 63396.33, "Villa Monikka");
+  });
+
+  test("y la comisión de cada uno también", () => {
+    const r = liquidarPropietario({ tramos, cuotaFijaMensual: null, meses: 7 });
+    assert.equal(r.tramos[0].comisionDeGestion, 13538.09, "30 % del Grupo Chano");
+    assert.equal(r.tramos[1].comisionDeGestion, 6339.63, "10 % de Villa Monikka");
+    assert.equal(r.comisionDeGestion, 19877.72, "y el total del borrador regenerado");
+  });
+
+  // El error que se corrigió, escrito como prueba para que no vuelva: sobre
+  // ventas salían 9.537,58 €, más de 3.000 € de más en siete meses.
+  test("el 10 % de Villa Monikka NO es sobre ventas", () => {
+    const r = liquidarPropietario({ tramos, cuotaFijaMensual: null, meses: 7 });
+    const sobreVentas = round2((95375.78 * 10) / 100);
+    assert.equal(sobreVentas, 9537.58, "esto es lo que decía el borrador viejo");
+    assert.notEqual(r.tramos[1].comisionDeGestion, sobreVentas);
+    assert.equal(round2(sobreVentas - r.tramos[1].comisionDeGestion), 3197.95, "lo que se le cobraba de más");
+  });
+
+  // Mirador no tiene esta salvaguarda: con beneficio negativo multiplicaría
+  // por el porcentaje y le pasaría al propietario una comisión negativa.
+  test("un grupo en pérdidas no genera comisión", () => {
+    const enPerdidas = [tramo("Un mes malo", 30, 1000, 150, 2000)];
+    const r = liquidarPropietario({ tramos: enPerdidas, cuotaFijaMensual: null, meses: 1 });
+    assert.ok(r.baseDeGestion < 0);
+    assert.equal(r.comisionDeGestion, 0);
+  });
+});
