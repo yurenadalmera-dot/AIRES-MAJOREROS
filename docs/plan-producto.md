@@ -74,6 +74,9 @@ de hueco hasta la siguiente reserva. Esa regla hay que traérsela.
 
 ### 1.5 Tres sistemas haciendo lo mismo, los tres encendidos
 
+**Decidido (Yurena, 21/09): el SaaS factura, y Airtable no pinta nada en ningún sitio.** Lo que
+queda de esta sección es el inventario de lo que hay que desmontar.
+
 Ahora mismo están **activos a la vez**:
 
 | Sistema | Qué hace | Dónde guarda |
@@ -213,15 +216,16 @@ huésped a la vista. Sin eso, seguís contestando desde el móvil personal y nad
 ### 3.4 Los informes por correo
 
 Ya existe: «Informe semanal propietarios», los viernes a las 17:00, agrupado por propietario y
-enviado por email. Lee de **Airtable**.
+enviado por email. Hoy lee de Airtable, y **Airtable se va**.
 
-El trabajo no es montar el envío, es **cambiarle la fuente**: que lea del SaaS, donde están los
-gastos, las comisiones contrastadas y la escalera de cuotas que corregimos ayer. Y de paso
-hacerle la v2 que su propia descripción dice que falta: adjuntar el PDF.
+Así que no se le cambia la fuente: **se rehace leyendo del SaaS**, que es donde están los gastos,
+las comisiones contrastadas y la escalera de cuotas que corregimos ayer — cosas que en Airtable
+no están y por las que el informe de los viernes lleva meses saliendo incompleto.
 
-El informe del SaaS ya está montado y ya sale bien —lo tienes en `/rental/reports`—. Lo que
-necesita es una ruta que lo devuelva en PDF y un botón de «enviar al propietario» que deje
-constancia de a quién y cuándo se envió.
+El informe del SaaS ya está montado y ya sale bien —lo tienes en `/rental/reports`—. Lo que le
+falta es una ruta que lo devuelva en PDF y un botón de «enviar al propietario» que deje
+constancia de a quién y cuándo se envió. n8n se queda solo con lo que sabe hacer y el SaaS no:
+sacar el correo por SMTP y poner el asunto.
 
 ---
 
@@ -243,9 +247,27 @@ Comprobado contra las 16 viviendas reales: **ninguna se queda sin precio**.
 Y la factura ya no deja pasar una limpieza a 0 €: se para y dice cuáles son. Una factura emitida
 solo se corrige con una rectificativa, así que el sitio para detectarlo es antes, no después.
 
-**Queda, y es lo urgente:** apagar en n8n «Facturar limpiezas» y «Generar limpiezas» antes del
-día 1, que es cuando vuelven a dispararse contra Airtable. Y «Mirador · cargar reservas
-Lodgify», que sigue corriendo cada 3 horas. Eso no lo toco sin que me lo digas.
+**Queda, y es lo urgente: desmontar Airtable.** No todos los workflows se apagan igual, porque
+dos de ellos le mandan cosas a gente de fuera y apagarlos sin más deja a alguien sin su correo.
+
+**Se apagan ya** (duplican lo que el SaaS hace, y el día 1 vuelven a dispararse):
+
+| Workflow | Por qué |
+|---|---|
+| «Facturar limpiezas» | El SaaS factura. Con los dos, las mismas limpiezas se cobran dos veces. |
+| «Generar limpiezas» | El SaaS ya las genera, con su misma regla de los 7 días. |
+| «Sondeo Lodgify» | El SaaS trae las reservas de Lodgify. |
+| «Mirador · cargar reservas Lodgify» | Idem, contra Supabase. Sobra desde la mudanza. |
+
+**Se quedan encendidos hasta tener el reemplazo**, porque hoy son un servicio que alguien recibe:
+
+| Workflow | Qué manda | Reemplazo |
+|---|---|---|
+| «Informe semanal propietarios» | El informe de los viernes, a los propietarios | Fase 4 |
+| «Previsión mensual limpiezas» | El PDF de carga del mes, a Aires | Fase 1, punto 7 |
+
+Apagar el informe de los viernes antes de tener el del SaaS sería dejar a los propietarios sin
+su correo semanal para arreglar un problema que no tienen.
 
 ### Fase 1 — que cada una vea lo suyo (1–2 semanas)
 
@@ -276,18 +298,19 @@ Al final de esta fase Aires factura bien sola, que es de donde sale el dinero.
 
 ### Fase 4 — informes y cierre (1 semana)
 
-16. El informe semanal leyendo del SaaS, con PDF adjunto.
+16. El informe semanal **rehecho contra el SaaS** (no «cambiarle la fuente»: en Airtable no están
+    los gastos ni las comisiones contrastadas), con PDF adjunto.
 17. Botón de «enviar al propietario» con registro de envíos.
-18. Apagar los últimos workflows de Airtable.
+18. Apagar «Informe semanal propietarios». Con eso **no queda nada leyendo de Airtable**, y la
+    base se puede archivar.
 
 ---
 
 ## 5. Lo que necesito que decidas
 
-1. **¿Quién factura las limpiezas a partir de ahora, el SaaS o n8n+Airtable?** Es la decisión que
-   bloquea todo lo demás, y la que puede duplicar un número de factura si se deja a medias.
-2. **¿Por qué número va la numeración ahora mismo?** «Facturar limpiezas» dice que arranca en
-   2026-005; necesito el último emitido de verdad.
+1. ~~¿Quién factura?~~ **El SaaS**, y Airtable fuera de todo (21/09).
+2. **¿Por qué número va la numeración ahora mismo?** Yurena se lo pide a Emma. Con ese número
+   decidimos con la asesoría si el SaaS continúa la serie `2026-NNN` o abre una propia.
 3. ~~Las catorce viviendas sin precio.~~ **Resuelto sin preguntar nada.** Las tarifas ya estaban
    asignadas en los datos que vinieron de Mirador: Inversiones Brito Pérez con la suya, y
    Academia Cañada y Domingo Javier con la «Oficial 2026». Solo había que usarlas. Hecho.
@@ -306,8 +329,9 @@ Al final de esta fase Aires factura bien sola, que es de donde sale el dinero.
   gente. WhatsApp el día de la entrada, y que caduque.
 - **Automatizar la respuesta al huésped con IA sin que alguien la lea**, al menos al principio.
   Sugerir la respuesta, sí; enviarla sola, no.
-- **Seguir añadiendo funciones en n8n contra Airtable.** Cada una que se añada ahí es una que
-  habrá que mudar después.
+- **Volver a poner nada en Airtable.** Decidido el 21/09: fuera de todo. n8n se queda, pero solo
+  para lo que el SaaS no puede hacer por sí mismo —sacar correos, hablar con SES.HOSPEDAJES,
+  WhatsApp—, y siempre leyendo del SaaS.
 
 ---
 
