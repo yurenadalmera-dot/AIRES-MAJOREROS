@@ -6,6 +6,7 @@ import {
 } from "@/lib/lodgify-mock-data";
 import { prisma } from "@/lib/prisma";
 import { descifrar } from "@/lib/secretos";
+import { ErrorDeNegocio } from "@/lib/errores";
 
 export interface NormalizedReservation {
   externalId: string;
@@ -21,6 +22,31 @@ export interface NormalizedReservation {
 }
 
 const LODGIFY_API_BASE = "https://api.lodgify.com/v2";
+
+/**
+ * Lo que dice Lodgify cuando dice que no, en algo que se pueda leer.
+ *
+ * Que Lodgify rechace la clave es un fallo **previsible**, no un error
+ * interno: quien lo tiene que arreglar es quien está mirando la pantalla. Si
+ * se lanza como error normal, Next lo sustituye en producción por «An error
+ * occurred in the Server Components render…» y no queda más rastro que los
+ * registros del servidor — donde no mira nadie.
+ */
+function fallodeLodgify(status: number, que: string): ErrorDeNegocio {
+  if (status === 401 || status === 403) {
+    return new ErrorDeNegocio(
+      `Lodgify rechaza la clave de API (${status}) al pedir ${que}. ` +
+        "Comprueba en Ajustes → Integración con Lodgify que la clave es la correcta y está entera, " +
+        "y en Lodgify que sigue activa y que la cuenta tiene acceso a la API."
+    );
+  }
+  if (status === 429) {
+    return new ErrorDeNegocio(
+      `Lodgify está limitando las peticiones (429) al pedir ${que}. Espera unos minutos y vuelve a sincronizar.`
+    );
+  }
+  return new ErrorDeNegocio(`Lodgify respondió ${status} al pedir ${que}.`);
+}
 
 /**
  * La clave de API de Lodgify, si la hay.
@@ -47,9 +73,7 @@ async function fetchLivePage(apiKey: string, page: number) {
     headers: { "X-ApiKey": apiKey, Accept: "application/json" },
     cache: "no-store",
   });
-  if (!res.ok) {
-    throw new Error(`Lodgify respondió ${res.status} al pedir la página ${page}`);
-  }
+  if (!res.ok) throw fallodeLodgify(res.status, `las reservas (página ${page})`);
   const json = await res.json();
   // La forma exacta de la respuesta puede variar según la versión de API;
   // se normaliza de forma defensiva.
@@ -131,9 +155,7 @@ async function fetchLivePropertiesPage(apiKey: string, page: number) {
     headers: { "X-ApiKey": apiKey, Accept: "application/json" },
     cache: "no-store",
   });
-  if (!res.ok) {
-    throw new Error(`Lodgify respondió ${res.status} al pedir las viviendas (página ${page})`);
-  }
+  if (!res.ok) throw fallodeLodgify(res.status, `las viviendas (página ${page})`);
   const json = await res.json();
   // Igual que con las reservas: la forma exacta varía según la versión de la
   // API, así que se lee de forma defensiva y se acepta cualquiera de los

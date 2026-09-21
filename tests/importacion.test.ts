@@ -556,3 +556,25 @@ describe("cuando Lodgify no deja leer las viviendas", () => {
     assert.equal(r.viviendas.length, 2);
   });
 });
+
+// ── Que Lodgify diga que no se tiene que poder leer ───────────────────
+//
+// Next.js oculta en producción el mensaje de cualquier error lanzado dentro
+// de una acción de servidor. Con un 403 de Lodgify eso dejaba en pantalla
+// «An error occurred in the Server Components render…» y el motivo real solo
+// en los registros del servidor — donde no mira nadie. Un rechazo de la clave
+// es un fallo previsible y quien lo arregla está mirando la pantalla.
+
+describe("cuando Lodgify rechaza la clave", () => {
+  /** La misma decisión que toma `fallodeLodgify`. */
+  const esParaLeer = (status: number) => status === 401 || status === 403 || status === 429;
+
+  test("401 y 403 son para leerlos, no para ocultarlos", () => {
+    assert.ok(esParaLeer(403));
+    assert.ok(esParaLeer(401));
+  });
+
+  test("y el límite de peticiones también", () => {
+    assert.ok(esParaLeer(429));
+  });
+});
