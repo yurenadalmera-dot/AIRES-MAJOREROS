@@ -227,11 +227,78 @@ model Booking {
   updatedAt DateTime @updatedAt
 
   cleaningTasks CleaningTask[]
+  huespedes     Huesped[]
+
+  /// Enlace público, de un solo uso y caducable, con el que el huésped
+  /// rellena sus datos desde el móvil antes de llegar. Se guarda solo su
+  /// huella, igual que el token de importación: se enseña una vez.
+  huellaFormulario  String?   @unique
+  formularioExpira  DateTime?
+  /// Cuándo se comunicaron los viajeros de esta reserva, y el acuse.
+  comunicadoEl      DateTime?
+  acuseComunicacion String?   @db.Text
 
   @@index([organizationId])
   @@index([propertyId])
   @@index([checkIn])
   @@index([checkOut])
+}
+
+/// Un viajero de una reserva, con los datos que exige el parte de viajeros.
+///
+/// Real Decreto 933/2021: quien presta alojamiento tiene que registrar e
+/// informar los datos de cada viajero a través de SES.HOSPEDAJES. No es un
+/// campo más de la reserva: son **datos personales de identificación**, y por
+/// eso los sensibles van cifrados (`lib/secretos.ts`, AES-256-GCM) y el
+/// registro se borra cuando vence el plazo de conservación.
+///
+/// ⚠️ La lista de campos está montada con fuentes secundarias coincidentes:
+/// el proxy de red de esta sesión bloquea boe.es, interior.gob.es y
+/// sede.interior.gob.es, así que **no he podido leer ni el Real Decreto ni la
+/// guía oficial**. Antes de comunicar nada de verdad hay que contrastarla con
+/// la «Guía visual de Hospedajes» del Ministerio.
+model Huesped {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  /// El que firma el contrato y responde por el resto. Uno por reserva.
+  titular Boolean @default(false)
+
+  // --- Identidad. Todo lo que identifica va cifrado. ---
+  nombre    String
+  apellido1 String
+  apellido2 String?
+  /// NIF | NIE | PAS | OTRO
+  tipoDocumento String
+  /// Cifrado.
+  documento     String  @db.Text
+  /// El número de soporte del DNI/NIE. Cifrado. No es el número del
+  /// documento: es el que lleva impreso al lado y cambia al renovarlo.
+  numeroSoporte String? @db.Text
+  /// ISO 3166-1 alfa-3.
+  nacionalidad  String
+  fechaNacimiento DateTime
+  /// M | F | O
+  sexo String?
+
+  // --- Residencia y contacto ---
+  direccion  String? @db.Text
+  municipio  String?
+  provincia  String?
+  pais       String?
+  codigoPostal String?
+  telefono   String?
+  email      String?
+
+  /// Parentesco con el titular. Obligatorio cuando el viajero es menor de
+  /// edad: sus datos los da el adulto que lo acompaña.
+  parentesco String?
+
+  creadoEl     DateTime @default(now())
+  actualizadoEl DateTime @updatedAt
+
+  @@index([bookingId])
 }
 
 /// Registro compartido entre los dos negocios: es a la vez tarea operativa

@@ -50,6 +50,16 @@ const TEXTOS_LIBRES: [string, string][] = [
 ];
 
 /** ¿Falta esta columna en la tabla? */
+/** ¿No existe todavía esta tabla? */
+async function faltaTabla(tabla: string): Promise<boolean> {
+  const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+    SELECT COUNT(*) AS n
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE() AND table_name = ${tabla}
+  `;
+  return Number(filas[0]?.n ?? 0) === 0;
+}
+
 async function faltaColumna(tabla: string, columna: string): Promise<boolean> {
   const filas = await prisma.$queryRaw<{ n: bigint }[]>`
     SELECT COUNT(*) AS n
@@ -375,6 +385,52 @@ const MIGRACIONES: Migracion[] = [
           "SET t.`huespedes` = b.`adults` + b.`children` " +
           "WHERE t.`type` = 'CLEANING' AND t.`huespedes` IS NULL"
       );
+    },
+  },
+  {
+    // El parte de viajeros del RD 933/2021. Hasta ahora de un huésped solo se
+    // guardaba el nombre y el contacto de quien reservó, que no basta ni para
+    // comunicar ni para identificar a los que vienen.
+    nombre: "Los viajeros de cada reserva",
+    haceFalta: async () => (await faltaTabla("Huesped")) || faltaColumna("Booking", "huellaFormulario"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "CREATE TABLE IF NOT EXISTS `Huesped` (" +
+          "`id` VARCHAR(191) NOT NULL," +
+          "`bookingId` VARCHAR(191) NOT NULL," +
+          "`titular` BOOLEAN NOT NULL DEFAULT false," +
+          "`nombre` VARCHAR(191) NOT NULL," +
+          "`apellido1` VARCHAR(191) NOT NULL," +
+          "`apellido2` VARCHAR(191) NULL," +
+          "`tipoDocumento` VARCHAR(191) NOT NULL," +
+          "`documento` TEXT NOT NULL," +
+          "`numeroSoporte` TEXT NULL," +
+          "`nacionalidad` VARCHAR(191) NOT NULL," +
+          "`fechaNacimiento` DATETIME(3) NOT NULL," +
+          "`sexo` VARCHAR(191) NULL," +
+          "`direccion` TEXT NULL," +
+          "`municipio` VARCHAR(191) NULL," +
+          "`provincia` VARCHAR(191) NULL," +
+          "`pais` VARCHAR(191) NULL," +
+          "`codigoPostal` VARCHAR(191) NULL," +
+          "`telefono` VARCHAR(191) NULL," +
+          "`email` VARCHAR(191) NULL," +
+          "`parentesco` VARCHAR(191) NULL," +
+          "`creadoEl` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)," +
+          "`actualizadoEl` DATETIME(3) NOT NULL," +
+          "INDEX `Huesped_bookingId_idx`(`bookingId`)," +
+          "PRIMARY KEY (`id`)" +
+          ") DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+      );
+      for (const sql of [
+        "ALTER TABLE `Booking` ADD COLUMN `huellaFormulario` VARCHAR(191) NULL",
+        "ALTER TABLE `Booking` ADD COLUMN `formularioExpira` DATETIME(3) NULL",
+        "ALTER TABLE `Booking` ADD COLUMN `comunicadoEl` DATETIME(3) NULL",
+        "ALTER TABLE `Booking` ADD COLUMN `acuseComunicacion` TEXT NULL",
+        "CREATE UNIQUE INDEX `Booking_huellaFormulario_key` ON `Booking`(`huellaFormulario`)",
+      ]) {
+        await prisma.$executeRawUnsafe(sql);
+      }
     },
   },
   {

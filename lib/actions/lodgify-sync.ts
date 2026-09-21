@@ -135,7 +135,20 @@ async function sincronizarViviendas(organizationId: string, apiKey: string | nul
 export async function syncLodgifyReservations(): Promise<SyncSummary | { error: string }> {
   return conErroresLegibles(async () => {
     const organizationId = await exigir("operativa.alquiler");
+    return sincronizarLodgify(organizationId);
+  });
+}
 
+/**
+ * Lo mismo, pero sin sesión: recibe la organización ya resuelta.
+ *
+ * Existe porque esta sincronización tenía un solo disparador —un botón en
+ * Ajustes— y por tanto solo ocurría cuando alguien se acordaba de pulsarlo.
+ * `app/api/sincronizar` la llama con el token de escritura para que pueda
+ * correr sola, programada.
+ */
+export async function sincronizarLodgify(organizationId: string): Promise<SyncSummary> {
+  {
     const settings = await prisma.integrationSettings.findUnique({
       where: { organizationId_provider: { organizationId, provider: "LODGIFY" } },
     });
@@ -400,5 +413,5 @@ export async function syncLodgifyReservations(): Promise<SyncSummary | { error: 
     revalidatePath("/cleaning/tasks");
 
     return summary;
-  });
+  }
 }

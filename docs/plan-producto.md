@@ -20,7 +20,21 @@ Dos avisos sobre los números:
 
 ---
 
-## 1. Lo que está roto, por orden de lo que cuesta
+## 0. Lo más grave, encontrado al final
+
+**Los clientes de Aires Majoreros son los propietarios de las viviendas, no Emma** (Yurena,
+21/09). El SaaS está montado sobre la premisa contraria:
+
+- `app/cleaning/page.tsx:83` rellena el cliente de la factura con **el negocio de alquiler**.
+- `generateInvoice` mete **todas** las limpiezas del periodo en **una sola factura**.
+
+O sea: el SaaS emitiría una única factura a Emma por las limpiezas de todos los propietarios.
+El workflow de n8n que acabamos de apagar hacía lo correcto —agrupaba por propietario y emitía
+una factura a cada uno, con el detalle de sus viviendas— y además distinguía que **Domingo Javier
+recibe solo un resumen, no factura oficial**, cosa que el SaaS no sabe.
+
+**Hasta que esto esté arreglado, no hay que pulsar «Generar factura» en el SaaS.** Es lo primero
+que toca, antes del día 1.
 
 ### 1.1 Catorce de dieciséis viviendas no tienen precio de limpieza — y eso llega a la factura
 
@@ -247,27 +261,36 @@ Comprobado contra las 16 viviendas reales: **ninguna se queda sin precio**.
 Y la factura ya no deja pasar una limpieza a 0 €: se para y dice cuáles son. Una factura emitida
 solo se corrige con una rectificativa, así que el sitio para detectarlo es antes, no después.
 
-**Queda, y es lo urgente: desmontar Airtable.** No todos los workflows se apagan igual, porque
-dos de ellos le mandan cosas a gente de fuera y apagarlos sin más deja a alguien sin su correo.
+**Airtable, desmontado (21/09).** Los seis workflows que lo tocaban están apagados:
 
-**Se apagan ya** (duplican lo que el SaaS hace, y el día 1 vuelven a dispararse):
-
-| Workflow | Por qué |
+| Workflow | Por qué se apaga |
 |---|---|
 | «Facturar limpiezas» | El SaaS factura. Con los dos, las mismas limpiezas se cobran dos veces. |
 | «Generar limpiezas» | El SaaS ya las genera, con su misma regla de los 7 días. |
 | «Sondeo Lodgify» | El SaaS trae las reservas de Lodgify. |
 | «Mirador · cargar reservas Lodgify» | Idem, contra Supabase. Sobra desde la mudanza. |
+| «Informe semanal propietarios» | Emma no lo estaba usando (Yurena, 21/09). Se rehará contra el SaaS. |
+| «Previsión mensual limpiezas» | Leía de Airtable, que ya no recibe nada. |
 
-**Se quedan encendidos hasta tener el reemplazo**, porque hoy son un servicio que alguien recibe:
+El motivo de apagar también los dos últimos: al parar «Sondeo Lodgify», Airtable deja de recibir
+reservas. Un informe que siga leyendo de ahí no se queda quieto — **empieza a mentir**, cada
+semana un poco más. Entre no mandar nada y mandar algo falso, no mandar nada.
 
-| Workflow | Qué manda | Reemplazo |
-|---|---|---|
-| «Informe semanal propietarios» | El informe de los viernes, a los propietarios | Fase 4 |
-| «Previsión mensual limpiezas» | El PDF de carga del mes, a Aires | Fase 1, punto 7 |
+**El agujero que eso deja, y que hay que tapar.** La sincronización del SaaS con Lodgify tenía un
+único disparador: **un botón en Ajustes**. Nunca ha estado programada; lo automático lo hacían
+los workflows de Airtable. Apagados esos, si nadie pulsa el botón no entra ninguna reserva
+—y por tanto tampoco se genera ninguna limpieza.
 
-Apagar el informe de los viernes antes de tener el del SaaS sería dejar a los propietarios sin
-su correo semanal para arreglar un problema que no tienen.
+Ya está hecha la mitad: `POST /api/sincronizar` ejecuta la sincronización con el mismo token de
+escritura que `/api/importar`, es idempotente y se puede llamar cada hora sin duplicar nada.
+**Falta decidir quién la llama**, y son dos líneas de trabajo:
+
+- **Tarea programada de Hostinger.** No añade ningún sistema, pero el token queda escrito en el
+  panel de hosting.
+- **Un workflow de n8n** cada 3 horas. El token va en una credencial cifrada y queda histórico de
+  ejecuciones, que es donde se ve si un día falla.
+
+Recomiendo el de n8n, por el token y por el histórico.
 
 ### Fase 1 — que cada una vea lo suyo (1–2 semanas)
 
@@ -314,17 +337,29 @@ Al final de esta fase Aires factura bien sola, que es de donde sale el dinero.
 3. ~~Las catorce viviendas sin precio.~~ **Resuelto sin preguntar nada.** Las tarifas ya estaban
    asignadas en los datos que vinieron de Mirador: Inversiones Brito Pérez con la suya, y
    Academia Cañada y Domingo Javier con la «Oficial 2026». Solo había que usarlas. Hecho.
-4. **¿Confirmamos con la asesoría el parte de viajeros** antes de que yo programe nada de la
-   fase 2? Yurena pasó las dos fuentes oficiales, pero el proxy de red de esta sesión bloquea
-   `interior.gob.es` y `sede.interior.gob.es`, así que **no he podido leerlas**. No voy a escribir
-   la lista de campos de memoria: cuando toque la fase 2, que me pase el PDF adjunto por aquí.
+4. **El parte de viajeros: falta la especificación del servicio web.** Yurena adjuntó la «Guía
+   visual de Hospedajes» (v. 29/08/2025) y la he leído entera, imágenes incluidas. Pero es un
+   paso a paso de la web, no una especificación de campos. Lo que sí deja claro:
+
+   - La jerarquía es **entidad → establecimiento**, cada uno con su código.
+   - El tipo de comunicación se llama **«Parte de viajeros»**, y hay más tipos.
+   - Cada envío devuelve un **código de comunicación**, y se puede **anular**.
+   - Hay envío **por lotes**.
+   - En los datos de la entidad hay una casilla **«Envío de comunicaciones por servicio web»** y
+     un correo para los errores de ese servicio. Ahí se habilita la vía automática.
+   - Su sección 14 es **«Descargar documentación del servicio web»**: ahí está la especificación
+     técnica de verdad, y solo se puede bajar entrando en la plataforma con certificado.
+
+   **Eso es lo que necesito:** que Yurena entre en SES.HOSPEDAJES, siga la sección 14 y me pase
+   ese documento. Con él monto el envío; sin él estaría adivinando el formato.
 5. ~~¿Qué número de WhatsApp?~~ Queda apuntado como mejora, para más adelante.
 
 ---
 
 ## 6. Lo que no recomiendo
 
-- **Meter datos de documentos de identidad en Airtable.** Ni como paso intermedio.
+- **Sacar los datos de documentos de identidad del SaaS.** Se quedan aquí, cifrados, y de aquí
+  salen solo hacia SES.HOSPEDAJES.
 - **Mandar códigos de llave por email.** El correo se queda para siempre en el buzón de mucha
   gente. WhatsApp el día de la entrada, y que caduque.
 - **Automatizar la respuesta al huésped con IA sin que alguien la lea**, al menos al principio.
