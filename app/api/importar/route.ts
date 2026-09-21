@@ -22,17 +22,40 @@ import { tokenCoincide, tokenDeLaCabecera } from "@/lib/token-importacion";
  * rechazado, con el motivo.
  */
 export async function POST(request: Request) {
-  const token = tokenDeLaCabecera(request.headers.get("authorization"));
+  // Los tres fallos posibles se arreglan en sitios distintos, así que hay que
+  // poder distinguirlos. Un «no autorizado» a secas obliga a adivinar, y eso
+  // es media tarde perdida tocando la credencial que ya estaba bien.
+  const cabecera = request.headers.get("authorization");
+  const token = tokenDeLaCabecera(cabecera);
   if (!token) {
-    return Response.json({ error: "Falta el token." }, { status: 401 });
+    // Del valor de la cabecera solo sale la primera palabra: es lo que hace
+    // falta para saber qué pasa, y no enseña ningún secreto.
+    const empiezaPor = cabecera?.trim().split(/\s+/)[0]?.slice(0, 16);
+    return Response.json(
+      {
+        error: cabecera
+          ? `La cabecera Authorization llega, pero su valor empieza por «${empiezaPor}» y tiene que empezar por «Bearer ». En la credencial de n8n, el campo Value va así: Bearer imp_...`
+          : "No llega ninguna cabecera Authorization. En la credencial de n8n, el campo Name tiene que decir exactamente «Authorization» (es el nombre de la cabecera, no el nombre de la credencial).",
+      },
+      { status: 401 }
+    );
   }
 
   const ajustes = await prisma.integrationSettings.findFirst({
     where: { provider: "IMPORT" },
     select: { organizationId: true, apiKeyCifrada: true },
   });
-  if (!ajustes || !tokenCoincide(token, ajustes.apiKeyCifrada)) {
-    return Response.json({ error: "El token no vale." }, { status: 401 });
+  if (!ajustes) {
+    return Response.json(
+      { error: "Aquí no hay ningún token generado todavía. Genéralo en Ajustes → «Traerse los datos de Mirador»." },
+      { status: 401 }
+    );
+  }
+  if (!tokenCoincide(token, ajustes.apiKeyCifrada)) {
+    return Response.json(
+      { error: "El token llega bien formado, pero no es el que hay guardado. Genera otro en Ajustes y cópialo entero." },
+      { status: 401 }
+    );
   }
   const organizationId = ajustes.organizationId;
 
