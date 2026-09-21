@@ -15,7 +15,7 @@ import { addDays, addMonths, subDays } from "date-fns";
 import { calculateCommissions, splitAmount, round2, calcularImpuesto } from "../lib/money";
 import { puede } from "../lib/permisos";
 import { puedeCambiarEstadoFactura } from "../lib/constants";
-import { numeroSiguiente } from "../lib/numeracion";
+import { numeroSiguiente, prefijoFacturas, prefijoResumenes } from "../lib/numeracion";
 import { computePropertyStatus } from "../lib/status";
 import { casillaDelDia } from "../lib/calendario";
 import { decidirCuentaAdmin } from "../lib/cuenta-admin";
@@ -96,6 +96,27 @@ describe("numeración de facturas", () => {
 
   test("pasa de cuatro cifras sin romperse", () => {
     assert.equal(numeroSiguiente("AM-2026-", "AM-2026-9999"), "AM-2026-10000");
+  });
+
+  test("las facturas y los resúmenes llevan series distintas", () => {
+    // Un resumen no es una factura: no lleva impuesto ni tiene efectos
+    // fiscales. Si gastara números de la serie de facturas, esa serie tendría
+    // huecos que no corresponden a ninguna factura, y la correlatividad no lo
+    // permite.
+    assert.notEqual(prefijoFacturas(new Date("2026-05-01")), prefijoResumenes(new Date("2026-05-01")));
+    assert.equal(prefijoFacturas(new Date("2026-05-01")), "AM-2026-");
+    assert.equal(prefijoResumenes(new Date("2026-05-01")), "RES-2026-");
+  });
+
+  test("cada serie cuenta por su cuenta", () => {
+    // Emitir tres resúmenes no puede mover el número de la próxima factura.
+    assert.equal(numeroSiguiente(prefijoResumenes(new Date("2026-05-01")), "RES-2026-0003"), "RES-2026-0004");
+    assert.equal(numeroSiguiente(prefijoFacturas(new Date("2026-05-01")), "AM-2026-0001"), "AM-2026-0002");
+  });
+
+  test("la serie lleva el año, así que en enero vuelve a empezar", () => {
+    assert.equal(prefijoFacturas(new Date("2027-01-02")), "AM-2027-");
+    assert.equal(numeroSiguiente("AM-2027-", null), "AM-2027-0001");
   });
 });
 

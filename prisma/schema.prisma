@@ -115,10 +115,17 @@ model Owner {
   tarifaId String?
   tarifa   Tarifa? @relation(fields: [tarifaId], references: [id])
 
+  /// Qué recibe de Aires Majoreros por las limpiezas: FACTURA (documento
+  /// fiscal con IGIC) o RESUMEN (solo el detalle, informativo). No todos los
+  /// propietarios piden factura: Domingo Javier, por ejemplo, encarga él las
+  /// limpiezas y solo quiere el resumen.
+  documentoLimpieza String @default("FACTURA")
+
   properties Property[]
   expenses   Expense[]
   groups     PropertyGroup[]
   cuotas     CuotaFija[]
+  facturas   Invoice[]
 
   @@index([organizationId])
 }
@@ -384,8 +391,21 @@ model Invoice {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
+  /// FACTURA (documento fiscal, con IGIC y numeración correlativa propia) o
+  /// RESUMEN (informativo, sin impuesto y con su propia serie). Un resumen no
+  /// consume número de factura: la serie fiscal tiene que quedar correlativa.
+  tipoDocumento String @default("FACTURA")
+
+  /// A quién se le factura. Los clientes de Aires Majoreros son **los
+  /// propietarios de las viviendas**, uno por documento, no el negocio de
+  /// alquiler. Se guarda además el nombre y los datos fiscales copiados, que
+  /// es lo que sale impreso: cambiar mañana la ficha del propietario no puede
+  /// alterar una factura ya emitida.
+  ownerId String?
+  owner   Owner?  @relation(fields: [ownerId], references: [id])
+
   invoiceNumber   String   @unique
-  billedToName    String // cliente facturado (p.ej. la razón social del negocio de alquiler)
+  billedToName    String // cliente facturado: la razón social del propietario
   billedToTaxId   String?
   /// Domicilio del destinatario, también obligatorio en la factura.
   billedToAddress String?  @db.Text
@@ -418,6 +438,7 @@ model Invoice {
   invoiceLines InvoiceLine[]
 
   @@index([organizationId])
+  @@index([ownerId])
 }
 
 /// Copia inmutable de cada línea en el momento de facturar (snapshot), para

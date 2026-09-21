@@ -170,7 +170,50 @@ const ownerSchema = z.object({
   monthlyFee: z.string().optional(),
   /** Desde cuándo se le cobra esa cuota. */
   monthlyFeeDesde: z.string().optional(),
+  /** Qué recibe de Aires por las limpiezas: factura fiscal o solo el resumen. */
+  documentoLimpieza: z.enum(["FACTURA", "RESUMEN"]).optional(),
 });
+
+const datosFiscalesSchema = z.object({
+  ownerId: z.string().min(1),
+  taxId: z.string().optional(),
+  address: z.string().optional(),
+  email: z.string().optional(),
+  documentoLimpieza: z.enum(["FACTURA", "RESUMEN"]).default("FACTURA"),
+});
+
+/**
+ * Los datos con los que se le factura a un propietario.
+ *
+ * Existe porque hasta ahora un propietario solo se podía crear, no corregir, y
+ * los que vinieron de Mirador llegaron sin NIF ni domicilio — sin los cuales
+ * la factura no cumple el RD 1619/2012 y el sistema se niega a emitirla.
+ */
+export async function guardarDatosFiscalesDelPropietario(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("administracion");
+    const data = datosFiscalesSchema.parse(Object.fromEntries(formData.entries()));
+
+    const existe = await prisma.owner.findFirst({
+      where: { id: data.ownerId, organizationId },
+      select: { id: true },
+    });
+    if (!existe) throw new ErrorDeNegocio("Ese propietario no existe.");
+
+    await prisma.owner.update({
+      where: { id: data.ownerId },
+      data: {
+        taxId: data.taxId?.trim() || null,
+        address: data.address?.trim() || null,
+        email: data.email?.trim() || null,
+        documentoLimpieza: data.documentoLimpieza,
+      },
+    });
+
+    revalidatePath("/rental/settings");
+    revalidatePath("/cleaning");
+  });
+}
 
 export async function createOwner(formData: FormData) {
   return conErroresLegibles(async () => {
@@ -187,6 +230,7 @@ export async function createOwner(formData: FormData) {
         address: data.address || null,
         monthlyFee: leerCuota(data.monthlyFee),
         monthlyFeeDesde: leerDia(data.monthlyFeeDesde),
+        documentoLimpieza: data.documentoLimpieza ?? "FACTURA",
       },
     });
     // La cuota también nace como tramo: es el histórico el que manda al

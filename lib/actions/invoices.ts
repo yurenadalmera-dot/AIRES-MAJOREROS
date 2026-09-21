@@ -8,7 +8,7 @@ import { exigir } from "@/lib/auth";
 import { splitAmount, round2, calcularImpuesto } from "@/lib/money";
 import { format } from "date-fns";
 import { INVOICE_STATUS_LABEL, puedeCambiarEstadoFactura, BUSINESS_TYPES } from "@/lib/constants";
-import { numeroSiguiente, prefijoFacturas } from "@/lib/numeracion";
+import { numeroSiguiente, prefijoFacturas, prefijoResumenes } from "@/lib/numeracion";
 
 /**
  * Lo que se lee en cada línea de la factura.
@@ -40,22 +40,23 @@ function formatDate(fecha: Date): string {
 const generateSchema = z.object({
   periodStart: z.string().min(1),
   periodEnd: z.string().min(1),
-  billedToName: z.string().min(1),
-  billedToTaxId: z.string().optional(),
-  billedToAddress: z.string().optional(),
   notes: z.string().optional(),
 });
 
 /**
- * Siguiente número de factura del año, `AM-AAAA-NNNN`.
+ * Siguiente número del año para una serie, `<PREFIJO>AAAA-NNNN`.
  *
- * Se deriva del número más alto ya emitido, no de cuántas facturas hay: si se
- * anula una, contar da un número que ya existe y, como `invoiceNumber` es
- * único, la siguiente factura no se puede emitir. Además la numeración debe
- * ser correlativa y no reutilizar números, aunque haya huecos por anulación.
+ * Se deriva del número más alto ya emitido, no de cuántos documentos hay: si
+ * se anula uno, contar da un número que ya existe y, como `invoiceNumber` es
+ * único, el siguiente no se puede emitir. Además la numeración debe ser
+ * correlativa y no reutilizar números, aunque haya huecos por anulación.
+ *
+ * Facturas y resúmenes llevan **series distintas**. Un resumen no es una
+ * factura y no puede gastar un número de la serie fiscal: si lo hiciera, la
+ * serie de facturas quedaría con huecos que no corresponden a nada.
  */
-async function siguienteNumeroFactura(organizationId: string) {
-  const prefijo = prefijoFacturas();
+async function siguienteNumero(organizationId: string, tipo: "FACTURA" | "RESUMEN") {
+  const prefijo = tipo === "RESUMEN" ? prefijoResumenes() : prefijoFacturas();
 
   const ultima = await prisma.invoice.findFirst({
     where: { organizationId, invoiceNumber: { startsWith: prefijo } },
@@ -66,24 +67,37 @@ async function siguienteNumeroFactura(organizationId: string) {
   return numeroSiguiente(prefijo, ultima?.invoiceNumber ?? null);
 }
 
+export interface ResumenDeFacturacion {
+  /** Documentos creados, en orden. */
+  creados: { id: string; numero: string; propietario: string; tipo: string; total: number }[];
+  /** Lo que no se ha podido facturar, y por qué. Sin esto se perdería. */
+  pendientes: string[];
+}
+
 /**
- * Genera una factura a partir de las tareas de limpieza YA hechas (DONE),
- * facturables y todavía sin asignar a ninguna factura, dentro del periodo.
- * Este es el punto donde el registro compartido "CleaningTask" pasa de ser
- * solo operativa de Emma a convertirse también en línea de factura de Aires
- * Majoreros — sin duplicar el dato, solo enlazándolo (invoiceId).
+ * Emite los documentos de un periodo, **uno por propietario**.
+ *
+ * Los clientes de Aires Majoreros son los propietarios de las viviendas, no
+ * el negocio de alquiler: cada uno recibe lo suyo, con el detalle de sus
+ * viviendas. Antes esto metía todas las limpiezas del periodo en una sola
+ * factura a nombre del negocio de alquiler, que es exactamente lo contrario.
+ *
+ * Y no todos reciben factura: `Owner.documentoLimpieza` decide si se le emite
+ * una factura con IGIC o solo un resumen informativo.
+ *
+ * Las limpiezas que no se pueden facturar no se pierden ni se cuelan: se
+ * quedan pendientes y salen nombradas en el parte.
  */
-export async function generateInvoice(formData: FormData) {
+export async function generarFacturasDelPeriodo(formData: FormData) {
   return conErroresLegibles(async () => {
     const organizationId = await exigir("facturacion");
-    const raw = Object.fromEntries(formData.entries());
-    const data = generateSchema.parse(raw);
+    const data = generateSchema.parse(Object.fromEntries(formData.entries()));
 
     const periodStart = new Date(data.periodStart);
     const periodEnd = new Date(data.periodEnd);
     periodEnd.setHours(23, 59, 59, 999);
 
-    const pendingTasks = await prisma.cleaningTask.findMany({
+    const pendientes = await prisma.cleaningTask.findMany({
       where: {
         organizationId,
         type: "CLEANING",
@@ -92,19 +106,19 @@ export async function generateInvoice(formData: FormData) {
         invoiceId: null,
         date: { gte: periodStart, lte: periodEnd },
       },
-      include: { property: true },
+      include: { property: { include: { owner: true } } },
       orderBy: { date: "asc" },
     });
 
-    if (pendingTasks.length === 0) {
-      throw new ErrorDeNegocio("No hay limpiezas pendientes de facturar en ese periodo");
+    if (pendientes.length === 0) {
+      throw new ErrorDeNegocio("No hay limpiezas pendientes de facturar en ese periodo.");
     }
 
     // Una limpieza a 0 € no se puede cobrar, y emitida ya no hay marcha atrás:
     // una factura emitida solo se corrige con una rectificativa. Así que se
-    // para aquí y se dice cuáles son, en vez de sumar ceros y dejar el agujero
-    // dentro de un documento con efectos fiscales.
-    const sinPrecio = pendingTasks.filter((t) => Number(t.price) === 0);
+    // para aquí y se dice cuáles son, en vez de sumar ceros dentro de un
+    // documento con efectos fiscales.
+    const sinPrecio = pendientes.filter((t) => Number(t.price) === 0);
     if (sinPrecio.length > 0) {
       const cuales = sinPrecio
         .slice(0, 5)
@@ -117,9 +131,7 @@ export async function generateInvoice(formData: FormData) {
       );
     }
 
-    const subtotal = round2(pendingTasks.reduce((sum, t) => sum + Number(t.price), 0));
-
-    // El impuesto se copia del negocio a la factura en el momento de emitirla.
+    // El impuesto se copia del negocio al documento en el momento de emitirlo.
     // Aquí es IGIC, no IVA: en Canarias el tipo general es el 7 %. Copiarlo (en
     // lugar de leerlo al mostrar la factura) es lo que hace que cambiar el tipo
     // el año que viene no altere ni un céntimo de las ya emitidas.
@@ -127,8 +139,7 @@ export async function generateInvoice(formData: FormData) {
       where: { organizationId, type: BUSINESS_TYPES.CLEANING_BILLING },
       select: { taxRate: true },
     });
-    const taxRate = negocio ? Number(negocio.taxRate) : 7;
-    const { cuota: taxAmount, total } = calcularImpuesto(subtotal, taxRate);
+    const tipoImpositivo = negocio ? Number(negocio.taxRate) : 7;
 
     const splitConfig = await prisma.partnerSplitConfig.findFirst({
       where: { organizationId },
@@ -136,51 +147,111 @@ export async function generateInvoice(formData: FormData) {
     });
     const partnerAPercent = splitConfig ? Number(splitConfig.partnerAPercent) : 50;
     const partnerBPercent = splitConfig ? Number(splitConfig.partnerBPercent) : 50;
-    const { partnerAAmount, partnerBAmount } = splitAmount(subtotal, partnerAPercent, partnerBPercent);
 
-    const invoiceNumber = await siguienteNumeroFactura(organizationId);
+    // Agrupadas por propietario, conservando el orden por fecha.
+    const porPropietario = new Map<string, typeof pendientes>();
+    const avisos: string[] = [];
+    for (const t of pendientes) {
+      const owner = t.property.owner;
+      if (!owner) {
+        avisos.push(
+          `«${t.property.name}» (${formatDate(t.date)}) no tiene propietario asignado, así que no se sabe a quién facturarla.`
+        );
+        continue;
+      }
+      const lista = porPropietario.get(owner.id) ?? [];
+      lista.push(t);
+      porPropietario.set(owner.id, lista);
+    }
 
-    const invoice = await prisma.invoice.create({
-      data: {
-        organizationId,
-        invoiceNumber,
-        billedToName: data.billedToName,
-        billedToTaxId: data.billedToTaxId || null,
-        billedToAddress: data.billedToAddress || null,
-        periodStart,
-        periodEnd,
-        status: "ISSUED",
-        subtotal,
-        taxRate,
-        taxAmount,
+    const creados: ResumenDeFacturacion["creados"] = [];
+
+    for (const [ownerId, tareas] of porPropietario) {
+      const owner = tareas[0].property.owner!;
+      const tipo = owner.documentoLimpieza === "RESUMEN" ? "RESUMEN" : "FACTURA";
+
+      // Una factura sin el NIF y el domicilio del cliente no cumple el
+      // RD 1619/2012. Mejor no emitirla que emitirla mal: emitida no se
+      // deshace. El resumen no es un documento fiscal y no los necesita.
+      if (tipo === "FACTURA" && (!owner.taxId || !owner.address)) {
+        const falta = [!owner.taxId && "el NIF/CIF", !owner.address && "el domicilio"]
+          .filter(Boolean)
+          .join(" y ");
+        avisos.push(
+          `A «${owner.name}» le falta ${falta}, y sin eso la factura no sería válida. ` +
+            `Sus ${tareas.length} limpieza(s) se quedan sin facturar; complétalo en Ajustes.`
+        );
+        continue;
+      }
+
+      const subtotal = round2(tareas.reduce((sum, t) => sum + Number(t.price), 0));
+      // El resumen es informativo: ni lleva impuesto ni lo repercute.
+      const taxRate = tipo === "FACTURA" ? tipoImpositivo : 0;
+      const { cuota: taxAmount, total } =
+        tipo === "FACTURA" ? calcularImpuesto(subtotal, taxRate) : { cuota: 0, total: subtotal };
+      const { partnerAAmount, partnerBAmount } = splitAmount(subtotal, partnerAPercent, partnerBPercent);
+
+      const invoiceNumber = await siguienteNumero(organizationId, tipo);
+
+      const invoice = await prisma.invoice.create({
+        data: {
+          organizationId,
+          tipoDocumento: tipo,
+          ownerId,
+          invoiceNumber,
+          // Copiados, no enlazados: lo que se imprimió es lo que se imprimió.
+          billedToName: owner.name,
+          billedToTaxId: owner.taxId,
+          billedToAddress: owner.address,
+          periodStart,
+          periodEnd,
+          status: "ISSUED",
+          subtotal,
+          taxRate,
+          taxAmount,
+          total,
+          partnerAId: splitConfig?.partnerAId,
+          partnerBId: splitConfig?.partnerBId,
+          partnerAPercent,
+          partnerBPercent,
+          partnerAAmount,
+          partnerBAmount,
+          notes: data.notes || null,
+        },
+      });
+
+      await prisma.invoiceLine.createMany({
+        data: tareas.map((t) => ({
+          invoiceId: invoice.id,
+          cleaningTaskId: t.id,
+          // Lo mismo que venía imprimiendo el workflow de n8n: quien recibe la
+          // factura tiene que poder comprobar por qué cuesta lo que cuesta.
+          description: descripcionDeLinea(t),
+          propertyName: t.property.name,
+          date: t.date,
+          amount: t.price,
+        })),
+      });
+
+      await prisma.cleaningTask.updateMany({
+        where: { id: { in: tareas.map((t) => t.id) } },
+        data: { invoiceId: invoice.id },
+      });
+
+      creados.push({
+        id: invoice.id,
+        numero: invoiceNumber,
+        propietario: owner.name,
+        tipo,
         total,
-        partnerAId: splitConfig?.partnerAId,
-        partnerBId: splitConfig?.partnerBId,
-        partnerAPercent,
-        partnerBPercent,
-        partnerAAmount,
-        partnerBAmount,
-        notes: data.notes || null,
-      },
-    });
+      });
+    }
 
-    await prisma.invoiceLine.createMany({
-      data: pendingTasks.map((t) => ({
-        invoiceId: invoice.id,
-        cleaningTaskId: t.id,
-        // Lo mismo que venía imprimiendo el workflow de n8n: quien recibe la
-        // factura tiene que poder comprobar por qué cuesta lo que cuesta.
-        description: descripcionDeLinea(t),
-        propertyName: t.property.name,
-        date: t.date,
-        amount: t.price,
-      })),
-    });
-
-    await prisma.cleaningTask.updateMany({
-      where: { id: { in: pendingTasks.map((t) => t.id) } },
-      data: { invoiceId: invoice.id },
-    });
+    if (creados.length === 0) {
+      throw new ErrorDeNegocio(
+        `No se ha podido emitir ningún documento. ${avisos.join(" ")}`.trim()
+      );
+    }
 
     revalidatePath("/cleaning");
     revalidatePath("/cleaning/invoices");
@@ -189,7 +260,8 @@ export async function generateInvoice(formData: FormData) {
     revalidatePath("/cleaning/tasks");
     revalidatePath("/rental/tasks");
 
-    return invoice.id;
+    const resumen: ResumenDeFacturacion = { creados, pendientes: avisos };
+    return resumen;
   });
 }
 

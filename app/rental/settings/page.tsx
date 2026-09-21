@@ -2,7 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PageHeader, Badge } from "@/components/ui";
 import { updateLodgifySettings, updateBusinessInfo, updateOcrSettings } from "@/lib/actions/settings";
-import { createEmployee, setEmployeeActive, createOwner } from "@/lib/actions/properties";
+import {
+  createEmployee,
+  setEmployeeActive,
+  createOwner,
+  guardarDatosFiscalesDelPropietario,
+} from "@/lib/actions/properties";
 import { BUSINESS_TYPES, EMPLOYEE_ROLE_LABEL } from "@/lib/constants";
 import { formatDate } from "@/lib/money";
 import SyncLodgifyButton from "@/components/SyncLodgifyButton";
@@ -269,13 +274,68 @@ export default async function RentalSettingsPage() {
 
       <div className="card p-5">
         <h2 className="font-medium text-tinta mb-3">Propietarios</h2>
+        <p className="text-xs text-tinta-suave mb-3">
+          Son los clientes de Aires Majoreros: cada uno recibe su propio documento con las
+          limpiezas de sus viviendas. Sin NIF ni domicilio la factura no es válida y el sistema
+          se niega a emitirla.
+        </p>
         <div className="space-y-2 mb-4">
-          {owners.map((o) => (
-            <div key={o.id} className="border border-borde rounded-lg px-3 py-2">
-              <p className="text-sm font-medium text-tinta">{o.name}</p>
-              <p className="text-xs text-tinta-suave">{o.email ?? "—"} {o.phone ? `· ${o.phone}` : ""}</p>
-            </div>
-          ))}
+          {owners.map((o) => {
+            const completo = Boolean(o.taxId && o.address) || o.documentoLimpieza === "RESUMEN";
+            return (
+              <details key={o.id} className="border border-borde rounded-lg px-3 py-2">
+                <summary className="cursor-pointer">
+                  <span className="text-sm font-medium text-tinta">{o.name}</span>
+                  <span className="ml-2 text-xs text-tinta-suave">
+                    {o.documentoLimpieza === "RESUMEN" ? "recibe resumen" : "recibe factura"}
+                  </span>
+                  {!completo && (
+                    <span className="ml-2 badge badge-aviso">faltan datos para facturar</span>
+                  )}
+                </summary>
+                <FormularioConAviso
+                  action={guardarDatosFiscalesDelPropietario}
+                  className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end"
+                >
+                  <input type="hidden" name="ownerId" value={o.id} />
+                  <div>
+                    <label className="label">NIF/CIF</label>
+                    <input name="taxId" defaultValue={o.taxId ?? ""} className="input" />
+                  </div>
+                  <div>
+                    <label className="label">Email</label>
+                    <input name="email" type="email" defaultValue={o.email ?? ""} className="input" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="label">Domicilio fiscal</label>
+                    <textarea
+                      name="address"
+                      rows={2}
+                      defaultValue={o.address ?? ""}
+                      className="input"
+                      placeholder="Calle, número, código postal y municipio"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Qué recibe por las limpiezas</label>
+                    <select
+                      name="documentoLimpieza"
+                      defaultValue={o.documentoLimpieza}
+                      className="input"
+                    >
+                      <option value="FACTURA">Factura (con IGIC)</option>
+                      <option value="RESUMEN">Solo el resumen</option>
+                    </select>
+                  </div>
+                  <div>
+                    <button type="submit" className="btn-secondary">
+                      Guardar
+                    </button>
+                  </div>
+                </FormularioConAviso>
+              </details>
+            );
+          })}
         </div>
         <details>
           <summary className="cursor-pointer text-sm text-oceano-oscuro">+ Añadir propietario</summary>

@@ -434,6 +434,23 @@ const MIGRACIONES: Migracion[] = [
     },
   },
   {
+    // Los clientes de Aires Majoreros son los propietarios, uno por factura,
+    // no el negocio de alquiler. Y no todos piden factura: hay quien solo
+    // quiere el resumen de lo que se ha limpiado.
+    nombre: "A quién se le factura cada limpieza",
+    haceFalta: () => faltaColumna("Invoice", "ownerId"),
+    aplicar: async () => {
+      for (const sql of [
+        "ALTER TABLE `Owner` ADD COLUMN `documentoLimpieza` VARCHAR(191) NOT NULL DEFAULT 'FACTURA'",
+        "ALTER TABLE `Invoice` ADD COLUMN `tipoDocumento` VARCHAR(191) NOT NULL DEFAULT 'FACTURA'",
+        "ALTER TABLE `Invoice` ADD COLUMN `ownerId` VARCHAR(191) NULL",
+        "CREATE INDEX `Invoice_ownerId_idx` ON `Invoice`(`ownerId`)",
+      ]) {
+        await prisma.$executeRawUnsafe(sql);
+      }
+    },
+  },
+  {
     nombre: "De dónde sale cada comisión de canal",
     haceFalta: () => faltaColumna("ChannelCommission", "confirmado"),
     aplicar: async () => {

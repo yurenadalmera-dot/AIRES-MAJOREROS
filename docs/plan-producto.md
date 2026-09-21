@@ -33,8 +33,22 @@ El workflow de n8n que acabamos de apagar hacía lo correcto —agrupaba por pro
 una factura a cada uno, con el detalle de sus viviendas— y además distinguía que **Domingo Javier
 recibe solo un resumen, no factura oficial**, cosa que el SaaS no sabe.
 
-**Hasta que esto esté arreglado, no hay que pulsar «Generar factura» en el SaaS.** Es lo primero
-que toca, antes del día 1.
+**Arreglado el 21/09.** Ahora sale **un documento por propietario**, con el detalle de sus
+viviendas, y los datos fiscales se toman de su ficha en vez de teclearlos cada mes. Los que
+tienen puesto «resumen» reciben resumen: sin IGIC y **en su propia serie**, porque un resumen no
+es una factura y no puede gastar un número de la serie fiscal.
+
+Probado de punta a punta contra los datos reales, con las tres propietarias:
+
+| Documento | Cliente | Base | IGIC | Total |
+|---|---|---|---|---|
+| `AM-2026-0001` | Academia Cañada del Río S.L. | 120,00 € | 8,40 € | 128,40 € |
+| `AM-2026-0002` | Inversiones Brito Pérez S.L. | 300,00 € | 21,00 € | 321,00 € |
+| `RES-2026-0001` | Domingo Javier *(resumen)* | 60,00 € | — | 60,00 € |
+
+Y lo que no se puede emitir no se cuela ni se pierde: a quien le falte el NIF o el domicilio, sus
+limpiezas se quedan pendientes y sale dicho con su nombre. En Ajustes → Propietarios se corrigen,
+que hasta ahora un propietario solo se podía crear, no arreglar.
 
 ### 1.1 Catorce de dieciséis viviendas no tienen precio de limpieza — y eso llega a la factura
 

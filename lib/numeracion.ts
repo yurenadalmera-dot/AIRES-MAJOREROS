@@ -21,3 +21,15 @@ export function numeroSiguiente(prefijo: string, ultimoNumero: string | null): s
   const siguiente = Number.isFinite(ultimoOrdinal) && ultimoOrdinal >= 0 ? ultimoOrdinal + 1 : 1;
   return `${prefijo}${String(siguiente).padStart(4, "0")}`;
 }
+
+/**
+ * La serie de los resúmenes, aparte de la de facturas.
+ *
+ * Un resumen no es una factura: es informativo, no lleva impuesto y no tiene
+ * efectos fiscales. Si gastara números de la serie de facturas, esa serie
+ * quedaría con huecos que no corresponden a ninguna factura — justo lo que la
+ * correlatividad no permite.
+ */
+export function prefijoResumenes(fecha: Date = new Date()): string {
+  return `RES-${format(fecha, "yyyy")}-`;
+}
