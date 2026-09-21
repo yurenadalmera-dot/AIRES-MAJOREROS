@@ -2,13 +2,10 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PrintButton, BackButton } from "@/components/ui";
 import { Marca } from "@/components/Marca";
+import MarcarInformeEnviado from "@/components/MarcarInformeEnviado";
 import { formatCurrency, formatDate, round2 } from "@/lib/money";
 import { BUSINESS_TYPES } from "@/lib/constants";
-import { liquidarPropietario, armarTramos, cuotaDelPeriodo } from "@/lib/liquidacion";
-
-/** Los `Decimal` de Prisma, a número; y `null` se queda en `null`. */
-const num = (v: { toString(): string } | null | undefined): number | null =>
-  v === null || v === undefined ? null : Number(v);
+import { informeDePropietario } from "@/lib/informe-propietario";
 
 /**
  * Informe imprimible de propietario. Compartido por ambos negocios: siempre
@@ -35,123 +32,38 @@ export default async function OwnerReportPrintView({
   end: string;
   backHref: string;
 }) {
-  const periodStart = new Date(start);
-  const periodEnd = new Date(end);
-  periodEnd.setHours(23, 59, 59, 999);
+  // Los números viven en `lib/informe-propietario.ts`, no aquí: el mismo
+  // informe se manda por correo, y dos cálculos separados acaban desviándose.
+  const datos = await informeDePropietario({ organizationId, ownerId, start, end });
+  if (!datos) notFound();
 
-  const [owner, rentalBusiness] = await Promise.all([
-    prisma.owner.findFirst({
-      where: { id: ownerId, organizationId },
-      include: { properties: { include: { group: true } }, cuotas: true },
-    }),
-    prisma.business.findFirst({ where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT } }),
-  ]);
-  if (!owner) notFound();
-
-  const propertyIds = owner.properties.map((p) => p.id);
-
-  const bookings = await prisma.booking.findMany({
-    where: {
-      organizationId,
-      propertyId: { in: propertyIds },
-      status: "CONFIRMED",
-      checkIn: { gte: periodStart, lte: periodEnd },
-    },
-    include: { property: true },
-    orderBy: { checkIn: "asc" },
-  });
-
-  const cleaningTasks = await prisma.cleaningTask.findMany({
-    where: {
-      organizationId,
-      propertyId: { in: propertyIds },
-      type: "CLEANING",
-      billable: true,
-      // Una limpieza cancelada no se ha hecho, así que no se le puede
-      // descontar al propietario. Antes sí entraba, y el informe no cuadraba
-      // con la factura, que solo cuenta las hechas.
-      status: { not: "CANCELLED" },
-      date: { gte: periodStart, lte: periodEnd },
-    },
-    include: { property: true },
-    orderBy: { date: "asc" },
-  });
-
-  const expenses = await prisma.expense.findMany({
-    where: {
-      organizationId,
-      propertyId: { in: propertyIds },
-      date: { gte: periodStart, lte: periodEnd },
-    },
-    include: { property: true },
-    orderBy: { date: "asc" },
-  });
-
-  const totals = bookings.reduce(
-    (acc, b) => ({
-      total: acc.total + Number(b.totalPrice),
-      platform: acc.platform + Number(b.platformCommissionAmt),
-      bank: acc.bank + Number(b.bankCommissionAmt),
-      net: acc.net + Number(b.netAmount),
-    }),
-    { total: 0, platform: 0, bank: 0, net: 0 }
-  );
-  const cleaningTotal = round2(cleaningTasks.reduce((sum, t) => sum + Number(t.price), 0));
-  const expensesTotal = round2(expenses.reduce((sum, g) => sum + Number(g.amount), 0));
-
-  // Cada vivienda va al tramo de su grupo; una vivienda suelta hace tramo
-  // propio. Es lo que permite que Inversiones Brito lleve el 30 % del Grupo
-  // Villa Mónica y el 10 % de Villa Monikka en el mismo informe. La regla está
-  // en `armarTramos` y no aquí, porque el panel de la semana la necesita igual.
-  const { tramos, tramoDe } = armarTramos({
-    viviendas: owner.properties.map((p) => ({
-      id: p.id,
-      name: p.name,
-      managementPct: num(p.managementPct),
-      groupId: p.groupId,
-      group: p.group ? { name: p.group.name, managementPct: num(p.group.managementPct) } : null,
-    })),
-    reservas: bookings.map((b) => ({
-      propertyId: b.propertyId,
-      totalPrice: Number(b.totalPrice),
-      platformCommissionAmt: Number(b.platformCommissionAmt),
-      bankCommissionAmt: Number(b.bankCommissionAmt),
-    })),
-    // Las limpiezas son un gasto más de la vivienda: bajan lo que se liquida
-    // y, con ello, la base sobre la que se calcula la gestión.
-    gastos: [
-      ...cleaningTasks.map((t) => ({ propertyId: t.propertyId, amount: Number(t.price) })),
-      ...expenses.map((g) => ({ propertyId: g.propertyId, amount: Number(g.amount) })),
-    ],
-  });
-
-  // Las mismas reservas, agrupadas para pintarlas: el propietario las ve por
-  // complejo y con su subtotal, que es como se las viene dando el informe que
-  // ya recibe. Un listado corrido de veinte reservas no dice de dónde sale
-  // cada parte.
-  const reservasPorGrupo = new Map<string, { nombre: string; reservas: typeof bookings }>();
-  for (const b of bookings) {
-    const clave = tramoDe.get(b.propertyId) ?? "";
-    if (!reservasPorGrupo.has(clave)) {
-      reservasPorGrupo.set(clave, { nombre: tramos.get(clave)?.nombre ?? "Sin grupo", reservas: [] });
-    }
-    reservasPorGrupo.get(clave)!.reservas.push(b);
-  }
-
-  // Mes a mes y al importe que estuviera en vigor: la cuota sube, y cobrar la
-  // de hoy por los meses de antes se factura de más.
-  const cuotaFija = cuotaDelPeriodo({
-    inicio: periodStart,
-    fin: new Date(end),
-    cuotas: owner.cuotas.map((c) => ({
-      importe: Number(c.importe),
-      desde: c.desde,
-      hasta: c.hasta,
-    })),
-  });
-  const liquidacion = liquidarPropietario({ tramos: [...tramos.values()], cuotaFija });
+  const {
+    owner,
+    periodStart,
+    periodEnd,
+    bookings,
+    cleaningTasks,
+    expenses,
+    totals,
+    cleaningTotal,
+    expensesTotal,
+    liquidacion,
+    gruposDeReservas,
+    cabecera,
+  } = datos;
   const desglosePorGrupo = liquidacion.tramos.filter((t) => t.comisionDeGestion > 0);
-  const gruposDeReservas = [...reservasPorGrupo.entries()];
+
+  const [rentalBusiness, ultimoEnvio] = await Promise.all([
+    prisma.business.findFirst({
+      where: { organizationId, type: BUSINESS_TYPES.RENTAL_MANAGEMENT },
+    }),
+    // ¿Consta ya un envío de este mismo periodo? Evita mandarlo dos veces.
+    prisma.envioDeInforme.findFirst({
+      where: { ownerId, periodStart: periodStart },
+      orderBy: { enviadoEl: "desc" },
+      select: { enviadoEl: true },
+    }),
+  ]);
 
   /** Los totales de un puñado de reservas, para el subtotal de cada grupo. */
   const totalesDe = (rs: typeof bookings) =>
@@ -165,21 +77,19 @@ export default async function OwnerReportPrintView({
       { total: 0, platform: 0, bank: 0, net: 0 }
     );
 
-  // Las cuatro cifras de cabecera, las mismas que trae el informe que el
-  // propietario ya recibe. «A percibir» es antes de gastos, como allí: los
-  // gastos van aparte porque no siempre los adelanta la gestora.
-  const cabecera = [
-    { etiqueta: "Precio total reservas", valor: round2(totals.total) },
-    { etiqueta: "Comisiones de venta", valor: round2(totals.platform + totals.bank) },
-    { etiqueta: "A percibir en cuenta", valor: round2(totals.net) },
-    { etiqueta: "Gastos del periodo", valor: round2(cleaningTotal + expensesTotal) },
-  ];
-
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-4 no-print">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4 no-print">
         <BackButton href={backHref} />
-        <PrintButton />
+        <div className="flex flex-wrap items-center gap-3">
+          <MarcarInformeEnviado
+            ownerId={ownerId}
+            start={start}
+            end={end}
+            yaEnviado={ultimoEnvio?.enviadoEl.toISOString() ?? null}
+          />
+          <PrintButton />
+        </div>
       </div>
 
       <div className="card print-area p-8">

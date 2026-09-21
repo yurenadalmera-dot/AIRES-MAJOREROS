@@ -437,3 +437,46 @@ export async function borrarGrupo(groupId: string) {
     revalidarVistasDeViviendas();
   });
 }
+
+const envioSchema = z.object({
+  ownerId: z.string().min(1),
+  start: z.string().min(1),
+  end: z.string().min(1),
+  medio: z.enum(["EMAIL", "MANO"]).default("EMAIL"),
+  nota: z.string().optional(),
+});
+
+/**
+ * Deja constancia de que a un propietario se le ha mandado su informe.
+ *
+ * Sin esto, «¿le mandamos ya el de septiembre?» solo se puede contestar
+ * mirando la bandeja de enviados de un correo concreto, y solo lo sabe quien
+ * lo mandó. La dirección se copia en el momento: si mañana cambia su correo,
+ * lo que se mandó se mandó a la de entonces.
+ */
+export async function registrarEnvioDeInforme(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    const data = envioSchema.parse(Object.fromEntries(formData.entries()));
+
+    const owner = await prisma.owner.findFirst({
+      where: { id: data.ownerId, organizationId },
+      select: { id: true, email: true },
+    });
+    if (!owner) throw new ErrorDeNegocio("Ese propietario no existe.");
+
+    await prisma.envioDeInforme.create({
+      data: {
+        ownerId: owner.id,
+        periodStart: new Date(data.start),
+        periodEnd: new Date(data.end),
+        destinatario: owner.email,
+        medio: data.medio,
+        nota: data.nota?.trim() || null,
+      },
+    });
+
+    revalidatePath("/rental/reports");
+    revalidatePath("/cleaning/reports");
+  });
+}

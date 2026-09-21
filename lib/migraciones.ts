@@ -451,6 +451,29 @@ const MIGRACIONES: Migracion[] = [
     },
   },
   {
+    // Saber si a un propietario ya se le mandó su informe. Antes solo lo sabía
+    // quien lo hubiera mandado, y mirando su bandeja de enviados.
+    nombre: "Cuándo se le mandó el informe a cada propietario",
+    haceFalta: () => faltaTabla("EnvioDeInforme"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "CREATE TABLE IF NOT EXISTS `EnvioDeInforme` (" +
+          "`id` VARCHAR(191) NOT NULL," +
+          "`ownerId` VARCHAR(191) NOT NULL," +
+          "`periodStart` DATETIME(3) NOT NULL," +
+          "`periodEnd` DATETIME(3) NOT NULL," +
+          "`destinatario` VARCHAR(191) NULL," +
+          "`medio` VARCHAR(191) NOT NULL DEFAULT 'EMAIL'," +
+          "`enviadoEl` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)," +
+          "`nota` TEXT NULL," +
+          "INDEX `EnvioDeInforme_ownerId_idx`(`ownerId`)," +
+          "INDEX `EnvioDeInforme_periodStart_idx`(`periodStart`)," +
+          "PRIMARY KEY (`id`)" +
+          ") DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+      );
+    },
+  },
+  {
     nombre: "De dónde sale cada comisión de canal",
     haceFalta: () => faltaColumna("ChannelCommission", "confirmado"),
     aplicar: async () => {

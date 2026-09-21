@@ -14,6 +14,7 @@ const PUBLIC_PATHS = [
   "/api/health/db",
   "/api/importar",
   "/api/sincronizar",
+  "/api/informe",
 ];
 
 function isPublic(pathname: string) {

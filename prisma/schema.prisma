@@ -126,6 +126,7 @@ model Owner {
   groups     PropertyGroup[]
   cuotas     CuotaFija[]
   facturas   Invoice[]
+  informes   EnvioDeInforme[]
 
   @@index([organizationId])
 }
@@ -249,6 +250,30 @@ model Booking {
   @@index([propertyId])
   @@index([checkIn])
   @@index([checkOut])
+}
+
+/// Cada vez que se le manda un informe a un propietario.
+///
+/// No es un adorno: sin esto, «¿le mandamos ya el de septiembre?» solo se
+/// puede contestar mirando la bandeja de enviados de un correo concreto, y
+/// solo lo sabe quien lo mandó. Aquí queda a quién, cuándo y de qué periodo.
+model EnvioDeInforme {
+  id      String @id @default(cuid())
+  ownerId String
+  owner   Owner  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  periodStart DateTime
+  periodEnd   DateTime
+  /// A dónde se mandó. Se copia en vez de leerlo del propietario: si mañana
+  /// cambia su correo, lo que se mandó se mandó a la dirección de entonces.
+  destinatario String?
+  /// EMAIL | MANO — «mano» es haberlo dado impreso o por WhatsApp.
+  medio     String   @default("EMAIL")
+  enviadoEl DateTime @default(now())
+  nota      String?  @db.Text
+
+  @@index([ownerId])
+  @@index([periodStart])
 }
 
 /// Un viajero de una reserva, con los datos que exige el parte de viajeros.

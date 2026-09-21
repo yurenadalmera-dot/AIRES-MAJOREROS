@@ -30,15 +30,22 @@ export async function register() {
     const { prepararDatos } = await import("./lib/seed-datos");
 
     const recienCreado = await crearEsquemaSiFalta();
+
+    // Las migraciones se pasan siempre, también sobre una base recién creada.
+    // Antes solo corrían sobre una base que ya existía, y eso escondía una
+    // trampa: una tabla nueva que solo estuviera en `lib/migraciones.ts` no
+    // llegaba nunca a una instalación desde cero. Como cada migración mira
+    // antes si hace falta, sobre una base recién hecha no son más que unas
+    // cuantas consultas a information_schema.
+    const { aplicarMigraciones } = await import("./lib/migraciones");
+    await aplicarMigraciones();
+
     if (recienCreado) {
       await prepararDatos();
     } else {
       // El esquema ya estaba: no se siembra (la siembra ya se protege sola),
       // pero sí se revisa la cuenta de administración, que es lo que permite
       // recuperar el acceso cambiando ADMIN_PASSWORD y reiniciando.
-      const { aplicarMigraciones } = await import("./lib/migraciones");
-      await aplicarMigraciones();
-
       const { asegurarAdministrador, retirarUsuariosDemo } = await import("./lib/seed-datos");
       await asegurarAdministrador();
       await retirarUsuariosDemo();
