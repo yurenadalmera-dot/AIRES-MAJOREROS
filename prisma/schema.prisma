@@ -178,7 +178,15 @@ model Property {
   /// qué portal es. Texto libre porque cada casa tiene lo suyo.
   comoLlegar  String? @db.Text
   /// Enlace al punto exacto en un mapa. Se manda tal cual.
+  ///
+  /// Si Lodgify trae coordenadas, se rellena solo con ellas. No se vuelve a
+  /// pisar después: quien lo cambie a mano puede haber elegido un punto mejor
+  /// que el del anuncio —la entrada del garaje en vez de la fachada—.
   mapaUrl     String?
+  /// La descripción del anuncio de Lodgify, tal cual. No se le manda al
+  /// huésped: se enseña al lado del formulario para tener delante lo que ya
+  /// está escrito mientras se redacta el «cómo se llega».
+  descripcion String? @db.Text
   horaEntrada String? // "16:00"
   horaSalida  String? // "10:00"
   wifiRed     String?

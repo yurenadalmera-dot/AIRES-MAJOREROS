@@ -509,6 +509,19 @@ const MIGRACIONES: Migracion[] = [
       }
     },
   },
+  {
+    // La descripcion del anuncio de Lodgify.
+    //
+    // Lodgify no da ni las horas de entrada ni instrucciones de llegada
+    // —comprobado contra la cuenta real—, pero si una descripcion larga donde
+    // suele estar la mitad de lo que se le cuenta al huesped. Se guarda para
+    // tenerla delante al escribir el «como se llega», no para mandarsela.
+    nombre: "La descripción del anuncio de Lodgify",
+    haceFalta: () => faltaColumna("Property", "descripcion"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe("ALTER TABLE `Property` ADD COLUMN `descripcion` TEXT NULL");
+    },
+  },
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */

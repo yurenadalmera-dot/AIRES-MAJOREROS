@@ -82,12 +82,29 @@ async function sincronizarViviendas(organizationId: string, apiKey: string | nul
   for (const v of viviendas) {
     const existente = await prisma.property.findUnique({
       where: { lodgifyPropertyId: v.externalId },
-      select: { id: true, organizationId: true },
+      select: { id: true, organizationId: true, mapaUrl: true },
     });
 
     // Una vivienda con ese identificador pero de otra organización no es
     // nuestra: no se toca.
     if (existente && existente.organizationId !== organizationId) continue;
+
+    // Plazas, dormitorios y baños solo se escriben si Lodgify los da, y no
+    // los da. Machacarlos con un valor de reserva es lo que dejaba todas las
+    // viviendas con un dormitorio y un baño; y si alguien los corrige a mano,
+    // la siguiente sincronización se los llevaba por delante.
+    const cuantosSiVienen = {
+      ...(v.capacity !== null ? { capacity: v.capacity } : {}),
+      ...(v.bedrooms !== null ? { bedrooms: v.bedrooms } : {}),
+      ...(v.bathrooms !== null ? { bathrooms: v.bathrooms } : {}),
+    };
+
+    // El mapa sale de las coordenadas de Lodgify, que sí vienen. No es
+    // inventarlo: es el punto exacto que tiene puesto el anuncio.
+    const mapa =
+      v.latitud !== null && v.longitud !== null
+        ? `https://www.google.com/maps?q=${v.latitud},${v.longitud}`
+        : null;
 
     if (existente) {
       await prisma.property.update({
@@ -96,9 +113,12 @@ async function sincronizarViviendas(organizationId: string, apiKey: string | nul
           name: v.name,
           locality: v.locality,
           address: v.address,
-          capacity: v.capacity,
-          bedrooms: v.bedrooms,
-          bathrooms: v.bathrooms,
+          ...cuantosSiVienen,
+          ...(v.descripcion ? { descripcion: v.descripcion } : {}),
+          // El mapa no se pisa si alguien ha puesto otro: puede haber elegido
+          // un punto mejor que el del anuncio, por ejemplo la entrada del
+          // garaje en vez de la fachada.
+          ...(mapa && !existente.mapaUrl ? { mapaUrl: mapa } : {}),
           active: v.active,
         },
       });
@@ -111,9 +131,9 @@ async function sincronizarViviendas(organizationId: string, apiKey: string | nul
           name: v.name,
           locality: v.locality,
           address: v.address,
-          capacity: v.capacity,
-          bedrooms: v.bedrooms,
-          bathrooms: v.bathrooms,
+          ...cuantosSiVienen,
+          descripcion: v.descripcion,
+          mapaUrl: mapa,
           active: v.active,
           // Sin propietario y sin precio de limpieza: se ponen aquí, a mano.
           cleaningPrice: 0,

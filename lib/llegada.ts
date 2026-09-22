@@ -23,7 +23,6 @@ export interface QueFalta {
 
 const IMPRESCINDIBLES: { campo: keyof DatosDeLlegada["vivienda"]; etiqueta: string }[] = [
   { campo: "direccion", etiqueta: "la dirección" },
-  { campo: "comoLlegar", etiqueta: "cómo se llega" },
   { campo: "horaEntrada", etiqueta: "la hora de entrada" },
 ];
 
@@ -103,6 +102,13 @@ export async function llegadasProximas({
       campo: String(i.campo),
       etiqueta: i.etiqueta,
     }));
+    // Para llegar hace falta saber dónde está: vale el texto de «cómo se
+    // llega» o el punto en el mapa, que Lodgify sí da. Exigir los dos dejaba
+    // fuera viviendas a las que se puede llegar perfectamente con el mapa; no
+    // exigir ninguno manda un correo que no dice a dónde ir.
+    if (!v.comoLlegar && !v.mapaUrl) {
+      falta.push({ campo: "comoLlegar", etiqueta: "cómo se llega (texto o mapa)" });
+    }
     // Lo de la vivienda se escribe una vez; esto es de cada reserva. Van
     // juntos porque los dos impiden lo mismo: mandarle el correo.
     if (!r.guestEmail) falta.push({ campo: "email", etiqueta: "el correo del huésped" });

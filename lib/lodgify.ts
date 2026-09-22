@@ -41,6 +41,13 @@ const LODGIFY_API_BASE = "https://api.lodgify.com/v2";
  * que un correo que falta parezca un correo puesto, y la pantalla no lo marca
  * como pendiente.
  */
+/** Un número de verdad, o `null`. `NaN` y las cadenas vacías no lo son. */
+function numeroONada(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function textoONada(v: unknown): string | undefined {
   if (typeof v !== "string") return undefined;
   const limpio = v.trim();
@@ -184,9 +191,29 @@ export interface NormalizedProperty {
   name: string;
   locality: string;
   address: string | null;
-  capacity: number;
-  bedrooms: number;
-  bathrooms: number;
+  /**
+   * Plazas, dormitorios y baños, **o `null` si Lodgify no los da**.
+   *
+   * No los da por esta API: ni `max_people`, ni `bedrooms`, ni `bathrooms`
+   * aparecen en `/properties` ni en el detalle de una propiedad —comprobado
+   * contra la cuenta real el 22/09—. Antes esto no era `null` sino 2, 1 y 1,
+   * porque el mapeo los daba por ausentes y ponía un valor de reserva. El
+   * resultado es que todas las viviendas figuraban con una habitación y un
+   * baño, y ese número acabó saliendo en el tablero de limpiezas como si
+   * fuera cierto.
+   *
+   * `null` significa «no lo sé», y quien lo lea decide: al crear la vivienda
+   * se usan los valores por defecto de la ficha, y al refrescarla no se toca
+   * lo que ya hubiera puesto una persona.
+   */
+  capacity: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  /** La descripción del anuncio, tal cual viene (HTML). */
+  descripcion: string | null;
+  /** Coordenadas exactas, para el enlace al mapa. */
+  latitud: number | null;
+  longitud: number | null;
   active: boolean;
 }
 
@@ -206,9 +233,17 @@ async function fetchLivePropertiesPage(apiKey: string, page: number) {
       name: String(p.name ?? p.title ?? "Vivienda sin nombre"),
       city: (p.city ?? p.town ?? null) as string | null,
       address: (p.address ?? p.address_1 ?? p.street ?? null) as string | null,
-      max_people: Number(p.max_people ?? p.maxPeople ?? p.capacity ?? 0),
-      bedrooms: Number(p.bedrooms ?? p.rooms ?? 0),
-      bathrooms: Number(p.bathrooms ?? 0),
+      zip: (p.zip ?? p.postal_code ?? null) as string | null,
+      description: (p.description ?? null) as string | null,
+      latitude: numeroONada(p.latitude),
+      longitude: numeroONada(p.longitude),
+      // Ojo con `rooms`: en la respuesta real es un **array** de habitaciones
+      // con su id y su nombre, no un número. `Number([{…}])` da NaN, y NaN no
+      // es mayor que cero, así que caía al valor de reserva y todas las
+      // viviendas acababan con un dormitorio.
+      max_people: numeroONada(p.max_people ?? p.maxPeople ?? p.capacity),
+      bedrooms: numeroONada(p.bedrooms),
+      bathrooms: numeroONada(p.bathrooms),
       active: p.is_active === undefined && p.active === undefined ? true : Boolean(p.is_active ?? p.active),
     })
   );
@@ -241,10 +276,16 @@ export async function fetchAllLodgifyProperties(
     // vacía. Mejor un texto que se ve y se corrige que dejar la vivienda sin
     // dar de alta.
     locality: p.city?.trim() || "(sin localidad)",
-    address: p.address?.trim() || null,
-    capacity: p.max_people > 0 ? p.max_people : 2,
-    bedrooms: p.bedrooms > 0 ? p.bedrooms : 1,
-    bathrooms: p.bathrooms > 0 ? p.bathrooms : 1,
+    // La dirección, entera. Lodgify la reparte en calle, código postal y
+    // ciudad, y al huésped hay que darle las tres.
+    address:
+      [p.address?.trim(), p.zip?.trim(), p.city?.trim()].filter(Boolean).join(", ") || null,
+    capacity: p.max_people ?? null,
+    bedrooms: p.bedrooms ?? null,
+    bathrooms: p.bathrooms ?? null,
+    descripcion: p.description?.trim() || null,
+    latitud: p.latitude ?? null,
+    longitud: p.longitude ?? null,
     active: p.active,
   }));
 }

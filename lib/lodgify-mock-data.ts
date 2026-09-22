@@ -93,9 +93,14 @@ export interface LodgifyPropertyRaw {
   name: string;
   city: string | null;
   address: string | null;
-  max_people: number;
-  bedrooms: number;
-  bathrooms: number;
+  zip?: string | null;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  /** `null` cuando Lodgify no lo da, que es lo normal. Ver `NormalizedProperty`. */
+  max_people: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
   active: boolean;
 }
 
