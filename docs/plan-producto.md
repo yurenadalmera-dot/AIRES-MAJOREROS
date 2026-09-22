@@ -67,6 +67,17 @@ Dicho de otra forma: cada salida que entre por Lodgify en cualquiera de esas cat
 apunta una limpieza que luego se factura a cero. Alguien se dio cuenta del problema y puso la
 comprobación… solo en el camino que menos se usa.
 
+### 1.1 bis Las limpiezas que ya existían se quedaron a 0 € (encontrado el 22/09)
+
+Arreglar el motor de tarifas solo arregló **las limpiezas nuevas**. Las que ya estaban nacieron a
+0 €, y la sincronización, al pasar por ellas, solo les cambiaba la fecha: nadie les iba a poner
+precio nunca. En producción son, entre otras, las cinco limpiezas de septiembre de Inversiones
+Brito. Y como la facturación rechaza las líneas a 0 € —y hace bien—, se caían de la factura del
+propietario sin que saltara ningún aviso.
+
+Arreglado: la sincronización también las precisa, tocando solo lo que está vacío. Un precio
+distinto de 0 es un precio que puso alguien.
+
 ### 1.2 El motor de tarifas está escrito, probado, y no se llama desde ningún sitio
 
 `lib/tarifas.ts` calcula exactamente lo que Aires cobra: **base + tanto por huésped adicional**,
@@ -397,16 +408,15 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
    **Eso es lo que necesito:** que Yurena entre en SES.HOSPEDAJES, siga la sección 14 y me pase
    ese documento. Con él monto el envío; sin él estaría adivinando el formato.
 5. ~~¿Qué número de WhatsApp?~~ Queda apuntado como mejora, para más adelante.
-6. **¿Quién llama a `POST /api/sincronizar`?** Las reservas de Lodgify entran por ahí desde que se
-   apagó lo de Airtable, pero hoy hay que darle a mano. Dos sitios:
+6. ~~¿Quién llama a `POST /api/sincronizar`?~~ **Resuelto el 22/09: un workflow de n8n**, «Aires ·
+   traer reservas de Lodgify al SaaS», cada 3 horas y activo. El token va en una credencial
+   cifrada y cada ejecución queda registrada. Probado contra producción: 123 reservas leídas, 76
+   actualizadas, ninguna sin emparejar.
 
-   - **Un cron de Hostinger.** Es lo más corto, pero el token queda escrito a la vista en el panel
-     y, si un día falla, no queda rastro de por qué.
-   - **Un workflow de n8n cada 3 horas.** El token va en una credencial cifrada y cada ejecución
-     queda registrada, con su error si lo hubo. **Es el que recomiendo**, y además es el hueco que
-     dejó «Mirador · cargar reservas Lodgify» al apagarse.
-
-   Mientras no se decida, las reservas nuevas no aparecen solas.
+   Al probarlo salió lo que estaba tapado: `/api/sincronizar` devolvía **401 desde el
+   middleware**, porque la web corría una compilación anterior a que la ruta existiera. Había
+   nueve commits sin desplegar, y con ellos estaban fuera de servicio también el formulario del
+   huésped y el informe. Desplegado el 22/09 con permiso.
 
 ---
 
