@@ -85,6 +85,16 @@ export default function Shell({
   const otherHref = activeBusiness === "rental" ? "/cleaning" : "/rental";
   const otroNegocio = activeBusiness === "rental" ? "cleaning" : "rental";
 
+  // Y solo se ofrece cambiar de negocio a quien pueda entrar en el otro.
+  //
+  // Las socias de limpiezas veían «Cambiar a · Alquileres vacacionales» y, al
+  // pulsarlo, volvían al sitio del que salían. Una puerta que no se abre es
+  // peor que no tener puerta: parece un fallo de la aplicación y no lo es.
+  const puedeVerElOtro = puede(
+    rol,
+    otroNegocio === "rental" ? "operativa.alquiler" : "operativa.estado_tarea"
+  );
+
   async function handleLogout() {
     setLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" });
@@ -145,6 +155,7 @@ export default function Shell({
     <div className="px-5 pb-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-tinta-suave">Negocio activo</p>
       <p className="mt-1 font-semibold leading-snug text-marina">{businessName}</p>
+      {puedeVerElOtro && (
       <Link
         href={otherHref}
         className="mt-2.5 block rounded-lg border border-borde-fuerte px-3 py-2 transition-colors hover:bg-marina-suave"
@@ -163,6 +174,7 @@ export default function Shell({
           <IconoFlecha size={13} className="text-tinta-suave" />
         </span>
       </Link>
+      )}
     </div>
   );
 
