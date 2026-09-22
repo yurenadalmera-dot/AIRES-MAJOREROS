@@ -74,6 +74,18 @@ export default function SyncLodgifyButton() {
               de que el precio saliera de la tarifa; a 0 € no se pueden facturar.
             </p>
           )}
+          {summary.sinPrecioDetalles.length > 0 && (
+            <div className="text-aviso bg-aviso-suave border border-[#f6e0c4] rounded px-2 py-1">
+              <p className="font-medium">
+                {summary.sinPrecioDetalles.length} limpiezas siguen sin precio:
+              </p>
+              <ul className="list-disc list-inside">
+                {summary.sinPrecioDetalles.map((d) => (
+                  <li key={d}>{d}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {summary.pastCleaningsDone > 0 && (
             <p>
               {summary.pastCleaningsDone} limpiezas de reservas ya terminadas se han dado por

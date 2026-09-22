@@ -35,6 +35,8 @@ export interface SyncSummary {
   sinPrecio: number;
   /** Limpiezas que estaban a 0 € y a las que esta pasada les ha puesto precio. */
   preciosPuestos: number;
+  /** Por qué no se ha podido precisar cada una de las que siguen a 0 €. */
+  sinPrecioDetalles: string[];
   /** Por qué no se han podido leer las viviendas de Lodgify, si ha pasado. */
   avisoViviendas: string | null;
 }
@@ -189,6 +191,7 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
     let pastCleaningsDone = 0;
     let sinPrecio = 0;
     let preciosPuestos = 0;
+    const sinPrecioDetalles: string[] = [];
 
     // Una reserva que ya terminó trae una limpieza que ya se hizo.
     //
@@ -344,7 +347,6 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
             cambios.price = calculo.precio;
             preciosPuestos++;
           }
-          if (Number(tarea.price) === 0 && calculo.precio === null) sinPrecio++;
           if (Object.keys(cambios).length > 0) {
             await prisma.cleaningTask.update({ where: { id: tarea.id }, data: cambios });
           }
@@ -415,6 +417,63 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
       }
     }
 
+    // Un repaso final a todas las que sigan a 0 €, vengan o no de una reserva
+    // que Lodgify haya devuelto hoy.
+    //
+    // Atar esto al bucle de arriba dejaba fuera justo lo que peor se ve: una
+    // limpieza cuya reserva ya no viene en el listado no la miraba nadie, y se
+    // quedaba a 0 € para siempre. Como el barrido solo toca las que están a
+    // cero, en cuanto tienen precio deja de encontrarlas: no es trabajo que se
+    // repita cada tres horas.
+    //
+    // Las canceladas quedan fuera —no se han hecho— y las facturadas también,
+    // que eso ya es historia.
+    const rezagadas = await prisma.cleaningTask.findMany({
+      where: {
+        organizationId,
+        type: "CLEANING",
+        invoiceId: null,
+        status: { not: "CANCELLED" },
+        price: 0,
+      },
+      select: { id: true, propertyId: true, date: true, bookingId: true, huespedes: true },
+      take: 500,
+    });
+    for (const tarea of rezagadas) {
+      // Los huéspedes de quien se va: los de su reserva si la tiene, y si no
+      // lo que se guardó en su día. Sin ese dato la tarifa cobra la base.
+      const reserva = tarea.bookingId
+        ? await prisma.booking.findFirst({
+            where: { id: tarea.bookingId, organizationId },
+            select: { adults: true, children: true },
+          })
+        : null;
+      const huespedes = reserva ? reserva.adults + reserva.children : tarea.huespedes;
+
+      const calculo = await limpiezaDeSalida({
+        organizationId,
+        propertyId: tarea.propertyId,
+        bookingId: tarea.bookingId ?? undefined,
+        checkOut: tarea.date,
+        huespedes,
+      });
+      if (calculo.precio === null) {
+        // El motivo, escrito. «Sin precio» a secas no se puede arreglar.
+        sinPrecioDetalles.push(`${tarea.date.toISOString().slice(0, 10)}: ${calculo.explicacion}`);
+        sinPrecio++;
+        continue;
+      }
+      await prisma.cleaningTask.update({
+        where: { id: tarea.id },
+        data: {
+          servicio: calculo.servicio,
+          huespedes: calculo.huespedes ?? undefined,
+          price: calculo.precio,
+        },
+      });
+      preciosPuestos++;
+    }
+
     const summary: SyncSummary = {
       liveMode: apiKey !== null,
       fetched: all.length,
@@ -430,6 +489,7 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
       pastCleaningsDone,
       sinPrecio,
       preciosPuestos,
+      sinPrecioDetalles,
       avisoViviendas,
     };
 
