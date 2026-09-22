@@ -75,8 +75,15 @@ precio nunca. En producción son, entre otras, las cinco limpiezas de septiembre
 Brito. Y como la facturación rechaza las líneas a 0 € —y hace bien—, se caían de la factura del
 propietario sin que saltara ningún aviso.
 
-Arreglado: la sincronización también las precisa, tocando solo lo que está vacío. Un precio
-distinto de 0 es un precio que puso alguien.
+Arreglado en dos vueltas, porque la primera se quedó corta. Atar el repaso al bucle de reservas
+solo alcanzaba las limpiezas cuya reserva devolviera Lodgify en esa pasada: de las cinco de Brito
+se arreglaron cuatro, y la quinta se quedó a cero. Ahora hay además un barrido final por todas
+las que sigan a 0 €, cuelguen o no de una reserva, y las que no se puedan precisar dicen por qué
+—«sin precio» a secas no se puede arreglar—. Solo toca lo que está vacío: un precio distinto de 0
+es un precio que puso alguien.
+
+Comprobado contra producción el 22/09: **ninguna limpieza a 0 €**. Solo en septiembre y solo en
+Inversiones Brito eran 160 € de limpiezas sin cobrar, y 122 € de más liquidados al propietario.
 
 ### 1.2 El motor de tarifas está escrito, probado, y no se llama desde ningún sitio
 
