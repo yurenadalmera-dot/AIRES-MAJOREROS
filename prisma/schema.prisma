@@ -170,6 +170,28 @@ model Property {
   group             PropertyGroup? @relation(fields: [groupId], references: [id]) // precio que Aires Majoreros factura por limpieza estándar de esta vivienda
   manualStatus      String? // override manual opcional: OCCUPIED | AVAILABLE | CLEANING_NEEDED | MAINTENANCE
   lodgifyPropertyId String?        @unique // para emparejar con la integración Lodgify
+
+  // Lo que el huésped necesita para llegar y entrar. Hoy esto vive en la
+  // cabeza de quien contesta el WhatsApp, y por eso se contesta mil veces lo
+  // mismo y a deshora. Ver `lib/llegada.ts`.
+  /// Cómo se llega de verdad: el desvío que no sale en el mapa, dónde aparcar,
+  /// qué portal es. Texto libre porque cada casa tiene lo suyo.
+  comoLlegar  String? @db.Text
+  /// Enlace al punto exacto en un mapa. Se manda tal cual.
+  mapaUrl     String?
+  horaEntrada String? // "16:00"
+  horaSalida  String? // "10:00"
+  wifiRed     String?
+  wifiClave   String?
+  normas      String? @db.Text
+  /// El código de la caja de llaves, cifrado (AES-256-GCM, `lib/secretos.ts`).
+  ///
+  /// **No sale por correo.** Un correo se queda para siempre en el buzón de
+  /// mucha gente, y el código de una caja de llaves no cambia entre huéspedes.
+  /// Se guarda aquí para poder mandarlo el día de la entrada por un canal que
+  /// caduque, y mientras tanto para no tenerlo en un cuaderno.
+  codigoLlaveCifrado String? @db.Text
+
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 

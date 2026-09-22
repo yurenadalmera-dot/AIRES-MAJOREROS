@@ -6,6 +6,7 @@ import PropertyForm from "@/components/PropertyForm";
 import { updateProperty, setPropertyManualStatus, setPropertyActive } from "@/lib/actions/properties";
 import { PROPERTY_STATUS_LABEL } from "@/lib/constants";
 import FormularioConAviso from "@/components/FormularioConAviso";
+import LlegadaDeLaVivienda from "@/components/LlegadaDeLaVivienda";
 
 export default async function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -80,6 +81,21 @@ export default async function EditPropertyPage({ params }: { params: Promise<{ i
           </button>
         </FormularioConAviso>
       </div>
+
+      <LlegadaDeLaVivienda
+        propertyId={property.id}
+        initial={{
+          address: property.address,
+          comoLlegar: property.comoLlegar,
+          mapaUrl: property.mapaUrl,
+          horaEntrada: property.horaEntrada,
+          horaSalida: property.horaSalida,
+          wifiRed: property.wifiRed,
+          wifiClave: property.wifiClave,
+          normas: property.normas,
+          tieneCodigoDeLlave: Boolean(property.codigoLlaveCifrado),
+        }}
+      />
 
       <PropertyForm
         owners={owners}

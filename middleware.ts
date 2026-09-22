@@ -15,6 +15,7 @@ const PUBLIC_PATHS = [
   "/api/importar",
   "/api/sincronizar",
   "/api/informe",
+  "/api/llegadas",
 ];
 
 function isPublic(pathname: string) {

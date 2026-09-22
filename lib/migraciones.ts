@@ -485,6 +485,30 @@ const MIGRACIONES: Migracion[] = [
       }
     },
   },
+  {
+    // Lo que el huesped necesita para llegar y entrar.
+    //
+    // Hasta ahora esto vivia en la cabeza de quien contesta el WhatsApp: como
+    // se llega, a que hora se entra, cual es el wifi. Por eso se contestaba
+    // mil veces lo mismo, y a deshora. El codigo de la caja de llaves va
+    // cifrado y aparte: no es informacion, es una llave.
+    nombre: "Cómo llegar y entrar en cada vivienda",
+    haceFalta: () => faltaColumna("Property", "comoLlegar"),
+    aplicar: async () => {
+      for (const sql of [
+        "ALTER TABLE `Property` ADD COLUMN `comoLlegar` TEXT NULL",
+        "ALTER TABLE `Property` ADD COLUMN `mapaUrl` VARCHAR(191) NULL",
+        "ALTER TABLE `Property` ADD COLUMN `horaEntrada` VARCHAR(191) NULL",
+        "ALTER TABLE `Property` ADD COLUMN `horaSalida` VARCHAR(191) NULL",
+        "ALTER TABLE `Property` ADD COLUMN `wifiRed` VARCHAR(191) NULL",
+        "ALTER TABLE `Property` ADD COLUMN `wifiClave` VARCHAR(191) NULL",
+        "ALTER TABLE `Property` ADD COLUMN `normas` TEXT NULL",
+        "ALTER TABLE `Property` ADD COLUMN `codigoLlaveCifrado` TEXT NULL",
+      ]) {
+        await prisma.$executeRawUnsafe(sql);
+      }
+    },
+  },
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */

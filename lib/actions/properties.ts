@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir } from "@/lib/auth";
+import { cifrar } from "@/lib/secretos";
 
 
 /**
@@ -212,6 +213,78 @@ export async function guardarDatosFiscalesDelPropietario(formData: FormData) {
 
     revalidatePath("/rental/settings");
     revalidatePath("/cleaning");
+  });
+}
+
+const llegadaSchema = z.object({
+  propertyId: z.string().min(1),
+  address: z.string().optional(),
+  comoLlegar: z.string().optional(),
+  mapaUrl: z.string().optional(),
+  horaEntrada: z.string().optional(),
+  horaSalida: z.string().optional(),
+  wifiRed: z.string().optional(),
+  wifiClave: z.string().optional(),
+  normas: z.string().optional(),
+  codigoLlave: z.string().optional(),
+});
+
+/**
+ * Lo que hay que contarle al huésped para que llegue y entre.
+ *
+ * El código de la caja de llaves se guarda **cifrado** y no se vuelve a
+ * enseñar: es una llave, no un dato. Dejarlo en blanco no lo borra —eso
+ * obligaría a volver a escribirlo cada vez que se corrige una falta de
+ * ortografía en «cómo llegar»—; para quitarlo hay que escribir un guion.
+ */
+export async function guardarLlegadaDeLaVivienda(formData: FormData) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("operativa.alquiler");
+    const data = llegadaSchema.parse(Object.fromEntries(formData.entries()));
+
+    const existe = await prisma.property.findFirst({
+      where: { id: data.propertyId, organizationId },
+      select: { id: true },
+    });
+    if (!existe) throw new ErrorDeNegocio("Esa vivienda no existe.");
+
+    const limpio = (v: string | undefined) => (v && v.trim() ? v.trim() : null);
+
+    // Una hora mal escrita se le manda al huésped tal cual, y a esa hora está
+    // en la puerta. Mejor no aceptarla que mandarla.
+    const hora = (v: string | null, campo: string) => {
+      if (v === null) return null;
+      if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(v)) {
+        throw new ErrorDeNegocio(`«${v}» no es una hora. Escríbela como 16:00 (${campo}).`);
+      }
+      return v;
+    };
+
+    const codigo = limpio(data.codigoLlave);
+    const cambioDeCodigo =
+      codigo === null
+        ? {} // en blanco: se queda como estaba
+        : codigo === "-"
+          ? { codigoLlaveCifrado: null }
+          : { codigoLlaveCifrado: cifrar(codigo) };
+
+    await prisma.property.update({
+      where: { id: data.propertyId },
+      data: {
+        address: limpio(data.address),
+        comoLlegar: limpio(data.comoLlegar),
+        mapaUrl: limpio(data.mapaUrl),
+        horaEntrada: hora(limpio(data.horaEntrada), "hora de entrada"),
+        horaSalida: hora(limpio(data.horaSalida), "hora de salida"),
+        wifiRed: limpio(data.wifiRed),
+        wifiClave: limpio(data.wifiClave),
+        normas: limpio(data.normas),
+        ...cambioDeCodigo,
+      },
+    });
+
+    revalidarVistasDeViviendas();
+    revalidatePath(`/rental/properties/${data.propertyId}`);
   });
 }
 
