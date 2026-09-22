@@ -81,7 +81,12 @@ export default async function Llegadas({
                     </span>
                   </td>
                   <td className="font-medium text-tinta">{l.vivienda.nombre}</td>
-                  <td className="text-tinta-suave">{l.huesped}</td>
+                  <td className="text-tinta-suave">
+                    {l.huesped}
+                    <span className="block text-xs">
+                      {l.email ?? <span className="text-aviso">sin correo</span>}
+                    </span>
+                  </td>
                   <td>
                     {l.falta.length === 0 ? (
                       <Badge tono="bien">Lista</Badge>
@@ -104,8 +109,10 @@ export default async function Llegadas({
       )}
 
       <p className="text-xs text-tinta-suave">
-        Lo de «cómo se llega» se escribe una vez por vivienda, en su ficha. El código de la caja de
-        llaves se guarda cifrado y nunca viaja en el correo.
+        Lo de «cómo se llega» se escribe una vez por vivienda, en su ficha, y vale para todas sus
+        reservas. El correo del huésped es de cada reserva: Lodgify no siempre lo da, y cuando
+        falta se pone a mano en la propia reserva. El código de la caja de llaves se guarda cifrado
+        y nunca viaja en el correo.
       </p>
     </div>
   );

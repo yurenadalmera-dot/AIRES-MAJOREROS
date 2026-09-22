@@ -13,6 +13,17 @@ export interface NormalizedReservation {
   status: string;
   propertyExternalId: string;
   guestName: string;
+  /**
+   * El correo del huésped, si Lodgify lo da. `null` cuando no viene.
+   *
+   * Sin esto no se le puede escribir a quien llega, que es la mitad de la
+   * atención al huésped. Lodgify no siempre lo trae en el listado —y en las
+   * reservas de Booking.com suele ser una dirección de alias del canal—, así
+   * que se busca en los nombres con los que puede venir y, si no aparece, se
+   * deja vacío para rellenarlo a mano en la ficha de la reserva.
+   */
+  guestEmail: string | null;
+  guestPhone: string | null;
   checkIn: Date;
   checkOut: Date;
   adults: number;
@@ -22,6 +33,19 @@ export interface NormalizedReservation {
 }
 
 const LODGIFY_API_BASE = "https://api.lodgify.com/v2";
+
+/**
+ * Un texto de verdad, o `null`.
+ *
+ * Lodgify manda cadenas vacías donde no hay dato. Guardarlas como `""` hace
+ * que un correo que falta parezca un correo puesto, y la pantalla no lo marca
+ * como pendiente.
+ */
+function textoONada(v: unknown): string | undefined {
+  if (typeof v !== "string") return undefined;
+  const limpio = v.trim();
+  return limpio === "" ? undefined : limpio;
+}
 
 /**
  * Lo que dice Lodgify cuando dice que no, en algo que se pueda leer.
@@ -83,6 +107,12 @@ async function fetchLivePage(apiKey: string, page: number) {
       status: String(r.status ?? "Booked") as LodgifyReservationRaw["status"],
       property_id: String(r.property_id ?? r.propertyId ?? ""),
       guest_name: String(r.guest_name ?? r.guestName ?? "Huésped"),
+      guest_email: textoONada(
+        r.guest_email ?? r.guestEmail ?? (r.guest as Record<string, unknown> | undefined)?.email
+      ),
+      guest_phone: textoONada(
+        r.guest_phone ?? r.guestPhone ?? (r.guest as Record<string, unknown> | undefined)?.phone
+      ),
       arrival: String(r.arrival ?? r.checkIn ?? r.date_arrival),
       departure: String(r.departure ?? r.checkOut ?? r.date_departure),
       adults: Number(r.adults ?? r.people ?? 1),
@@ -123,6 +153,8 @@ export async function fetchAllLodgifyReservations(
     status: r.status,
     propertyExternalId: r.property_id,
     guestName: r.guest_name,
+    guestEmail: r.guest_email ?? null,
+    guestPhone: r.guest_phone ?? null,
     checkIn: new Date(r.arrival),
     checkOut: new Date(r.departure),
     adults: r.adults,

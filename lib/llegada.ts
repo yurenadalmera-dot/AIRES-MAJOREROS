@@ -30,6 +30,13 @@ const IMPRESCINDIBLES: { campo: keyof DatosDeLlegada["vivienda"]; etiqueta: stri
 export interface DatosDeLlegada {
   bookingId: string;
   huesped: string;
+  /**
+   * A dónde escribirle. `null` cuando no lo tenemos.
+   *
+   * Lodgify no siempre lo da, y sin él no hay correo que mandar por mucho que
+   * la vivienda tenga todo escrito. Por eso cuenta como algo que falta.
+   */
+  email: string | null;
   entrada: Date;
   salida: Date;
   /** Días desde hoy hasta la entrada. 0 es hoy, negativo es que ya entró. */
@@ -96,10 +103,14 @@ export async function llegadasProximas({
       campo: String(i.campo),
       etiqueta: i.etiqueta,
     }));
+    // Lo de la vivienda se escribe una vez; esto es de cada reserva. Van
+    // juntos porque los dos impiden lo mismo: mandarle el correo.
+    if (!r.guestEmail) falta.push({ campo: "email", etiqueta: "el correo del huésped" });
 
     return {
       bookingId: r.id,
       huesped: r.guestName,
+      email: r.guestEmail,
       entrada: r.checkIn,
       salida: r.checkOut,
       diasHastaLaEntrada: differenceInCalendarDays(startOfDay(r.checkIn), hoy),

@@ -291,6 +291,12 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
           data: {
             propertyId: property.id,
             guestName: res.guestName,
+            // El correo y el teléfono solo se escriben si Lodgify los trae.
+            // Vienen vacíos muchas veces, y machacar con vacío borraría el
+            // que alguien hubiera puesto a mano después de pedírselo al
+            // huésped, que es justo el que sirve.
+            ...(res.guestEmail ? { guestEmail: res.guestEmail } : {}),
+            ...(res.guestPhone ? { guestPhone: res.guestPhone } : {}),
             adults: res.adults,
             children: res.children,
             checkIn: res.checkIn,
@@ -368,6 +374,8 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
             propertyId: property.id,
             lodgifyBookingId: res.externalId,
             guestName: res.guestName,
+            guestEmail: res.guestEmail,
+            guestPhone: res.guestPhone,
             adults: res.adults,
             children: res.children,
             checkIn: res.checkIn,

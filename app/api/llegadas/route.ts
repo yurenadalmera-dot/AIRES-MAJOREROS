@@ -69,6 +69,7 @@ function aJson(l: Awaited<ReturnType<typeof llegadasProximas>>[number]) {
   return {
     bookingId: l.bookingId,
     huesped: l.huesped,
+    email: l.email,
     entrada: l.entrada.toISOString().slice(0, 10),
     salida: l.salida.toISOString().slice(0, 10),
     diasHastaLaEntrada: l.diasHastaLaEntrada,

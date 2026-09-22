@@ -19,6 +19,9 @@ export interface LodgifyReservationRaw {
   status: "Booked" | "Declined" | "Tentative" | "Cancelled";
   property_id: string;
   guest_name: string;
+  /** Lodgify no siempre lo trae; sin él no se le puede escribir a quien llega. */
+  guest_email?: string;
+  guest_phone?: string;
   arrival: string; // ISO date
   departure: string; // ISO date
   adults: number;
