@@ -365,6 +365,25 @@ porque los demás campos obligatorios estaban vacíos y el navegador bloqueaba e
 ni pío. A esas alturas cualquiera manda una foto del DNI por WhatsApp y se acabó el formulario.
 Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
 
+### Fase 3 — hablar con el huésped
+
+**Empezada el 22/09.** Lo hecho hasta ahora:
+
+- ✅ **Cada vivienda guarda cómo se llega**: dirección, el desvío que no sale en el mapa, dónde
+  aparcar, horas de entrada y salida, wifi y normas. Se escribe una vez. El **código de la caja de
+  llaves** va aparte y cifrado, y no sale ni por la API ni en el correo.
+- ✅ **`/rental/llegadas`** enseña quién entra pronto y **qué falta** por escribir. Las incompletas
+  salen en la lista en lugar de desaparecer.
+- ✅ **El correo del huésped ya entra desde Lodgify.** No entraba: la sincronización solo se
+  quedaba con el nombre. Comprobado en producción el 22/09: **26 de 29** entradas de los próximos
+  treinta días traen correo. Los de Booking.com son direcciones de alias del canal
+  (`…@guest.booking.com`), que funcionan.
+- ✅ **Workflow «Mirador · correo de llegada al huésped»**, tres días antes de la entrada, en modo
+  borrador y con el mismo interruptor que el informe.
+- ⏳ **Falta rellenar las viviendas.** Hoy las 29 entradas están incompletas por lo mismo: ninguna
+  vivienda tiene escrito «cómo se llega» ni la hora de entrada. Hasta que se rellene, el workflow
+  corre y no manda nada — a propósito: es mejor que mandar un correo que no dice cómo entrar.
+
 ### Fase 3 — hablar con el huésped (2–3 semanas)
 
 12. Plantillas de WhatsApp dadas de alta en Meta — **esto se pide el primer día de la fase 2**,

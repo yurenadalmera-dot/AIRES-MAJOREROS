@@ -106,7 +106,15 @@ async function fetchLivePage(apiKey: string, page: number) {
       id: String(r.id ?? r.reservation_id),
       status: String(r.status ?? "Booked") as LodgifyReservationRaw["status"],
       property_id: String(r.property_id ?? r.propertyId ?? ""),
-      guest_name: String(r.guest_name ?? r.guestName ?? "Huésped"),
+      // El nombre puede venir suelto o dentro de `guest`. Las 29 entradas de
+      // los próximos treinta días llegaban como «Huésped», que es el valor de
+      // reserva de aquí abajo: se estaba mirando en un solo sitio.
+      guest_name: String(
+        r.guest_name ??
+          r.guestName ??
+          (r.guest as Record<string, unknown> | undefined)?.name ??
+          "Huésped"
+      ),
       guest_email: textoONada(
         r.guest_email ?? r.guestEmail ?? (r.guest as Record<string, unknown> | undefined)?.email
       ),
