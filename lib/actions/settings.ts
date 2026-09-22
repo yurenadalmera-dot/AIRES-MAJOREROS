@@ -70,9 +70,29 @@ const businessSchema = z.object({
   taxRate: z.coerce.number().min(0).max(100).optional(),
 });
 
+/**
+ * Los datos de un negocio. Quién puede depende de **cuál**.
+ *
+ * Los del alquiler (Mirador de Sotavento) los edita quien lleva el alquiler:
+ * son su nombre, su dirección y su teléfono, y quien los tiene al día es
+ * quien atiende. Los de la empresa que emite las facturas, en cambio, salen
+ * impresos en un documento fiscal —y su tipo de IGIC decide lo que se cobra—,
+ * así que esos siguen siendo de administración.
+ */
 export async function updateBusinessInfo(businessId: string, formData: FormData) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("administracion");
+    const negocio = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { type: true, organizationId: true },
+    });
+    if (!negocio) throw new ErrorDeNegocio("Ese negocio no existe.");
+
+    const organizationId = await exigir(
+      negocio.type === "rental" ? "operativa.alquiler" : "administracion"
+    );
+    if (negocio.organizationId !== organizationId) {
+      throw new ErrorDeNegocio("Ese negocio no existe.");
+    }
     const raw = Object.fromEntries(formData.entries());
     const data = businessSchema.parse(raw);
     // Los dos formularios de ajustes (alquiler y limpiezas) editan el mismo

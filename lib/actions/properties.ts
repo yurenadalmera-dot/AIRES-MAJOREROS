@@ -190,9 +190,21 @@ const datosFiscalesSchema = z.object({
  * los que vinieron de Mirador llegaron sin NIF ni domicilio — sin los cuales
  * la factura no cumple el RD 1619/2012 y el sistema se niega a emitirla.
  */
+/**
+ * Los datos del propietario: NIF, domicilio, correo y qué documento recibe.
+ *
+ * Va con `operativa.alquiler`, no con `administracion`. Los propietarios son
+ * la cartera de alquiler y quien la lleva es quien habla con ellos: pedirle
+ * el CIF a un propietario y luego no poder escribirlo es la clase de tope que
+ * acaba en un papel encima de la mesa. Además dar de alta al propietario ya
+ * iba con este permiso, así que se podía crear uno y no poder completarlo.
+ *
+ * Lo que sigue pidiendo administración es otra cosa: el reparto entre socias,
+ * las cuentas de usuario y las credenciales.
+ */
 export async function guardarDatosFiscalesDelPropietario(formData: FormData) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("administracion");
+    const organizationId = await exigir("operativa.alquiler");
     const data = datosFiscalesSchema.parse(Object.fromEntries(formData.entries()));
 
     const existe = await prisma.owner.findFirst({
@@ -421,9 +433,11 @@ const employeeSchema = z.object({
   phone: z.string().optional(),
 });
 
+// El personal lo da de alta quien reparte el trabajo, no administración: son
+// las limpiadoras, y quien las conoce es quien organiza las limpiezas.
 export async function createEmployee(formData: FormData) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("administracion");
+    const organizationId = await exigir("operativa.limpiezas");
     const raw = Object.fromEntries(formData.entries());
     const data = employeeSchema.parse(raw);
     await prisma.employee.create({
@@ -441,7 +455,7 @@ export async function createEmployee(formData: FormData) {
 
 export async function setEmployeeActive(employeeId: string, active: boolean) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("administracion");
+    const organizationId = await exigir("operativa.limpiezas");
     await prisma.employee.updateMany({ where: { id: employeeId, organizationId }, data: { active } });
     revalidatePath("/rental/settings");
     revalidatePath("/rental/tasks");

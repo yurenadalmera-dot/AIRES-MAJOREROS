@@ -12,7 +12,11 @@ import { viajerosDeLaReserva } from "@/lib/parte-viajeros";
 
 export default async function EditBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { organizationId } = await requireBusinessContext();
+  // La ficha de una reserva lleva el parte de viajeros: nombres, fechas de
+  // nacimiento y documentos de identidad. Sin exigir permiso aquí bastaba con
+  // escribir la dirección a mano para verlos, aunque el listado sí estuviera
+  // cerrado. Se protege el listado y se olvida el detalle: pasa siempre.
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
 
   const [booking, properties, settings] = await Promise.all([
     prisma.booking.findFirst({ where: { id, organizationId } }),

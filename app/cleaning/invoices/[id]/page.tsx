@@ -17,7 +17,9 @@ const ESTADO_TONO: Record<string, string> = {
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { organizationId } = await requireBusinessContext();
+  // Una factura es la facturación entera de un propietario en un documento.
+  // El listado ya pedía este permiso; la ficha no lo pedía.
+  const { organizationId } = await requireBusinessContext("facturacion");
 
   const [invoice, cleaningBusiness] = await Promise.all([
     prisma.invoice.findFirst({

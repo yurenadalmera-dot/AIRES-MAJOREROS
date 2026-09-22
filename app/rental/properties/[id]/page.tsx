@@ -10,7 +10,10 @@ import LlegadaDeLaVivienda from "@/components/LlegadaDeLaVivienda";
 
 export default async function EditPropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { organizationId } = await requireBusinessContext();
+  // La ficha de la vivienda lleva su propietario, sus precios y ahora también
+  // cómo se entra en ella. Igual que con las reservas: el listado estaba
+  // cerrado y el detalle no.
+  const { organizationId } = await requireBusinessContext("operativa.alquiler");
 
   const [property, owners] = await Promise.all([
     prisma.property.findFirst({ where: { id, organizationId } }),

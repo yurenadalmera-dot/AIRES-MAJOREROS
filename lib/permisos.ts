@@ -13,10 +13,13 @@ import { ErrorDeNegocio } from "@/lib/errores";
 //
 //   ADMIN          administración: puede todo.
 //   RENTAL_MANAGER la gestora del alquiler (Emma): operativa de viviendas,
-//                  reservas, limpiezas y personal. No toca facturación ni
-//                  datos fiscales.
+//                  reservas, limpiezas y personal, **y los datos de los
+//                  propietarios** —NIF, domicilio, correo, qué documento
+//                  reciben—, porque es quien habla con ellos. No toca la
+//                  facturación, ni el reparto entre socias, ni las cuentas.
 //   PARTNER        las socias de la empresa de limpiezas: facturación y
-//                  operativa de limpiezas. No toca las reservas.
+//                  operativa de limpiezas. No toca las reservas ni ve la
+//                  operativa de alquiler.
 //   STAFF          quien limpia: solo avanzar el estado de su trabajo.
 
 export type Permiso =
