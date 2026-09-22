@@ -22,8 +22,21 @@ interface TaskRowProps {
     propertyName: string;
     /** salida | repaso, solo en las limpiezas. */
     servicio: string | null;
-    /** Con cuántos huéspedes se calculó el precio. */
+    /** Con cuántos huéspedes se calculó el precio: los de quien se fue. */
     huespedes: number | null;
+    /**
+     * Para cuántos hay que preparar la casa: los de quien **entra** después.
+     * No es el mismo número que `huespedes`, y confundirlos hace que se
+     * preparen cuatro camas para una pareja o al revés.
+     */
+    preparar: {
+      adultos: number;
+      ninos: number;
+      entrada: string;
+      mismoDia: boolean;
+      habitaciones: number;
+      banos: number;
+    } | null;
   };
   employees: { id: string; name: string }[];
 }
@@ -72,21 +85,50 @@ export default function TaskRow({ task, employees }: TaskRowProps) {
             : "Mantenimiento"}
         </span>
       </td>
-      {/* El dato con el que se cobra: la tarifa es base + tanto por huésped
-          que pase de los incluidos. Sin él no se puede comprobar la factura. */}
-      <td className="num">
-        {task.type === "CLEANING" ? (
-          task.huespedes !== null ? (
-            task.huespedes
-          ) : (
-            <span className="text-tinta-suave" title="No consta cuánta gente se iba">
-              —
+      {/* Estas dos columnas son de las limpiezas, y su cabecera también lo
+          es: pintarlas siempre descuadraba el tablero de mantenimiento, que
+          salía con una celda de más que su cabecera. */}
+      {task.type === "CLEANING" && (
+        <>
+          {/* El dato con el que se cobra: la tarifa es base + tanto por
+              huésped que pase de los incluidos. Sin él no se puede comprobar
+              la factura. */}
+          <td className="num">
+            {task.huespedes !== null ? (
+              task.huespedes
+            ) : (
+              <span className="text-tinta-suave" title="No consta cuánta gente se iba">
+                —
+              </span>
+            )}
+          </td>
+          {/* Para cuántos se prepara: lo que decide las sábanas, las toallas
+              y los amenities que hay que subir. Antes esto se preguntaba por
+              WhatsApp o se llevaba de más por si acaso. */}
+          <td className="text-xs">
+        {task.preparar ? (
+          <div>
+            <span className="text-tinta">
+              {task.preparar.adultos === 1 ? "1 adulto" : `${task.preparar.adultos} adultos`}
+              {task.preparar.ninos > 0 &&
+                (task.preparar.ninos === 1 ? " y 1 niño" : ` y ${task.preparar.ninos} niños`)}
             </span>
-          )
+            <span className="block text-tinta-suave">
+              {task.preparar.habitaciones} hab ·{" "}
+              {task.preparar.banos === 1 ? "1 baño" : `${task.preparar.banos} baños`}
+            </span>
+            {/* Entrar el mismo día no deja margen: si esa limpieza se
+                retrasa, hay alguien esperando en la puerta. */}
+            {task.preparar.mismoDia && <Badge tono="aviso">entran hoy mismo</Badge>}
+          </div>
         ) : (
-          <span className="text-tinta-suave">—</span>
+          <span className="text-tinta-suave" title="Después de esta limpieza no entra nadie">
+            nadie después
+          </span>
         )}
-      </td>
+          </td>
+        </>
+      )}
       <td>
         <select
           value={task.status}

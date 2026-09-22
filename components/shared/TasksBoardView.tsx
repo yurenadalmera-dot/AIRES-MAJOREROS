@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader, EmptyState } from "@/components/ui";
 import TaskRow from "@/components/TaskRow";
+import { queLlevarEnLasLimpiezas } from "@/lib/preparacion";
 import { createMaintenanceTask } from "@/lib/actions/tasks";
 import NuevaLimpieza from "@/components/NuevaLimpieza";
 import FormularioConAviso from "@/components/FormularioConAviso";
@@ -48,6 +49,24 @@ export default async function TasksBoardView({
     prisma.employee.findMany({ where: { organizationId, active: true }, orderBy: { name: "asc" } }),
     prisma.property.findMany({ where: { organizationId, active: true }, orderBy: { name: "asc" } }),
   ]);
+
+  // Para cuánta gente hay que preparar cada casa. Solo en el tablero de
+  // limpiezas: un mantenimiento no lleva sábanas.
+  //
+  // Se pide por el rango que abarcan las tareas que se están enseñando, de una
+  // vez, en vez de una consulta por fila.
+  const preparacion =
+    tipo === "CLEANING" && tasks.length > 0
+      ? new Map(
+          (
+            await queLlevarEnLasLimpiezas({
+              organizationId,
+              desde: tasks[0].date,
+              hasta: tasks[tasks.length - 1].date,
+            })
+          ).map((q) => [q.taskId, q])
+        )
+      : new Map();
 
   return (
     <div>
@@ -138,7 +157,8 @@ export default async function TasksBoardView({
                 <th>Fecha</th>
                 <th>Vivienda</th>
                 <th>{tipo === "CLEANING" ? "Servicio" : "Tipo"}</th>
-                {tipo === "CLEANING" && <th className="num">Huéspedes</th>}
+                {tipo === "CLEANING" && <th className="num">Se iban</th>}
+                {tipo === "CLEANING" && <th>Preparar para</th>}
                 <th>Estado</th>
                 <th>Empleada</th>
                 <th className="num">Importe</th>
@@ -165,6 +185,18 @@ export default async function TasksBoardView({
                     propertyName: t.property.name,
                     servicio: t.servicio,
                     huespedes: t.huespedes,
+                    preparar: (() => {
+                      const q = preparacion.get(t.id);
+                      if (!q?.entra) return null;
+                      return {
+                        adultos: q.entra.adultos,
+                        ninos: q.entra.ninos,
+                        entrada: q.entra.fecha.toISOString(),
+                        mismoDia: q.entraElMismoDia,
+                        habitaciones: q.vivienda.habitaciones,
+                        banos: q.vivienda.banos,
+                      };
+                    })(),
                   }}
                   employees={employees}
                 />

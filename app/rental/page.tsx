@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { startOfDay, endOfDay } from "date-fns";
+import { startOfDay, endOfDay, addDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireBusinessContext } from "@/lib/business-context";
 import { PageHeader, StatCard, Badge, EmptyState, EnlaceVer, Aviso } from "@/components/ui";
@@ -30,7 +30,15 @@ export default async function RentalDashboardPage() {
   const todayStart = startOfDay(today);
   const todayEnd = endOfDay(today);
 
-  const [checkIns, checkOuts, allProperties, allBookingsToday, allTasksToday, pendingCleaningTasks] =
+  const [
+    checkIns,
+    checkOuts,
+    allProperties,
+    allBookingsToday,
+    allTasksToday,
+    pendingCleaningTasks,
+    limpiezasHechas,
+  ] =
     await Promise.all([
       prisma.booking.findMany({
         where: { organizationId, status: "CONFIRMED", checkIn: { gte: todayStart, lte: todayEnd } },
@@ -58,6 +66,22 @@ export default async function RentalDashboardPage() {
       prisma.cleaningTask.findMany({
         where: { organizationId, type: "CLEANING", status: { in: ["PENDING", "IN_PROGRESS"] } },
         include: { property: true },
+      }),
+      // Las limpiezas que Aires ha dado por hechas estos días.
+      //
+      // Quien recibe al cliente es Emma, y hasta ahora se enteraba de que una
+      // casa estaba lista por WhatsApp, o no se enteraba y la daba por lista
+      // sin serlo. La limpiadora ya marca la tarea en su tablero; solo
+      // faltaba que eso se viera de este lado.
+      prisma.cleaningTask.findMany({
+        where: {
+          organizationId,
+          type: "CLEANING",
+          status: "DONE",
+          date: { gte: addDays(todayStart, -3), lte: todayEnd },
+        },
+        include: { property: true },
+        orderBy: { date: "desc" },
       }),
     ]);
 
@@ -113,6 +137,35 @@ export default async function RentalDashboardPage() {
           </Link>
         }
       />
+
+      {/* 0 · Lo que acaba de quedar listo ------------------------------------
+          Va arriba del todo a propósito: es lo único de esta pantalla que
+          alguien está esperando para poder decirle algo a un huésped. */}
+      {limpiezasHechas.length > 0 && (
+        <section className="card p-4 sm:p-5" aria-labelledby="listas">
+          <div className="card-titulo">
+            <h2 id="listas">Viviendas listas</h2>
+            <span className="cifra text-xs text-tinta-suave">últimos 3 días</span>
+          </div>
+          <p className="ayuda mb-3">
+            Aires Majoreros ha dado estas limpiezas por hechas. Es lo que hay que saber antes de
+            decirle a nadie que puede entrar.
+          </p>
+          <ul className="space-y-2">
+            {limpiezasHechas.map((t) => (
+              <li
+                key={t.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#cfe6dd] bg-bien-suave px-3 py-2"
+              >
+                <span className="text-sm font-medium text-tinta">{t.property.name}</span>
+                <span className="text-xs text-tinta-suave">
+                  {t.servicio === "repaso" ? "Repaso" : "Salida"} · {formatDateLong(t.date)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* 1 · Qué pasa hoy ---------------------------------------------------- */}
       <section aria-labelledby="hoy">

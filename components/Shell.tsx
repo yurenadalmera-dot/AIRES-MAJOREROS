@@ -52,6 +52,8 @@ const CLEANING_NAV: NavItem[] = [
   { href: "/cleaning", label: "Facturación", icono: "euro", permiso: "facturacion" },
   { href: "/cleaning/invoices", label: "Historial de facturas", icono: "factura", permiso: "facturacion" },
   { href: "/cleaning/tasks", label: "Limpiezas", icono: "limpieza", permiso: "operativa.estado_tarea" },
+  { href: "/cleaning/calendario", label: "Calendario", icono: "calendario", permiso: "operativa.estado_tarea" },
+  { href: "/cleaning/viviendas", label: "Viviendas", icono: "casa", permiso: "operativa.limpiezas" },
   { href: "/cleaning/reports", label: "Informes propietarios", icono: "informe", permiso: "facturacion" },
   { href: "/cleaning/settings", label: "Reparto y ajustes", icono: "ajustes", permiso: "administracion" },
 ];
