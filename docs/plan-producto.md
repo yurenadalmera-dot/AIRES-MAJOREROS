@@ -384,10 +384,22 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
     informe, y la lista de los últimos diez en `/rental/reports`. Sin eso, «¿le mandamos ya el de
     septiembre?» solo lo sabe quien lo mandó, y solo mirando su bandeja de enviados.
 18. ✅ «Informe semanal propietarios» apagado. **Ya no queda nada leyendo de Airtable.**
-19. ⏳ **El correo en sí.** `GET /api/informe?start=&end=` ya devuelve los números de cada
-    propietario, con el mismo token que `/api/importar`; `POST /api/informe` apunta el envío.
-    Falta el workflow que con eso redacte el correo, adjunte el PDF y lo mande. **No lo monto sin
-    que Yurena lo diga**: el primer disparo le llega a propietarios de verdad.
+19. ✅ **El correo.** Workflow «Mirador · informe mensual al propietario» (22/09). Lee
+    `GET /api/informe`, arma el informe con la identidad de Mirador, lo pasa a PDF con Gotenberg
+    y lo manda; después apunta el envío con `POST /api/informe`. Probado de punta a punta: PDF de
+    22.540 bytes y correo creado, sin que saliera ninguno.
+
+    **Mensual y no semanal, a propósito.** El que recibían salía los viernes, pero la cuota fija
+    de Academia son 600 € **al mes**: un informe semanal se la cobraría entera cada viernes, y la
+    comisión de gestión solo cuadra con el mes cerrado. Sale el día 1 con el mes que termina.
+
+    **Arranca en modo borrador**, con el interruptor `enviarDeVerdad` a la vista en el nodo
+    «Periodo y modo». En `false` deja el correo en borradores de Gmail para leerlo antes de que
+    salga; en `true` lo envía y lo apunta. Un borrador no es un envío, por eso solo se apunta
+    cuando sale de verdad.
+
+    No se manda informe vacío: sin nada que contar y sin cuota fija, no se escribe. Domingo Javier
+    se queda fuera además por no tener correo en el sistema — hay que ponérselo.
 
 ---
 
