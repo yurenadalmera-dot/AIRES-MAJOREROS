@@ -24,9 +24,45 @@ function revalidateTaskViews() {
   revalidatePath("/cleaning/invoices");
 }
 
+/**
+ * Quién puede tocar esta tarea depende de **qué tarea es**.
+ *
+ * Limpiezas y mantenimientos comparten tabla, así que un solo permiso para
+ * las dos dejaba que las socias de la empresa de limpiezas gestionaran el
+ * mantenimiento de las viviendas de Mirador, que no es suyo. Se mira el tipo
+ * antes de decidir.
+ *
+ * La tarea se lee antes de exigir nada —hace falta saber de qué es— y después
+ * se comprueba que sea de la organización de quien pregunta, para que esto no
+ * sirva de paso para averiguar si existe una tarea ajena.
+ */
+async function exigirSobreLaTarea(
+  taskId: string,
+  accion: "gestionar" | "estado"
+): Promise<string> {
+  const tarea = await prisma.cleaningTask.findUnique({
+    where: { id: taskId },
+    select: { type: true, organizationId: true },
+  });
+  if (!tarea) throw new ErrorDeNegocio("Esa tarea no existe.");
+
+  const permiso =
+    tarea.type === "MAINTENANCE"
+      ? "operativa.alquiler"
+      : accion === "estado"
+        ? "operativa.estado_tarea"
+        : "operativa.limpiezas";
+
+  const organizationId = await exigir(permiso);
+  if (tarea.organizationId !== organizationId) {
+    throw new ErrorDeNegocio("Esa tarea no existe.");
+  }
+  return organizationId;
+}
+
 export async function assignEmployeeToTask(taskId: string, employeeId: string | null) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("operativa.limpiezas");
+    const organizationId = await exigirSobreLaTarea(taskId, "gestionar");
     await prisma.cleaningTask.updateMany({
       where: { id: taskId, organizationId },
       data: { employeeId: employeeId || null },
@@ -37,7 +73,7 @@ export async function assignEmployeeToTask(taskId: string, employeeId: string | 
 
 export async function updateTaskStatus(taskId: string, status: string) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("operativa.estado_tarea");
+    const organizationId = await exigirSobreLaTarea(taskId, "estado");
     await prisma.cleaningTask.updateMany({ where: { id: taskId, organizationId }, data: { status } });
     revalidateTaskViews();
   });
@@ -150,9 +186,11 @@ const maintenanceSchema = z.object({
   notes: z.string().min(1),
 });
 
+// El mantenimiento de las viviendas es del alquiler: lo encarga y lo sigue
+// quien las gestiona, no la empresa que las limpia.
 export async function createMaintenanceTask(formData: FormData) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("operativa.limpiezas");
+    const organizationId = await exigir("operativa.alquiler");
     const raw = Object.fromEntries(formData.entries());
     const data = maintenanceSchema.parse(raw);
 
@@ -176,7 +214,7 @@ export async function createMaintenanceTask(formData: FormData) {
 
 export async function deleteTask(taskId: string) {
   return conErroresLegibles(async () => {
-    const organizationId = await exigir("operativa.limpiezas");
+    const organizationId = await exigirSobreLaTarea(taskId, "gestionar");
     const task = await prisma.cleaningTask.findFirst({ where: { id: taskId, organizationId } });
     if (!task) throw new ErrorDeNegocio("Tarea no encontrada");
     if (task.invoiceId) throw new ErrorDeNegocio("No se puede eliminar una tarea ya facturada");

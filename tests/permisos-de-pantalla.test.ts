@@ -61,6 +61,15 @@ describe("quién es quién", () => {
     assert.equal(puede("PARTNER", "operativa.alquiler"), false);
   });
 
+  test("el mantenimiento es del alquiler, no de las limpiezas", () => {
+    // Limpiezas y mantenimientos comparten tabla. Con un permiso único para
+    // las dos, las socias de la empresa de limpiezas gestionaban el
+    // mantenimiento de las viviendas de Mirador, que no es suyo.
+    assert.equal(puede("PARTNER", "operativa.alquiler"), false);
+    assert.equal(puede("STAFF", "operativa.alquiler"), false);
+    assert.equal(puede("RENTAL_MANAGER", "operativa.alquiler"), true);
+  });
+
   test("quien limpia solo puede mover el estado de su trabajo", () => {
     assert.equal(puede("STAFF", "operativa.estado_tarea"), true);
     assert.equal(puede("STAFF", "facturacion"), false);
