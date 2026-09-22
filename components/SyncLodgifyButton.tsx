@@ -68,6 +68,12 @@ export default function SyncLodgifyButton() {
           {summary.unmatchedProperty > 0 && (
             <p className="text-aviso">Sin vivienda emparejada: {summary.unmatchedProperty}</p>
           )}
+          {summary.preciosPuestos > 0 && (
+            <p>
+              {summary.preciosPuestos} limpiezas estaban a 0 € y ya tienen precio. Venían de antes
+              de que el precio saliera de la tarifa; a 0 € no se pueden facturar.
+            </p>
+          )}
           {summary.pastCleaningsDone > 0 && (
             <p>
               {summary.pastCleaningsDone} limpiezas de reservas ya terminadas se han dado por

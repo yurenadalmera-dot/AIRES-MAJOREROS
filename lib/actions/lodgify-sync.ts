@@ -33,6 +33,8 @@ export interface SyncSummary {
   pastCleaningsDone: number;
   /** Limpiezas creadas sin precio, porque no hay tarifa ni precio de vivienda. */
   sinPrecio: number;
+  /** Limpiezas que estaban a 0 € y a las que esta pasada les ha puesto precio. */
+  preciosPuestos: number;
   /** Por qué no se han podido leer las viviendas de Lodgify, si ha pasado. */
   avisoViviendas: string | null;
 }
@@ -186,6 +188,7 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
     let skippedManuallyAdjusted = 0;
     let pastCleaningsDone = 0;
     let sinPrecio = 0;
+    let preciosPuestos = 0;
 
     // Una reserva que ya terminó trae una limpieza que ya se hizo.
     //
@@ -304,6 +307,48 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
           where: { bookingId: existing.id, type: "CLEANING", invoiceId: null },
           data: { date: res.checkOut, propertyId: property.id },
         });
+
+        // Y además hay una deuda que arrastrar. Las limpiezas creadas antes
+        // de que existiera el motor de tarifas se quedaron a 0 €, y este
+        // camino —el de una reserva que ya estaba— no les ponía precio
+        // nunca: solo las movía de fecha. Una limpieza a 0 € no se puede
+        // facturar, así que se quedaban fuera de la factura del propietario
+        // sin que nadie se enterara.
+        //
+        // Solo se toca lo que está vacío: un precio distinto de 0 es un
+        // precio que alguien puso, y recalcularlo sería pisárselo. Las ya
+        // facturadas quedan fuera por el `invoiceId: null`.
+        const porPrecisar = await prisma.cleaningTask.findMany({
+          where: {
+            bookingId: existing.id,
+            type: "CLEANING",
+            invoiceId: null,
+            OR: [{ price: 0 }, { servicio: null }, { huespedes: null }],
+          },
+          select: { id: true, servicio: true, huespedes: true, price: true },
+        });
+        for (const tarea of porPrecisar) {
+          const calculo = await limpiezaDeSalida({
+            organizationId,
+            propertyId: property.id,
+            bookingId: existing.id,
+            checkOut: res.checkOut,
+            huespedes: res.adults + res.children,
+          });
+          const cambios: { servicio?: string; huespedes?: number; price?: number } = {};
+          if (tarea.servicio === null) cambios.servicio = calculo.servicio;
+          if (tarea.huespedes === null && calculo.huespedes !== null) {
+            cambios.huespedes = calculo.huespedes;
+          }
+          if (Number(tarea.price) === 0 && calculo.precio !== null) {
+            cambios.price = calculo.precio;
+            preciosPuestos++;
+          }
+          if (Number(tarea.price) === 0 && calculo.precio === null) sinPrecio++;
+          if (Object.keys(cambios).length > 0) {
+            await prisma.cleaningTask.update({ where: { id: tarea.id }, data: cambios });
+          }
+        }
         updated++;
       } else {
         const aplica = comisionAplicable(res.channel, property.id, comisiones, {
@@ -384,6 +429,7 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
       propertiesUpdated,
       pastCleaningsDone,
       sinPrecio,
+      preciosPuestos,
       avisoViviendas,
     };
 
