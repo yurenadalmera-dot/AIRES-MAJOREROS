@@ -45,7 +45,49 @@ const LODGIFY_API_BASE = "https://api.lodgify.com/v2";
 function numeroONada(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
   const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Un número que además tiene que ser positivo: plazas, dormitorios, baños.
+ *
+ * Esto **no** vale para las coordenadas. La longitud de Fuerteventura es
+ * −14,23, así que exigir «mayor que cero» se cargaba el mapa de las once
+ * viviendas en silencio. Medio planeta tiene la longitud negativa y el
+ * hemisferio sur entero, la latitud.
+ */
+function cuantosONada(v: unknown): number | null {
+  const n = numeroONada(v);
+  return n !== null && n > 0 ? n : null;
+}
+
+/** Calle, código postal y ciudad en una línea, sin decir dos veces lo mismo. */
+function juntarDireccion(
+  calle: string | null | undefined,
+  zip: string | null | undefined,
+  ciudad: string | null | undefined
+): string | null {
+  const partes: string[] = [];
+  for (const parte of [calle?.trim(), zip?.trim(), ciudad?.trim()]) {
+    if (!parte) continue;
+    // Si lo que va a entrar ya está dicho, o dice lo que ya hay dentro, se
+    // salta. Comparado sin acentos ni mayúsculas, que es como se repite.
+    const yaEsta = partes.some((p) => normalizar(p).includes(normalizar(parte)));
+    if (yaEsta) continue;
+    // Y al revés: una parte más completa sustituye a la que la contenía.
+    const indice = partes.findIndex((p) => normalizar(parte).includes(normalizar(p)));
+    if (indice >= 0) partes[indice] = parte;
+    else partes.push(parte);
+  }
+  return partes.join(", ") || null;
+}
+
+function normalizar(t: string): string {
+  return t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function textoONada(v: unknown): string | undefined {
@@ -241,9 +283,9 @@ async function fetchLivePropertiesPage(apiKey: string, page: number) {
       // con su id y su nombre, no un número. `Number([{…}])` da NaN, y NaN no
       // es mayor que cero, así que caía al valor de reserva y todas las
       // viviendas acababan con un dormitorio.
-      max_people: numeroONada(p.max_people ?? p.maxPeople ?? p.capacity),
-      bedrooms: numeroONada(p.bedrooms),
-      bathrooms: numeroONada(p.bathrooms),
+      max_people: cuantosONada(p.max_people ?? p.maxPeople ?? p.capacity),
+      bedrooms: cuantosONada(p.bedrooms),
+      bathrooms: cuantosONada(p.bathrooms),
       active: p.is_active === undefined && p.active === undefined ? true : Boolean(p.is_active ?? p.active),
     })
   );
@@ -277,9 +319,11 @@ export async function fetchAllLodgifyProperties(
     // dar de alta.
     locality: p.city?.trim() || "(sin localidad)",
     // La dirección, entera. Lodgify la reparte en calle, código postal y
-    // ciudad, y al huésped hay que darle las tres.
-    address:
-      [p.address?.trim(), p.zip?.trim(), p.city?.trim()].filter(Boolean).join(", ") || null,
+    // ciudad, y al huésped hay que darle las tres — pero sin repetirlas: en
+    // Villa Mónica la «ciudad» ya trae la carretera y el código postal
+    // dentro, y pegarlas sin mirar daba «FV-617, 35627, FV-617, Barranco del
+    // Tarajal de Sancho, Pájara, 35627».
+    address: juntarDireccion(p.address, p.zip, p.city),
     capacity: p.max_people ?? null,
     bedrooms: p.bedrooms ?? null,
     bathrooms: p.bathrooms ?? null,
