@@ -380,9 +380,20 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
   (`…@guest.booking.com`), que funcionan.
 - ✅ **Workflow «Mirador · correo de llegada al huésped»**, tres días antes de la entrada, en modo
   borrador y con el mismo interruptor que el informe.
-- ⏳ **Falta rellenar las viviendas.** Hoy las 29 entradas están incompletas por lo mismo: ninguna
-  vivienda tiene escrito «cómo se llega» ni la hora de entrada. Hasta que se rellene, el workflow
-  corre y no manda nada — a propósito: es mejor que mandar un correo que no dice cómo entrar.
+- ✅ **La hora de entrada, puesta.** Las 16:00 en las viviendas que la tenían vacía, como migración
+  de datos y una sola vez: si alguien escribe otra hora, o la borra, se queda como la deje. Era el
+  dato que tenía paradas las 30 entradas.
+- ✅ **Comprobado en producción el 23/09.** De 0 listas y 30 incompletas se pasó a **26 listas y 3
+  incompletas**, y las tres son por lo mismo: el huésped no dejó correo. La ejecución del workflow
+  dejó **tres borradores** en Gmail, que es lo que hará cada mañana hasta que se le quite el
+  interruptor.
+- ⏳ **Falta el wifi, y falta el desvío.** Ninguna vivienda los tiene escritos, así que el correo
+  sale con la dirección, el mapa y la hora, y nada más. No lo impide —a una casa se llega con el
+  mapa— pero el wifi es la siguiente pregunta que hará el huésped, y contestarla dos días después
+  por WhatsApp es justo lo que este correo venía a evitar. Se escribe una vez por vivienda, en su
+  ficha.
+- ⏳ **Tres reservas sin correo del huésped**: Leonardo Staurenghi, Neil Clemson y Karen Gillespie.
+  Se ponen a mano en la propia reserva.
 
 ### Fase 3 — hablar con el huésped (2–3 semanas)
 
