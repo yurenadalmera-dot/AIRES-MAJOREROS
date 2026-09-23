@@ -34,3 +34,26 @@ describe("la dirección, sin decir dos veces lo mismo", () => {
     assert.ok(ciudad.includes("35627"), "y también el código postal");
   });
 });
+
+describe("la dirección de Villa Mónica, entera y sin sobras", () => {
+  // Lo que da Lodgify de verdad para esa vivienda.
+  const calle = "FV-617";
+  const zip = "35627";
+  const ciudad = "FV-617, Barranco del Tarajal de Sancho, Pájara, 35627";
+
+  test("la ciudad ya lleva dentro la calle y el código", () => {
+    assert.ok(ciudad.includes(calle));
+    assert.ok(ciudad.includes(zip));
+  });
+
+  test("así que lo que queda es solo la ciudad", () => {
+    // Quitando las partes contenidas en otra, sobrevive una sola. Al primer
+    // intento quedaba «…Pájara, 35627, 35627», con el código repetido al
+    // final: el zip entraba antes de que llegara la ciudad que lo contiene.
+    const todas = [calle, zip, ciudad];
+    const quedan = todas.filter(
+      (parte, i) => !todas.some((otra, j) => j !== i && otra.includes(parte) && (otra !== parte || j < i))
+    );
+    assert.deepEqual(quedan, [ciudad]);
+  });
+});

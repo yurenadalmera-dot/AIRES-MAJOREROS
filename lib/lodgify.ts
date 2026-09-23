@@ -67,18 +67,23 @@ function juntarDireccion(
   zip: string | null | undefined,
   ciudad: string | null | undefined
 ): string | null {
-  const partes: string[] = [];
-  for (const parte of [calle?.trim(), zip?.trim(), ciudad?.trim()]) {
-    if (!parte) continue;
-    // Si lo que va a entrar ya está dicho, o dice lo que ya hay dentro, se
-    // salta. Comparado sin acentos ni mayúsculas, que es como se repite.
-    const yaEsta = partes.some((p) => normalizar(p).includes(normalizar(parte)));
-    if (yaEsta) continue;
-    // Y al revés: una parte más completa sustituye a la que la contenía.
-    const indice = partes.findIndex((p) => normalizar(parte).includes(normalizar(p)));
-    if (indice >= 0) partes[indice] = parte;
-    else partes.push(parte);
-  }
+  const todas = [calle?.trim(), zip?.trim(), ciudad?.trim()].filter(
+    (p): p is string => Boolean(p)
+  );
+  // Se queda cada parte que no esté ya dicha dentro de otra. Comparado sin
+  // acentos ni mayúsculas, que es como se repite de verdad.
+  //
+  // Hacerlo al final y no sobre la marcha importa: con Villa Mónica, «35627»
+  // entraba antes de que llegara la ciudad —que lo lleva dentro— y se quedaba
+  // colgando al final de la dirección.
+  const partes = todas.filter(
+    (parte, i) =>
+      !todas.some(
+        (otra, j) => j !== i && normalizar(otra).includes(normalizar(parte)) &&
+          // Entre dos partes idénticas se queda la primera, no ninguna.
+          (normalizar(otra) !== normalizar(parte) || j < i)
+      )
+  );
   return partes.join(", ") || null;
 }
 
