@@ -71,6 +71,47 @@ async function faltaColumna(tabla: string, columna: string): Promise<boolean> {
   return Number(filas[0]?.n ?? 0) === 0;
 }
 
+/**
+ * Una migración que arregla **datos**, no el esquema, y que solo puede correr
+ * una vez.
+ *
+ * Las demás se preguntan a sí mismas si hacen falta mirando la forma de la
+ * base: una columna que ya existe no se vuelve a crear, y por eso da igual
+ * ejecutarlas mil veces. Un arreglo de datos no tiene esa suerte. «Rellena la
+ * hora de entrada donde esté vacía» volvería a rellenarla cada arranque, así
+ * que el día que alguien la borre a propósito se la encontraría puesta otra
+ * vez a la mañana siguiente, sin saber quién.
+ *
+ * De ahí esta tabla: es la libreta del propio migrador, no un dato del
+ * negocio, y por eso no está en el esquema de Prisma.
+ */
+async function yaSeHizo(nombre: string): Promise<boolean> {
+  await prisma.$executeRawUnsafe(
+    "CREATE TABLE IF NOT EXISTS `MigracionDeDatos` (" +
+      "`nombre` VARCHAR(191) NOT NULL," +
+      "`aplicadaEl` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)," +
+      "PRIMARY KEY (`nombre`)" +
+      ") DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+  );
+  const filas = await prisma.$queryRaw<{ n: bigint }[]>`
+    SELECT COUNT(*) AS n FROM \`MigracionDeDatos\` WHERE nombre = ${nombre}
+  `;
+  return Number(filas[0]?.n ?? 0) > 0;
+}
+
+/** Envuelve un arreglo de datos para que corra una vez y quede anotado. */
+function unaVez(nombre: string, aplicar: () => Promise<void>): Migracion {
+  return {
+    nombre,
+    haceFalta: async () => !(await yaSeHizo(nombre)),
+    aplicar: async () => {
+      await aplicar();
+      // Se anota después: si el arreglo falla, la próxima vez se reintenta.
+      await prisma.$executeRaw`INSERT INTO \`MigracionDeDatos\` (nombre) VALUES (${nombre})`;
+    },
+  };
+}
+
 const MIGRACIONES: Migracion[] = [
   ...TEXTOS_LIBRES.map(([tabla, columna]) => ({
     nombre: `${tabla}.${columna} → TEXT`,
@@ -522,6 +563,24 @@ const MIGRACIONES: Migracion[] = [
       await prisma.$executeRawUnsafe("ALTER TABLE `Property` ADD COLUMN `descripcion` TEXT NULL");
     },
   },
+
+  // Las cuatro de la tarde, que es la hora a la que se entra en todas.
+  //
+  // Lodgify no da la hora de entrada, así que las once viviendas llegaron con
+  // ella vacía y eso bastaba para que ninguna reserva estuviera lista para
+  // mandarle el correo al huésped: treinta entradas paradas por un dato que
+  // es el mismo en todas las casas. Lo dice la propiedad, no lo inventa esto.
+  //
+  // Solo donde está vacía: si alguien ha escrito otra hora en una vivienda
+  // —hay apartamentos que entregan más tarde—, esa hora es la buena y no se
+  // toca. Y solo una vez: a partir de ahora la hora se cambia en Ajustes, y
+  // dejarla en blanco allí tiene que significar dejarla en blanco.
+  unaVez("La hora de entrada, las 16:00 donde no había ninguna", async () => {
+    const puestas = await prisma.$executeRaw`
+      UPDATE \`Property\` SET \`horaEntrada\` = '16:00' WHERE \`horaEntrada\` IS NULL
+    `;
+    console.log(`🕓 Hora de entrada puesta en ${puestas} viviendas.`);
+  }),
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */
