@@ -232,6 +232,10 @@ automático cuando venza el plazo de conservación. No quiero esos datos en un A
 
 ### 3.3 Hablar con el huésped: email y WhatsApp
 
+> **Al día 26/09:** de este guion está en marcha **la parte de email** —el correo de llegada, tres
+> días antes—. Todo lo que aquí pone «WhatsApp» está **en espera** por decisión de la clienta; el
+> detalle de qué hace falta para activarlo está más abajo, en «WhatsApp — EN ESPERA».
+
 Aquí está el salto de «registra» a «resuelve». Lo que propongo es un **guion de la estancia**,
 con mensajes que salen solos en su momento:
 
@@ -395,13 +399,51 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
 - ⏳ **Tres reservas sin correo del huésped**: Leonardo Staurenghi, Neil Clemson y Karen Gillespie.
   Se ponen a mano en la propia reserva.
 
-### Fase 3 — hablar con el huésped (2–3 semanas)
+### WhatsApp — EN ESPERA, se activa cuando ellos quieran
 
-12. Plantillas de WhatsApp dadas de alta en Meta — **esto se pide el primer día de la fase 2**,
-    porque la aprobación tarda.
-13. El guion de la estancia, con los mensajes saliendo por n8n.
-14. Códigos de llave cifrados, con envío el día de la entrada y no antes.
-15. Bandeja de entrada unificada dentro de la aplicación.
+**Decidido el 26/09: no se monta ahora.** Queda aquí escrito para que el día que se quiera
+activar no haya que reconstruir el razonamiento. No hay nada empezado a medias: lo que hay
+hecho funciona sin WhatsApp y seguirá funcionando.
+
+**Lo que ya está listo de nuestro lado**, y es la parte que lleva tiempo:
+
+- El **código de la caja de llaves** se guarda cifrado en cada vivienda (`codigoLlaveCifrado`), y
+  ni la API ni el correo lo devuelven nunca — solo dicen si lo hay. Eso no fue una precaución
+  abstracta: es exactamente por esto. Un correo se queda para siempre en el buzón de mucha gente
+  y ese código no cambia entre un huésped y el siguiente, así que **el código no puede ir por
+  correo**. Tiene que ir por un canal que caduque y el día de la entrada, no antes.
+- El SaaS ya sabe quién entra, qué día y en qué casa, y lo sirve por `/api/llegadas`. El
+  mensaje de WhatsApp leería de ahí, igual que el correo.
+- Las reservas traen **teléfono del huésped** cuando el canal lo da (`guestPhone`), que es a
+  donde se escribiría.
+
+**Lo que hace falta y no depende de nosotros** — en este orden, porque cada paso bloquea al
+siguiente:
+
+1. **Un número de teléfono para WhatsApp Business.** No puede ser uno que ya tenga WhatsApp
+   normal asociado. Esta es la decisión de verdad: si se usa el número con el que Emma ya
+   contesta a mano, deja de poder usarlo desde el móvil como hasta ahora.
+2. **Cuenta de Meta Business con el negocio verificado.** La verificación pide documentación de
+   la sociedad y tarda.
+3. **Las plantillas, dadas de alta y aprobadas por Meta.** Un mensaje que abre la conversación
+   —y el del día de la entrada la abre— tiene que ir con plantilla aprobada; texto libre solo
+   vale dentro de la ventana en la que el huésped ha escrito él. La aprobación tarda días, así
+   que es lo primero que se pide en cuanto haya número.
+4. **La credencial en n8n**, ya con el número y el token.
+
+**Los dos mensajes que se escribirían**, para tenerlos pensados:
+
+- **El día de la entrada**: el código de la caja y poco más. Es el único mensaje que justifica
+  WhatsApp en lugar de correo.
+- **El día de la salida**: a qué hora hay que dejarla y dónde se deja la llave.
+
+**Lo que conviene comprobar cuando se retome**, porque las reglas de Meta cambian y lo que
+está escrito arriba puede haber envejecido: las categorías de plantilla, qué cuesta cada
+conversación y cuánto dura la ventana de respuesta libre.
+
+### Fase 3 — lo que queda dentro de la aplicación
+
+15. Bandeja de entrada unificada. Depende de WhatsApp, así que también en espera.
 
 ### Fase 4 — informes y cierre (1 semana)
 
@@ -474,7 +516,9 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
 - **Sacar los datos de documentos de identidad del SaaS.** Se quedan aquí, cifrados, y de aquí
   salen solo hacia SES.HOSPEDAJES.
 - **Mandar códigos de llave por email.** El correo se queda para siempre en el buzón de mucha
-  gente. WhatsApp el día de la entrada, y que caduque.
+  gente. WhatsApp el día de la entrada, y que caduque. Mientras WhatsApp esté en espera esto
+  significa que **el código se sigue mandando a mano**, y así lo dice la pantalla donde se
+  guarda: sale mal decirle a quien lo escribe que ya se manda solo.
 - **Automatizar la respuesta al huésped con IA sin que alguien la lea**, al menos al principio.
   Sugerir la respuesta, sí; enviarla sola, no.
 - **Volver a poner nada en Airtable.** Decidido el 21/09: fuera de todo. n8n se queda, pero solo

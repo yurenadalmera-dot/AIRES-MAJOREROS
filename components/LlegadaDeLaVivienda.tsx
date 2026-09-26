@@ -163,11 +163,15 @@ export default function LlegadaDeLaVivienda({
         </div>
 
         {/* Que quede escrito en la pantalla, no solo en el código: quien
-            rellena esto tiene que saber que el código no viaja con lo demás. */}
+            rellena esto tiene que saber que el código no viaja con lo demás.
+            Y que hoy no lo manda nadie: decir «se manda aparte» hacía pensar
+            que sí, y quien guarda el código aquí se quedaba tranquilo. */}
         <Aviso tono="info">
           El código de la caja de llaves <strong>no sale en ese correo</strong>. Un correo se queda
           para siempre en el buzón de mucha gente y el código no cambia entre un huésped y el
-          siguiente, así que se manda aparte, el día de la entrada.
+          siguiente. Guardarlo aquí sirve para tenerlo en un sitio y cifrado, pero{" "}
+          <strong>hoy sigue mandándose a mano</strong>: el envío automático el día de la entrada
+          va por WhatsApp, y eso está en espera.
         </Aviso>
 
         <button type="submit" className="btn-primary">
