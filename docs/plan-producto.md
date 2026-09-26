@@ -398,6 +398,17 @@ Ahora lo escrito vuelve tal cual y solo hay que corregir el campo que falla.
   ficha.
 - ⏳ **Tres reservas sin correo del huésped**: Leonardo Staurenghi, Neil Clemson y Karen Gillespie.
   Se ponen a mano en la propia reserva.
+- ✅ **El huso horario, corregido el 26/09.** El disparador decía «cada mañana a las 9» y las tres
+  primeras ejecuciones salieron a las 13:00 UTC: n8n leía el cron en el huso de su instancia
+  (UTC−4), que en Fuerteventura son las dos de la tarde. Los dos workflows programados llevan ya
+  `Atlantic/Canary`. Vale la pena mirarlo en cualquier workflow nuevo con hora: el cron no falla,
+  falla el huso en el que se lee, y eso no se ve hasta que hay ejecuciones reales que mirar.
+- ⏳ **El correo sale solo el día exacto, y no hay red debajo.** El filtro es
+  `diasHastaLaEntrada === 3`. Si una mañana n8n está caído o el workflow pausado, a ese huésped no
+  le llega nunca: al día siguiente ya son 2 y no entra. Un rango (3 o menos) tampoco vale sin
+  guardar a quién se le escribió, o le llegaría el mismo correo tres días seguidos. Se arregla
+  bien con un registro de envíos por reserva, como el que ya tiene el informe al propietario
+  (`EnvioDeInforme`); mientras no lo haya, esto es un hueco conocido, no un descuido.
 
 ### WhatsApp — EN ESPERA, se activa cuando ellos quieran
 
