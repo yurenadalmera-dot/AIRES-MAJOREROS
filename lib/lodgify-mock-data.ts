@@ -26,7 +26,9 @@ export interface LodgifyReservationRaw {
   departure: string; // ISO date
   adults: number;
   children: number;
-  total_amount: number;
+  /** null cuando Lodgify no manda importe. Un 0 es un importe real de
+   *  cero; la ausencia es otra cosa y no puede confundirse con él. */
+  total_amount: number | null;
   source: string; // canal de venta
 }
 

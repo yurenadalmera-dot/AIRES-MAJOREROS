@@ -28,7 +28,9 @@ export interface NormalizedReservation {
   checkOut: Date;
   adults: number;
   children: number;
-  totalPrice: number;
+  /** null si Lodgify no mandó importe: el llamador decide qué hacer,
+   *  pero nunca se inventa un 0 que después se contabilizaría. */
+  totalPrice: number | null;
   channel: string;
 }
 
@@ -146,6 +148,26 @@ export async function isLodgifyLiveMode(organizationId: string): Promise<boolean
   return (await claveLodgify(organizationId)) !== null;
 }
 
+/**
+ * El importe de una reserva, o null si Lodgify no lo manda.
+ *
+ * Antes esto era `Number(... ?? 0)`, y ese 0 no era inofensivo: se
+ * guardaba como precio de la reserva, las comisiones y el neto se
+ * calculaban sobre él, y en una reserva que YA existía el sync
+ * sobrescribía el precio bueno con un cero. Todo en silencio, porque un
+ * 0 tiene pinta de dato y no de error.
+ *
+ * Un importe de 0 € sí existe (una estancia de cortesía, un bloqueo), así
+ * que no vale con tratar el 0 como ausente: hay que distinguirlos en
+ * origen.
+ */
+export function importeLodgify(r: Record<string, unknown>): number | null {
+  const bruto = r.total_amount ?? r.totalAmount;
+  if (bruto === null || bruto === undefined || bruto === '') return null;
+  const n = Number(bruto);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function fetchLivePage(apiKey: string, page: number) {
   const res = await fetch(`${LODGIFY_API_BASE}/reservations/bookings?page=${page}&size=50`, {
     headers: { "X-ApiKey": apiKey, Accept: "application/json" },
@@ -179,7 +201,7 @@ async function fetchLivePage(apiKey: string, page: number) {
       departure: String(r.departure ?? r.checkOut ?? r.date_departure),
       adults: Number(r.adults ?? r.people ?? 1),
       children: Number(r.children ?? 0),
-      total_amount: Number(r.total_amount ?? r.totalAmount ?? 0),
+      total_amount: importeLodgify(r),
       source: String(r.source ?? r.channel_name ?? "Lodgify"),
     })
   );

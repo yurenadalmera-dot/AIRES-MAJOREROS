@@ -10,6 +10,7 @@ import {
   fetchAllLodgifyProperties,
   onlyConfirmed,
   claveLodgify,
+  type NormalizedReservation,
 } from "@/lib/lodgify";
 import { calculateCommissions } from "@/lib/money";
 import { comisionAplicable } from "@/lib/comisiones-canal";
@@ -23,6 +24,11 @@ export interface SyncSummary {
   /** Reservas que estaban confirmadas y ya no lo están en Lodgify. */
   cancelled: number;
   skippedManuallyAdjusted: number;
+  /** Reservas que Lodgify devolvió sin importe. En las que ya existían
+   *  se ha conservado el precio guardado; las nuevas se han creado a 0 y
+   *  hay que completarlas a mano. */
+  sinImporte: number;
+  sinImporteDetalles: string[];
   unmatchedProperty: number;
   unmatchedDetails: string[];
   /** Viviendas dadas de alta desde Lodgify en esta sincronización. */
@@ -271,6 +277,20 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
     let unmatchedProperty = 0;
     const unmatchedDetails: string[] = [];
 
+    // Un importe ausente no es un importe de cero. Antes llegaba aquí como 0
+    // —lo ponía la normalización— y se guardaba como precio bueno: las
+    // comisiones y el neto salían de él, y en una reserva que ya existía
+    // sobrescribía el precio correcto. Nada de eso daba error: un 0 tiene
+    // pinta de dato. Ahora se conserva lo que hubiera y se reporta.
+    let sinImporte = 0;
+    const sinImporteDetalles: string[] = [];
+    const anotarSinImporte = (r: NormalizedReservation, quePasa: string) => {
+      sinImporte++;
+      if (sinImporteDetalles.length < 20) {
+        sinImporteDetalles.push(`${r.externalId} · ${r.guestName} (${quePasa})`);
+      }
+    };
+
     for (const res of confirmed) {
       const property = propertyByExternalId.get(res.propertyExternalId);
       if (!property) {
@@ -301,11 +321,25 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
           platformPct,
           bankPct,
         });
-        const { platformCommissionAmt, bankCommissionAmt, netAmount } = calculateCommissions({
-          totalPrice: res.totalPrice,
-          platformCommissionPct: aplica.platformPct,
-          bankCommissionPct: aplica.bankPct,
-        });
+        // Sin importe no se toca ningún campo de dinero: se conserva el que
+        // ya estuviera guardado. Dejar una reserva sin actualizar el precio
+        // es recuperable; machacar un precio bueno con un cero, no.
+        const dinero =
+          res.totalPrice === null
+            ? {}
+            : {
+                totalPrice: res.totalPrice,
+                platformCommissionPct: aplica.platformPct,
+                bankCommissionPct: aplica.bankPct,
+                ...calculateCommissions({
+                  totalPrice: res.totalPrice,
+                  platformCommissionPct: aplica.platformPct,
+                  bankCommissionPct: aplica.bankPct,
+                }),
+              };
+        if (res.totalPrice === null) {
+          anotarSinImporte(res, "se conserva el precio guardado");
+        }
         await prisma.booking.updateMany({
           where: { id: existing.id, organizationId },
           data: {
@@ -322,12 +356,7 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
             checkIn: res.checkIn,
             checkOut: res.checkOut,
             channel: res.channel,
-            totalPrice: res.totalPrice,
-            platformCommissionPct: aplica.platformPct,
-            platformCommissionAmt,
-            bankCommissionPct: aplica.bankPct,
-            bankCommissionAmt,
-            netAmount,
+            ...dinero,
             status: "CONFIRMED",
             source: "LODGIFY",
           },
@@ -383,8 +412,16 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
           platformPct,
           bankPct,
         });
+        // La reserva hace falta aunque no venga el precio: de ella cuelga la
+        // limpieza, y perderla sería peor. La base exige un número, así que
+        // se crea a 0 —pero REPORTADO. Esa es toda la diferencia entre un
+        // aviso que alguien atiende y una corrupción que nadie ve.
+        if (res.totalPrice === null) {
+          anotarSinImporte(res, "creada a 0, complétala a mano");
+        }
+        const precio = res.totalPrice ?? 0;
         const { platformCommissionAmt, bankCommissionAmt, netAmount } = calculateCommissions({
-          totalPrice: res.totalPrice,
+          totalPrice: precio,
           platformCommissionPct: aplica.platformPct,
           bankCommissionPct: aplica.bankPct,
         });
@@ -402,7 +439,7 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
             checkOut: res.checkOut,
             channel: res.channel,
             status: "CONFIRMED",
-            totalPrice: res.totalPrice,
+            totalPrice: precio,
             platformCommissionPct: aplica.platformPct,
             platformCommissionAmt,
             bankCommissionPct: aplica.bankPct,
@@ -510,6 +547,8 @@ export async function sincronizarLodgify(organizationId: string): Promise<SyncSu
       updated,
       cancelled,
       skippedManuallyAdjusted,
+      sinImporte,
+      sinImporteDetalles,
       unmatchedProperty,
       unmatchedDetails,
       propertiesCreated,

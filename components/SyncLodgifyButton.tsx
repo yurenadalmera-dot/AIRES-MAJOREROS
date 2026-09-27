@@ -99,6 +99,21 @@ export default function SyncLodgifyButton() {
               aplica también a sus limpiezas todavía no facturadas.
             </p>
           )}
+          {summary.sinImporte > 0 && (
+            <p className="text-amber-800">
+              💶 {summary.sinImporte} reserva{summary.sinImporte === 1 ? "" : "s"} sin importe en
+              Lodgify. En las que ya existían se ha conservado el precio guardado; las nuevas
+              entran a 0 y hay que ponerles el precio a mano, porque de él salen las comisiones y
+              el neto del propietario.
+            </p>
+          )}
+          {summary.sinImporteDetalles.length > 0 && (
+            <ul className="list-disc list-inside text-amber-800">
+              {summary.sinImporteDetalles.map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+          )}
           {summary.unmatchedDetails.length > 0 && (
             <ul className="list-disc list-inside text-tinta-suave">
               {summary.unmatchedDetails.map((d) => (
