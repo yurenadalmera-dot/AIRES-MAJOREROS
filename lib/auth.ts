@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { puede, SinPermiso, type Permiso } from "@/lib/permisos";
+import { ErrorDeNegocio } from "@/lib/errores";
 
 const COOKIE_NAME = "session";
 const encoder = new TextEncoder();
@@ -15,7 +16,8 @@ function getSecret() {
   return encoder.encode(secret);
 }
 
-export interface SessionPayload {
+/** Lo que viaja firmado dentro de la cookie. */
+export interface TokenPayload {
   userId: string;
   organizationId: string;
   name: string;
@@ -23,7 +25,19 @@ export interface SessionPayload {
   role: string;
 }
 
-export async function createSessionToken(payload: SessionPayload): Promise<string> {
+/**
+ * La sesión tal como la ve el resto de la aplicación.
+ *
+ * `debeCambiarContrasena` no va en la cookie: sale de la base en cada
+ * petición, igual que el rol. Si fuera en la cookie, restablecerle la
+ * contraseña a alguien que tiene la sesión abierta no le obligaría a nada
+ * hasta que le caducara, un mes después.
+ */
+export interface SessionPayload extends TokenPayload {
+  debeCambiarContrasena: boolean;
+}
+
+export async function createSessionToken(payload: TokenPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -31,10 +45,10 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
     .sign(getSecret());
 }
 
-export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
+export async function verifySessionToken(token: string): Promise<TokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    return payload as unknown as SessionPayload;
+    return payload as unknown as TokenPayload;
   } catch {
     return null;
   }
@@ -65,7 +79,15 @@ export const getSession = cache(async function getSession(): Promise<SessionPayl
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { id: true, organizationId: true, name: true, email: true, role: true, active: true },
+    select: {
+      id: true,
+      organizationId: true,
+      name: true,
+      email: true,
+      role: true,
+      active: true,
+      mustChangePassword: true,
+    },
   });
   if (!user || !user.active) return null;
 
@@ -75,8 +97,13 @@ export const getSession = cache(async function getSession(): Promise<SessionPayl
     name: user.name,
     email: user.email,
     role: user.role,
+    debeCambiarContrasena: user.mustChangePassword,
   };
 });
+
+/** El aviso a quien intenta hacer algo con la contraseña de un solo uso puesta. */
+export const AVISO_CAMBIA_TU_CONTRASENA =
+  "Has entrado con una contraseña de un solo uso. Antes de seguir tienes que ponerte la tuya, en «Mi cuenta».";
 
 /**
  * Exige sesión y permiso, y devuelve la organización sobre la que actuar.
@@ -88,6 +115,10 @@ export const getSession = cache(async function getSession(): Promise<SessionPayl
 export async function exigir(permiso: Permiso): Promise<string> {
   const session = await getSession();
   if (!session) throw new Error("No autenticado");
+  // Con la contraseña de un solo uso no se hace nada, tampoco por detrás: las
+  // pantallas ya mandan a «Mi cuenta», pero una acción se puede llamar sin
+  // pasar por ninguna pantalla.
+  if (session.debeCambiarContrasena) throw new ErrorDeNegocio(AVISO_CAMBIA_TU_CONTRASENA);
   if (!puede(session.role, permiso)) throw new SinPermiso(permiso);
   return session.organizationId;
 }

@@ -273,6 +273,27 @@ export function IconoBuscar(p: PropsIcono) {
   );
 }
 
+/** Ver lo escrito: un ojo abierto. Va en el botón de «mostrar contraseña». */
+export function IconoOjo(p: PropsIcono) {
+  return (
+    <Svg {...p}>
+      <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.75" />
+    </Svg>
+  );
+}
+
+/** Dejar de verlo: el mismo ojo, tachado. */
+export function IconoOjoTachado(p: PropsIcono) {
+  return (
+    <Svg {...p}>
+      <path d="M9.9 5.75A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a16.6 16.6 0 0 1-2.6 3.4M6.3 7.4A16.4 16.4 0 0 0 2.5 12s3.5 6.5 9.5 6.5a9.3 9.3 0 0 0 4.6-1.25" />
+      <path d="M9.95 10.1a2.75 2.75 0 0 0 3.9 3.85" />
+      <path d="m4 4 16 16" />
+    </Svg>
+  );
+}
+
 /**
  * Mapa de iconos por clave.
  *

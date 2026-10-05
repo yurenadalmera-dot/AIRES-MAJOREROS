@@ -581,6 +581,49 @@ const MIGRACIONES: Migracion[] = [
     `;
     console.log(`🕓 Hora de entrada puesta en ${puestas} viviendas.`);
   }),
+
+  // La contraseña que genera la aplicación la conoce quien la entrega, así que
+  // no puede ser la definitiva. Hasta ahora se decía «conviene que la cambie
+  // al entrar» y ahí se quedaba: nadie la cambiaba. Con esta marca, quien entra
+  // con una contraseña de un solo uso no puede hacer nada más que ponerse la
+  // suya. Las cuentas que ya existen nacen con la marca quitada: su contraseña
+  // ya es la que usan y obligarles a cambiarla ahora sería un susto gratis.
+  {
+    nombre: "Contraseñas de un solo uso",
+    haceFalta: () => faltaColumna("User", "mustChangePassword"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "ALTER TABLE `User` ADD COLUMN `mustChangePassword` BOOLEAN NOT NULL DEFAULT false"
+      );
+    },
+  },
+
+  // «He olvidado mi contraseña». Hasta ahora la única salida era pedirle a
+  // administración que la restableciera, y si quien la olvidaba era la propia
+  // administración, tocar las variables de entorno del hosting. Aquí se guarda
+  // cada petición y la huella de su enlace —nunca el enlace—, que caduca a la
+  // media hora y sirve una sola vez.
+  {
+    nombre: "Recuperar el acceso por correo",
+    haceFalta: () => faltaTabla("RecuperacionDeAcceso"),
+    aplicar: async () => {
+      await prisma.$executeRawUnsafe(
+        "CREATE TABLE IF NOT EXISTS `RecuperacionDeAcceso` (" +
+          "`id` VARCHAR(191) NOT NULL," +
+          "`userId` VARCHAR(191) NOT NULL," +
+          "`huella` VARCHAR(191) NULL," +
+          "`solicitadaEl` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)," +
+          "`entregadaEl` DATETIME(3) NULL," +
+          "`caducaEl` DATETIME(3) NULL," +
+          "`usadaEl` DATETIME(3) NULL," +
+          "UNIQUE INDEX `RecuperacionDeAcceso_huella_key`(`huella`)," +
+          "INDEX `RecuperacionDeAcceso_userId_idx`(`userId`)," +
+          "INDEX `RecuperacionDeAcceso_solicitadaEl_idx`(`solicitadaEl`)," +
+          "PRIMARY KEY (`id`)" +
+          ") DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+      );
+    },
+  },
 ];
 
 /** Aplica lo que falte. Devuelve cuántas se han aplicado. */

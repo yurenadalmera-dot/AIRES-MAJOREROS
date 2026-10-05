@@ -2,12 +2,18 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { MarcaDoble } from "@/components/Marca";
+import CampoContrasena from "@/components/CampoContrasena";
+import { destinoTrasEntrar } from "@/lib/acceso";
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next");
+  // Quien viene de ponerse una contraseña nueva desde el enlace del correo
+  // llega aquí: hay que decirle que ha salido bien, o lo vuelve a intentar.
+  const restablecida = params.get("restablecida") === "1";
   // Sin correo de ejemplo precargado: era una dirección inventada y en una
   // pantalla de verdad no pinta nada.
   const [email, setEmail] = useState("");
@@ -32,7 +38,10 @@ function LoginForm() {
         return;
       }
       // Cada rol empieza donde le sirve: el servidor dice cuál es su sitio.
-      router.push(next || data.inicio || "/rental");
+      // Y quien entra con una contraseña de un solo uso va primero a cambiarla.
+      router.push(
+        destinoTrasEntrar({ debeCambiar: data.debeCambiar === true, next, inicio: data.inicio })
+      );
       router.refresh();
     } catch {
       setError("Error de conexión");
@@ -54,6 +63,14 @@ function LoginForm() {
             Alquileres vacacionales &amp; Limpiezas
           </p>
         </div>
+        {restablecida && (
+          <p
+            role="status"
+            className="text-sm text-bien bg-bien-suave border border-[#cfe6dd] rounded-lg px-3 py-2 mb-4"
+          >
+            Contraseña cambiada. Ya puedes entrar con la nueva.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="card p-6 sm:p-7 space-y-4">
           <div>
             <label className="label" htmlFor="email">
@@ -71,23 +88,15 @@ function LoginForm() {
               autoFocus
             />
           </div>
-          <div>
-            <label className="label" htmlFor="password">
-              Contraseña
-            </label>
-            {/* Sin `placeholder` con una contraseña: la de demostración estaba
-                aquí escrita, a la vista de cualquiera que abriera la web. */}
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          {/* Sin `placeholder` con una contraseña: la de demostración estaba
+              aquí escrita, a la vista de cualquiera que abriera la web. */}
+          <CampoContrasena
+            id="password"
+            etiqueta="Contraseña"
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+          />
           {error && (
             <p
               role="alert"
@@ -99,6 +108,13 @@ function LoginForm() {
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? "Entrando…" : "Entrar"}
           </button>
+          {/* Debajo del botón y no pegado al campo: quien se sabe la contraseña
+              no tiene que saltárselo con el tabulador para llegar a «Entrar». */}
+          <p className="text-center text-sm">
+            <Link href="/recuperar" className="enlace">
+              ¿Has olvidado tu contraseña?
+            </Link>
+          </p>
         </form>
       </div>
     </div>

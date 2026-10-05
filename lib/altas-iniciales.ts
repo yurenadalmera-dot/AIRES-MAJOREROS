@@ -20,6 +20,19 @@ import { prisma } from "./prisma";
  * Cuando todo el mundo haya entrado y cambiado su contraseña, esta lista puede
  * vaciarse: ya no hace nada. Se deja porque también recrea las cuentas si
  * algún día hubiera que levantar la base de datos desde cero.
+ *
+ * **Emma y Alejandra ya no están aquí, y no hay que volver a ponerlas.** Sus
+ * cuentas se buscaban por correo (`emma@…`, `alejandra@…`), que eran nombres de
+ * usuario sin buzón detrás. Al pasarles el correo de verdad desde Ajustes —lo
+ * necesitan para que les llegue el enlace de «he olvidado mi contraseña»—, el
+ * arranque siguiente no encontraría `emma@…`, la daría por no creada y **la
+ * volvería a crear**, con la contraseña inicial de hace meses: una cuenta
+ * fantasma con acceso al alquiler que nadie ha pedido. Lo mismo le pasaría a
+ * la de limpieza, y por eso Ajustes no deja cambiarle el correo mientras siga
+ * en esta lista (`cambiarCorreoUsuario`): primero se quita de aquí.
+ *
+ * Las altas de personas se hacen desde Ajustes → Usuarios y accesos, que no
+ * deja nada escrito en el repositorio.
  */
 export const ALTAS_INICIALES: {
   name: string;
@@ -27,18 +40,6 @@ export const ALTAS_INICIALES: {
   role: string;
   passwordHash: string;
 }[] = [
-  {
-    name: "Emma Ferrer",
-    email: "emma@airesmajoreros.pro",
-    role: "RENTAL_MANAGER",
-    passwordHash: "$2a$10$l1dck/t7fNZKe7q5LIJ0H.FjDBd5QC8XiQP..IX0Qa/3M6iRUahxO",
-  },
-  {
-    name: "Alejandra",
-    email: "alejandra@airesmajoreros.pro",
-    role: "PARTNER",
-    passwordHash: "$2a$10$jYbGjwzjwl3uh6Rfy1QyLOBdMyOSBDRF8fdwfwergaHeJeanSYWF.",
-  },
   {
     name: "Equipo de limpieza",
     email: "limpieza@airesmajoreros.pro",
@@ -76,6 +77,9 @@ export async function crearAltasIniciales(altas = ALTAS_INICIALES) {
       name: a.name,
       email: a.email,
       passwordHash: a.passwordHash,
+      // Una contraseña entregada por otro canal es, por definición, de un
+      // solo uso: quien entre con ella tiene que ponerse la suya.
+      mustChangePassword: true,
       role: a.role,
       active: true,
     })),

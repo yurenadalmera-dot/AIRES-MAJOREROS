@@ -8,9 +8,15 @@ import { jwtVerify } from "jose";
 // quien llama es un programador de tareas, no una persona: se autentican con
 // su propio token de escritura, que las propias rutas comprueban. Dejarlas
 // fuera del middleware no las abre.
+// `/recuperar` y `/api/auth/recuperar` son de quien ha olvidado la contraseña:
+// exigirle sesión para pedir ayuda para entrar no tendría sentido.
+// `/api/recuperaciones` es de n8n, con su token, como las otras suyas.
 const PUBLIC_PATHS = [
   "/login",
   "/api/auth/login",
+  "/recuperar",
+  "/api/auth/recuperar",
+  "/api/recuperaciones",
   "/api/health/db",
   "/api/importar",
   "/api/sincronizar",
@@ -31,7 +37,9 @@ function isPublic(pathname: string) {
     // El formulario donde el huésped rellena sus datos antes de llegar. No
     // lleva sesión —el huésped no tiene cuenta— y su autorización es el
     // propio enlace, que caduca y del que aquí solo se guarda la huella.
-    pathname.startsWith("/viajeros/")
+    pathname.startsWith("/viajeros/") ||
+    // Lo mismo con el enlace del correo de «he olvidado mi contraseña».
+    pathname.startsWith("/restablecer/")
   );
 }
 

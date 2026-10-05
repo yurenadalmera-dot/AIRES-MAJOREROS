@@ -39,5 +39,13 @@ export async function POST(req: NextRequest) {
 
   // Dónde empieza cada quien: mandar a una socia al panel de alquiler,
   // donde casi nada le compete, es desconcertante.
-  return NextResponse.json({ ok: true, inicio: primeraRutaPermitida(user.role) });
+  //
+  // `debeCambiar` es solo para que la pantalla de entrada la lleve derecha a
+  // «Mi cuenta». No es lo que la obliga: eso lo hace el servidor en cada
+  // pantalla y en cada acción, mirando la base de datos.
+  return NextResponse.json({
+    ok: true,
+    inicio: primeraRutaPermitida(user.role),
+    debeCambiar: user.mustChangePassword,
+  });
 }

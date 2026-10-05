@@ -27,8 +27,31 @@ export const dynamic = "force-dynamic";
  */
 const COMPILADO_EN = process.env.COMPILADO_EN ?? "desconocido";
 
+/** ¿Es el error de pedirle a la base una columna o una tabla que no tiene? */
+function faltaAlgoDelEsquema(mensaje: string): boolean {
+  return /P2021|P2022|does not exist in the current database|Unknown column/i.test(mensaje);
+}
+
+/**
+ * ¿Tiene la base la forma que espera este código?
+ *
+ * Contar usuarios no lo dice: `COUNT(*)` funciona igual falte la columna que
+ * falte. Y es justo el fallo que deja a todo el mundo fuera sin que nada lo
+ * delate: el código nuevo pide al entrar una columna que la base todavía no
+ * tiene, el login contesta un error y esta ruta seguía diciendo «todo bien».
+ *
+ * Se pide aquí la última columna añadida. Si un día se añade otra de la que
+ * dependa entrar, se cambia por esa.
+ */
+async function comprobarEsquema() {
+  await prisma.user.findFirst({ select: { mustChangePassword: true } });
+}
+
 /** Causa aproximada, sin decir contra qué servidor ni con qué usuario. */
 function causaAproximada(mensaje: string): string {
+  if (faltaAlgoDelEsquema(mensaje)) {
+    return "a la base de datos le falta un cambio de esquema que este código necesita (no se aplicó al arrancar): reinicia la aplicación";
+  }
   if (/Authentication failed|Access denied/i.test(mensaje)) {
     return "la base de datos rechaza las credenciales (revisa que el host sea localhost)";
   }
@@ -43,10 +66,34 @@ function causaAproximada(mensaje: string): string {
 
 export async function GET() {
   const started = Date.now();
-  const session = await getSession();
+
+  // Dentro de su propio `try`: si a la base le falta una columna, mirar la
+  // sesión falla también, y antes eso tumbaba esta ruta con un error sin
+  // cuerpo en vez de dejarla decir qué pasa. Sin sesión se sigue, callando
+  // lo que solo se enseña con ella.
+  let session: Awaited<ReturnType<typeof getSession>> = null;
+  try {
+    session = await getSession();
+  } catch {
+    session = null;
+  }
 
   try {
     const usuarios = await prisma.user.count();
+
+    try {
+      await comprobarEsquema();
+    } catch (error) {
+      if (!faltaAlgoDelEsquema(error instanceof Error ? error.message : String(error))) throw error;
+      // Los cambios de esquema se aplican al arrancar, y si la base no
+      // contestó en ese momento se quedaron sin aplicar hasta el siguiente
+      // reinicio. Se reintentan aquí —cada uno mira antes si hace falta, así
+      // que repetirlos no rompe nada— y se vuelve a comprobar: si siguen sin
+      // estar, esta ruta lo dice.
+      const { aplicarMigraciones } = await import("@/lib/migraciones");
+      await aplicarMigraciones();
+      await comprobarEsquema();
+    }
 
     if (!session) {
       return NextResponse.json({ ok: true, compilado: COMPILADO_EN, ms: Date.now() - started });

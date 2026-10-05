@@ -26,9 +26,20 @@ export default async function RentalSettingsPage() {
     await prisma.user.findMany({
       where: { organizationId },
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: { id: true, name: true, email: true, role: true, active: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        mustChangePassword: true,
+      },
     })
-  ).map((u) => ({ ...u, esYo: u.id === session.userId }));
+  ).map(({ mustChangePassword, ...u }) => ({
+    ...u,
+    debeCambiar: mustChangePassword,
+    esYo: u.id === session.userId,
+  }));
 
   const [resumen, esDemostracion] = await Promise.all([
     resumenDeDatos(organizationId),

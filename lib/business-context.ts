@@ -13,6 +13,12 @@ export async function requireBusinessContext(permiso?: Permiso) {
   const session = await getSession();
   if (!session) redirect("/login");
 
+  // Quien ha entrado con una contraseña de un solo uso no ve ninguna pantalla
+  // hasta que se pone la suya. Va aquí porque por aquí pasan todas —lo exige
+  // `tests/permisos-de-pantalla.test.ts`—, así que no hay ninguna que se
+  // pueda quedar fuera.
+  if (session.debeCambiarContrasena) redirect("/cuenta");
+
   // Las acciones ya exigen permiso, pero **leer** también importa: sin esto,
   // quien limpia podía escribir /cleaning/invoices en la barra de direcciones
   // y ver la facturación entera. Se le manda a donde sí puede estar en lugar

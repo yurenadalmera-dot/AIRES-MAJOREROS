@@ -666,11 +666,40 @@ model User {
   passwordHash   String
   role           String       @default("STAFF") // ADMIN | RENTAL_MANAGER | PARTNER | STAFF
   active         Boolean      @default(true)
+  /// La contraseña que tiene es de un solo uso: se la ha generado la
+  /// aplicación para que alguien se la entregue, así que la conoce más gente
+  /// que su dueña. Mientras esté a `true` no puede hacer nada más que
+  /// cambiarla. Lo ponen el alta y «Restablecer contraseña»; lo quita ella al
+  /// ponerse la suya.
+  mustChangePassword Boolean  @default(false)
   createdAt      DateTime     @default(now())
 
   documentosSubidos DocumentoOcr[] @relation("DocumentosSubidos")
+  recuperaciones    RecuperacionDeAcceso[]
 
   @@index([organizationId])
+}
+
+/// Una petición de «he olvidado mi contraseña».
+///
+/// Nace sin enlace. El enlace se genera cuando n8n viene a recogerla para
+/// mandar el correo (`/api/recuperaciones`), y aquí solo queda su **huella**:
+/// quien lea esta tabla no puede abrir la cuenta de nadie. Caduca a la media
+/// hora y sirve una vez.
+model RecuperacionDeAcceso {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 del token del enlace. Vacía hasta que el correo sale.
+  huella       String?   @unique
+  solicitadaEl DateTime  @default(now())
+  /// Cuándo se le dio a n8n para enviarla. Vacía = todavía en cola.
+  entregadaEl  DateTime?
+  caducaEl     DateTime?
+  usadaEl      DateTime?
+
+  @@index([userId])
+  @@index([solicitadaEl])
 }
 
 /// Una factura de gasto subida para que la lea la máquina.

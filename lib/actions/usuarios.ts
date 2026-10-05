@@ -7,9 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { conErroresLegibles, ErrorDeNegocio } from "@/lib/errores";
 import { exigir, getSession } from "@/lib/auth";
 import { USER_ROLES } from "@/lib/constants";
-
-/** Mínimo razonable para una herramienta interna. */
-const MINIMO_CONTRASENA = 10;
+import { motivoContrasenaNoValida } from "@/lib/acceso";
+import { ALTAS_INICIALES } from "@/lib/altas-iniciales";
 
 const ROLES_VALIDOS = Object.values(USER_ROLES) as string[];
 
@@ -38,6 +37,11 @@ const nuevoUsuarioSchema = z.object({
  * La contraseña se genera aquí y no se guarda en claro en ningún sitio: solo
  * su hash. Quien la da de alta la ve una vez, en pantalla, para entregarla. Si
  * se pierde, se restablece — no se puede recuperar.
+ *
+ * Es **de un solo uso**: la cuenta nace con `mustChangePassword`, y con ella
+ * no se puede hacer nada más que entrar y ponerse la propia. Antes solo se
+ * recomendaba cambiarla, y la que conocía administración se quedaba para
+ * siempre.
  */
 export async function crearUsuario(formData: FormData) {
   return conErroresLegibles(async () => {
@@ -57,6 +61,7 @@ export async function crearUsuario(formData: FormData) {
         name: data.name.trim(),
         email,
         passwordHash: await bcrypt.hash(contrasena, 10),
+        mustChangePassword: true,
         role: data.role,
         active: true,
       },
@@ -67,10 +72,26 @@ export async function crearUsuario(formData: FormData) {
   });
 }
 
-/** Restablece la contraseña de alguien y devuelve la nueva, una sola vez. */
+/**
+ * Restablece la contraseña de alguien y devuelve la nueva, una sola vez.
+ *
+ * También de un solo uso, y por el mismo motivo: la acaba de ver quien la
+ * restablece.
+ */
 export async function restablecerContrasena(userId: string) {
   return conErroresLegibles(async () => {
     const organizationId = await exigir("administracion");
+
+    // A una misma no. La contraseña nueva sale en esta pantalla, pero al
+    // marcarla como de un solo uso esta pantalla deja de dejarle estar: la
+    // manda a «Mi cuenta» antes de que llegue a verla, y allí se le pide
+    // justo la que no ha visto. Se quedaría fuera de su propia cuenta.
+    const session = await getSession();
+    if (session?.userId === userId) {
+      throw new ErrorDeNegocio(
+        "Tu propia contraseña no se restablece desde aquí: cámbiala en «Mi cuenta» (tu nombre, arriba a la derecha)."
+      );
+    }
 
     const usuario = await prisma.user.findFirst({
       where: { id: userId, organizationId },
@@ -79,10 +100,23 @@ export async function restablecerContrasena(userId: string) {
     if (!usuario) throw new ErrorDeNegocio("Usuario no encontrado");
 
     const contrasena = generarContrasena();
-    await prisma.user.updateMany({
-      where: { id: userId, organizationId },
-      data: { passwordHash: await bcrypt.hash(contrasena, 10) },
-    });
+    const passwordHash = await bcrypt.hash(contrasena, 10);
+    // Las dos escrituras juntas o ninguna: si la segunda fallara con la
+    // primera ya hecha, la contraseña habría cambiado sin que esta pantalla
+    // llegara a enseñar la nueva.
+    await prisma.$transaction([
+      prisma.user.updateMany({
+        where: { id: userId, organizationId },
+        data: { passwordHash, mustChangePassword: true },
+      }),
+      // Si tenía pedido un enlace de «he olvidado mi contraseña», deja de
+      // valer: con la contraseña recién restablecida ya no pinta nada, y es
+      // una puerta menos abierta.
+      prisma.recuperacionDeAcceso.updateMany({
+        where: { userId, usadaEl: null },
+        data: { usadaEl: new Date() },
+      }),
+    ]);
 
     revalidatePath("/rental/settings");
     return { creada: { email: usuario.email, contrasena } };
@@ -137,6 +171,67 @@ export async function cambiarNombreUsuario(userId: string, name: string) {
   });
 }
 
+/**
+ * Cambia el correo con el que entra alguien.
+ *
+ * Las primeras cuentas se crearon con correos que eran solo nombres de usuario
+ * (`emma@…`, `alejandra@…`): no hay buzón detrás. Para entrar daba igual, pero
+ * «he olvidado mi contraseña» manda un enlace a ese correo, y a un buzón que no
+ * existe no llega nada. Esto permite ponerles el suyo de verdad sin crear otra
+ * cuenta, que dejaría la vieja colgando con su contraseña de siempre.
+ */
+export async function cambiarCorreoUsuario(userId: string, correo: string) {
+  return conErroresLegibles(async () => {
+    const organizationId = await exigir("administracion");
+
+    const validado = z.string().email().safeParse(correo.toLowerCase().trim());
+    if (!validado.success) throw new ErrorDeNegocio("El correo no es válido.");
+    const email = validado.data;
+
+    const usuario = await prisma.user.findFirst({
+      where: { id: userId, organizationId },
+      select: { email: true },
+    });
+    if (!usuario) throw new ErrorDeNegocio("Usuario no encontrado");
+    if (usuario.email === email) return;
+
+    // La cuenta de administración del arranque se busca por su correo
+    // (`ADMIN_EMAIL`). Si se le cambia aquí, el siguiente reinicio no la
+    // encuentra y crea otra con la contraseña del entorno: dos cuentas de
+    // administración donde había una, y nadie sabe de dónde ha salido.
+    const correoDeArranque = (process.env.ADMIN_EMAIL ?? "info@airesmajoreros.pro").toLowerCase().trim();
+    if (usuario.email === correoDeArranque) {
+      throw new ErrorDeNegocio(
+        "Esta es la cuenta de administración que se asegura en cada arranque. Su correo se cambia en la variable ADMIN_EMAIL del hosting, no aquí."
+      );
+    }
+
+    // Lo mismo con las cuentas que el arranque crea si no las encuentra
+    // (`lib/altas-iniciales.ts`): con otro correo dejaría de encontrarlas y
+    // las volvería a crear con su contraseña inicial.
+    if (ALTAS_INICIALES.some((a) => a.email === usuario.email)) {
+      throw new ErrorDeNegocio(
+        "Esta cuenta la crea el arranque si no la encuentra con este correo. Para cambiárselo hay que quitarla antes de lib/altas-iniciales.ts."
+      );
+    }
+
+    const yaExiste = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (yaExiste) throw new ErrorDeNegocio(`Ya hay una cuenta con el correo ${email}.`);
+
+    await prisma.$transaction([
+      prisma.user.updateMany({ where: { id: userId, organizationId }, data: { email } }),
+      // Un enlace de recuperación pedido antes salió —o iba a salir— hacia el
+      // correo anterior.
+      prisma.recuperacionDeAcceso.updateMany({
+        where: { userId, usadaEl: null },
+        data: { usadaEl: new Date() },
+      }),
+    ]);
+
+    revalidatePath("/rental/settings");
+  });
+}
+
 export async function cambiarRolUsuario(userId: string, role: string) {
   return conErroresLegibles(async () => {
     const organizationId = await exigir("administracion");
@@ -153,9 +248,9 @@ export async function cambiarRolUsuario(userId: string, role: string) {
 }
 
 const cambioPropioSchema = z.object({
-  actual: z.string().min(1, "Falta la contraseña actual"),
-  nueva: z.string().min(MINIMO_CONTRASENA, `La nueva debe tener al menos ${MINIMO_CONTRASENA} caracteres`),
-  repetida: z.string().min(1),
+  actual: z.string().min(1),
+  nueva: z.string(),
+  repetida: z.string(),
 });
 
 /**
@@ -169,10 +264,14 @@ export async function cambiarMiContrasena(formData: FormData) {
     const session = await getSession();
     if (!session) throw new ErrorDeNegocio("No autenticado");
 
-    const data = cambioPropioSchema.parse(Object.fromEntries(formData.entries()));
-    if (data.nueva !== data.repetida) {
-      throw new ErrorDeNegocio("La nueva contraseña y su repetición no coinciden.");
-    }
+    // Sin `parse` a secas: lanza un error que Next esconde en producción, y a
+    // quien se equivoca al cambiar la contraseña hay que decirle en qué.
+    const leido = cambioPropioSchema.safeParse(Object.fromEntries(formData.entries()));
+    if (!leido.success) throw new ErrorDeNegocio("Falta la contraseña actual.");
+    const data = leido.data;
+
+    const motivo = motivoContrasenaNoValida(data.nueva, data.repetida);
+    if (motivo) throw new ErrorDeNegocio(motivo);
 
     const usuario = await prisma.user.findUnique({
       where: { id: session.userId },
@@ -187,10 +286,20 @@ export async function cambiarMiContrasena(formData: FormData) {
       throw new ErrorDeNegocio("La nueva contraseña es la misma que la actual.");
     }
 
-    await prisma.user.update({
-      where: { id: session.userId },
-      data: { passwordHash: await bcrypt.hash(data.nueva, 10) },
-    });
+    // Al ponerse la suya deja de ser de un solo uso: la que le entregaron ya
+    // no abre nada, porque su hash se acaba de sustituir.
+    const passwordHash = await bcrypt.hash(data.nueva, 10);
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: session.userId },
+        data: { passwordHash, mustChangePassword: false },
+      }),
+      // Y cualquier enlace de recuperación que tuviera pedido deja de valer.
+      prisma.recuperacionDeAcceso.updateMany({
+        where: { userId: session.userId, usadaEl: null },
+        data: { usadaEl: new Date() },
+      }),
+    ]);
 
     revalidatePath("/cuenta");
     return { ok: true };

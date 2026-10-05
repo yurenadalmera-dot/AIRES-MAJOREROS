@@ -10,6 +10,7 @@ import {
   setUsuarioActivo,
   cambiarRolUsuario,
   cambiarNombreUsuario,
+  cambiarCorreoUsuario,
 } from "@/lib/actions/usuarios";
 
 interface UsuarioVisible {
@@ -18,6 +19,8 @@ interface UsuarioVisible {
   email: string;
   role: string;
   active: boolean;
+  /** Tiene puesta una contraseña de un solo uso y todavía no la ha cambiado. */
+  debeCambiar: boolean;
   esYo: boolean;
 }
 
@@ -27,6 +30,9 @@ interface UsuarioVisible {
  * La contraseña se genera en el servidor y se enseña **una sola vez**, aquí,
  * para poder entregársela a esa persona. No se guarda en claro en ningún
  * sitio: si se pierde, se restablece — no se recupera.
+ *
+ * Y es **de un solo uso**: quien entra con ella no puede hacer nada hasta que
+ * se pone la suya. Mientras no lo haya hecho, su fila lo dice.
  */
 export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible[] }) {
   const router = useRouter();
@@ -34,6 +40,10 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
   const [error, setError] = useState<string | null>(null);
   const [reciente, setReciente] = useState<{ email: string; contrasena: string } | null>(null);
   const [copiado, setCopiado] = useState(false);
+  // De quién se está cambiando el correo. Se edita aparte y con su botón, no
+  // escribiendo encima como el nombre: un correo cambiado por un dedo que se
+  // escapa deja a esa persona sin poder entrar.
+  const [editandoCorreo, setEditandoCorreo] = useState<string | null>(null);
 
   function ejecutar(accion: () => Promise<unknown>) {
     setError(null);
@@ -58,7 +68,8 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
     <div className="card p-5">
       <h2 className="font-medium text-tinta mb-1">Usuarios y accesos</h2>
       <p className="text-xs text-tinta-suave mb-4">
-        Cada persona entra con su propio correo. El rol decide qué ve y qué puede hacer.
+        Cada persona entra con su propio correo. El rol decide qué ve y qué puede hacer. Conviene
+        que el correo sea uno que de verdad lea: es adonde llega el enlace si olvida la contraseña.
       </p>
 
       {error && (
@@ -77,7 +88,8 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
           </p>
           <p className="text-xs text-aviso">
             Anótala ahora y entrégasela. <strong>No se puede volver a ver</strong>: si se pierde,
-            hay que restablecerla. Conviene que la cambie al entrar, desde «Mi cuenta».
+            hay que restablecerla. Es <strong>de un solo uso</strong>: al entrar con ella, la
+            aplicación le obliga a ponerse la suya antes de dejarle hacer nada.
           </p>
           <button
             type="button"
@@ -115,7 +127,55 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
                 />
                 {u.esYo && <span className="text-xs text-tinta-suave font-normal"> · tú</span>}
               </p>
-              <p className="text-xs text-tinta-suave truncate">{u.email}</p>
+              {editandoCorreo === u.id ? (
+                <form
+                  className="mt-1 flex flex-wrap items-center gap-2"
+                  action={(fd) => {
+                    const nuevo = String(fd.get("correo") ?? "");
+                    setEditandoCorreo(null);
+                    ejecutar(() => cambiarCorreoUsuario(u.id, nuevo));
+                  }}
+                >
+                  <input
+                    name="correo"
+                    type="email"
+                    required
+                    defaultValue={u.email}
+                    autoFocus
+                    aria-label={`Correo nuevo de ${u.name}`}
+                    className="input py-1 text-xs w-64 max-w-full"
+                  />
+                  <button type="submit" disabled={pending} className="text-xs text-oceano-oscuro hover:underline">
+                    Guardar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditandoCorreo(null)}
+                    className="text-xs text-tinta-suave hover:underline"
+                  >
+                    Cancelar
+                  </button>
+                </form>
+              ) : (
+                // «cambiar» va fuera del texto que se recorta: con un correo
+                // largo en el móvil, dentro se quedaba cortado junto con él.
+                <div className="flex items-baseline gap-1.5 text-xs text-tinta-suave">
+                  <span className="truncate min-w-0">{u.email}</span>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => setEditandoCorreo(u.id)}
+                    className="shrink-0 text-oceano-oscuro hover:underline"
+                  >
+                    cambiar
+                  </button>
+                </div>
+              )}
+              {u.debeCambiar && u.active && (
+                <span className="badge badge-aviso mt-1">
+                  Contraseña de un solo uso · aún no la ha cambiado
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -132,11 +192,15 @@ export default function GestionUsuarios({ usuarios }: { usuarios: UsuarioVisible
                 ))}
               </select>
 
+              {/* La propia no: quien se la restableciera a sí misma acabaría
+                  en «Mi cuenta» sin haber llegado a ver la nueva. La suya se
+                  cambia allí. */}
               <button
                 type="button"
-                disabled={pending}
+                disabled={pending || u.esYo}
+                title={u.esYo ? "La tuya se cambia en «Mi cuenta»" : undefined}
                 onClick={() => ejecutar(() => restablecerContrasena(u.id))}
-                className="text-xs text-oceano-oscuro hover:underline"
+                className="text-xs text-oceano-oscuro hover:underline disabled:opacity-40 disabled:no-underline"
               >
                 Restablecer contraseña
               </button>
